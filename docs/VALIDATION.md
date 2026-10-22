@@ -57,6 +57,8 @@ Saved installation and startup instructions, the actual `S2TEasy` mount path for
 
 ## Legacy update-terminal diagnosis and 1.5.1 hotfix
 
-The reported `findstr /I "11012"` command matches the old 1.4.0 updater source at commit 894419f: a CMD process repeatedly runs TASKLIST piped to FINDSTR. Closing the child FINDSTR can leave its parent loop running. Current clipboard code contains no shell command or process launch. The user confirmed the installed x64 package; the post-update version was not provided, so installation completion is not inferred from the reported windows.
+The reported `findstr /I "11012"` command matches the old 1.4.0 updater source at commit 894419f: a CMD process repeatedly runs TASKLIST piped to FINDSTR. Closing the child FINDSTR can leave its parent loop running. Current clipboard code contains no shell command or process launch. The user confirmed the installed x64 package; the user subsequently confirmed all three attempts left the app on 1.4.0 with three repeating helper windows, so those attempts did not establish a successful upgrade.
 
 The 1.5.1 hotfix makes applying exclusive across Restart, check/download and tray actions, adds explicit hidden PowerShell launch, and requires verified downloads before restart. Three new regression tests exercise duplicate handoff, launch failure, and premature restart. All 146 tests pass; typechecking and production app/site builds pass. The running helper on the user's PC cannot be terminated by a cloud code change; UPDATE_TROUBLESHOOTING.md gives narrowly scoped manual cleanup steps. Actual terminal visibility and native update execution remain Windows desktop checks.
+
+The applying-state browser check also passed: Check and automatic-download controls are disabled, the Restart button is absent, and no page errors occurred. The development harness initially used incorrect Vite import paths and was corrected before this check passed.
