@@ -37,7 +37,6 @@ Saved installation and startup instructions, the actual `S2TEasy` mount path for
 - The actual HUD component and theme editor are rendered in the built, standalone interactive preview. It starts with simulated speech and provides opt-in local microphone metering. Preview updates are simulated.
 - Update UI covers availability, downloading/progress, and user-triggered restart. Eight updater tests cover discovery, explicit downloading, digest verification, corrupt/missing artifacts, and incompatible releases. No provider or payment credentials are needed for these tests.
 - No GitHub Releases existed when the update feed was checked. End-to-end installation/replacement on Windows is still pending. A demo update is not a published release.
-- Optional hosted credits/payment architecture is proposed in CLOUD_SERVICE_PROPOSAL.md. No production billing or cloud transcription gateway was implemented.
 
 ## Liquid Glass, lifecycle and audio routing revision (1.4.0)
 
