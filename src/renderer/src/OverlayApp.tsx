@@ -42,6 +42,7 @@ export function OverlayApp() {
   }, [])
 
   useEffect(() => {
+    if (state.status === 'hidden' && !preview) return
     let frame = 0
     let t = 0
     const tick = () => {
@@ -61,7 +62,7 @@ export function OverlayApp() {
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [])
+  }, [state.status === 'hidden'])
 
   if (state.status === 'hidden' && !preview) return null
 

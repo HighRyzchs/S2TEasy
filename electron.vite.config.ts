@@ -36,7 +36,8 @@ export default defineConfig({
         input: {
           index: resolve('src/renderer/index.html'),
           overlay: resolve('src/renderer/overlay.html'),
-          recorder: resolve('src/renderer/recorder.html')
+          recorder: resolve('src/renderer/recorder.html'),
+          overlayShowcase: resolve('src/renderer/overlay-showcase.html')
         }
       }
     }

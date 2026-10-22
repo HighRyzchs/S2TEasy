@@ -7,6 +7,8 @@ export type OverlayWave = (typeof OVERLAY_WAVES)[number]
 export type OverlayBezel = (typeof OVERLAY_BEZELS)[number]
 
 export type OverlayTheme = {
+  skin: 'minimal' | 'frost' | 'studio'
+  showTranscript: boolean
   core: OverlayCore
   wave: OverlayWave
   bezel: OverlayBezel
@@ -47,18 +49,20 @@ export const OVERLAY_BEZEL_OPTIONS: { id: OverlayBezel; label: string }[] = [
   { id: 'ghost', label: 'Ghost' }
 ]
 
-/** Mixer default the user settled on: Iris · Ribbon · Signal Ribbon */
+/** Ink is the default; Studio mixer fields remain available for customization. */
 export function defaultOverlayTheme(): OverlayTheme {
   return {
+    skin: 'minimal',
+    showTranscript: true,
     core: 'iris',
     wave: 'ribbon',
     bezel: 'ribbon',
-    coreHue: 190,
-    coreSat: 85,
-    coreLight: 72,
-    waveHue: 190,
-    waveSat: 80,
-    waveLight: 68,
+    coreHue: 158,
+    coreSat: 55,
+    coreLight: 77,
+    waveHue: 158,
+    waveSat: 55,
+    waveLight: 77,
     bezelHue: 268,
     bezelSat: 70,
     bezelLight: 72,
@@ -78,13 +82,17 @@ function clampHue(value: number): number {
 }
 
 function oneOf<T extends string>(value: unknown, allowed: readonly T[], fallback: T): T {
-  return typeof value === 'string' && (allowed as readonly string[]).includes(value) ? (value as T) : fallback
+  return typeof value === 'string' && (allowed as readonly string[]).includes(value)
+    ? (value as T)
+    : fallback
 }
 
 export function normalizeOverlayTheme(raw?: Partial<OverlayTheme> | null): OverlayTheme {
   const fallback = defaultOverlayTheme()
   const next = { ...fallback, ...(raw ?? {}) }
   return {
+    skin: oneOf(next.skin, ['minimal', 'frost', 'studio'] as const, fallback.skin),
+    showTranscript: next.showTranscript !== false,
     core: oneOf(next.core, OVERLAY_CORES, fallback.core),
     wave: oneOf(next.wave, OVERLAY_WAVES, fallback.wave),
     bezel: oneOf(next.bezel, OVERLAY_BEZELS, fallback.bezel),
@@ -151,6 +159,8 @@ export function hexToHsl(hex: string): { h: number; s: number; l: number } {
 }
 
 export function overlayThemeLabel(theme: OverlayTheme): string {
+  if (theme.skin !== 'studio')
+    return `${theme.skin === 'frost' ? 'Frost' : 'Ink'} · ${theme.showTranscript ? 'Live transcript' : 'Compact'}`
   const core = OVERLAY_CORE_OPTIONS.find((item) => item.id === theme.core)?.label ?? theme.core
   const wave = OVERLAY_WAVE_OPTIONS.find((item) => item.id === theme.wave)?.label ?? theme.wave
   const bezel = OVERLAY_BEZEL_OPTIONS.find((item) => item.id === theme.bezel)?.label ?? theme.bezel

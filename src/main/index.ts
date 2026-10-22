@@ -26,7 +26,8 @@ import {
   createMainWindow,
   createOverlayWindow,
   createRecorderWindow,
-  placeOverlay
+  placeOverlay,
+  sizeOverlay
 } from './windows'
 
 let mainWindow: BrowserWindow | null = null
@@ -103,6 +104,7 @@ async function setup(): Promise<void> {
 
   mainWindow = createMainWindow()
   overlayWindow = createOverlayWindow()
+  sizeOverlay(overlayWindow, store.getSettings().overlayTheme)
   recorderWindow = createRecorderWindow()
 
   mainWindow.on('close', (event) => {
@@ -199,6 +201,7 @@ async function setup(): Promise<void> {
       throw error
     }
     applyStartup(settings)
+    if (overlayWindow) sizeOverlay(overlayWindow, settings.overlayTheme)
     broadcastSettings()
     if (patch.autoUpdate === true) {
       void updater.check({ force: true, download: true })
@@ -248,7 +251,11 @@ async function setup(): Promise<void> {
   ipcMain.handle(IPC.CHECK_UPDATE, (_event, download?: boolean) =>
     updater.check({ force: true, download: Boolean(download) || store.getSettings().autoUpdate })
   )
-  ipcMain.handle(IPC.INSTALL_UPDATE, () => updater.install())
+  ipcMain.handle(IPC.INSTALL_UPDATE, () => {
+    if (dictation.isBusy() || recoveryBusy)
+      throw new Error('Finish your recording or recovery before restarting for an update.')
+    return updater.install()
+  })
 
   ipcMain.handle(IPC.EDIT_HISTORY, (_event, id: string, text: string) => {
     if (dictation.isBusy() || recoveryBusy)

@@ -1,5 +1,6 @@
 import { BrowserWindow, nativeImage, screen, shell } from 'electron'
 import { join } from 'node:path'
+import type { OverlayTheme } from '../shared/overlay-theme'
 import iconPath from '../../resources/icon.png?asset'
 import { attachOverlayTopmost, pinOverlayTopmost } from './overlay-topmost'
 
@@ -133,4 +134,12 @@ export function placeOverlay(window: BrowserWindow, position: 'top' | 'bottom' =
     position === 'top' ? display.workArea.y + 28 : display.workArea.y + height - bounds.height - 28
   )
   pinOverlayTopmost(window)
+}
+
+export function sizeOverlay(window: BrowserWindow, theme: OverlayTheme): void {
+  if (window.isDestroyed()) return
+  const width = theme.skin === 'studio' ? 536 : theme.showTranscript ? 456 : 332
+  const height = theme.skin === 'studio' || theme.showTranscript ? 96 : 80
+  const bounds = window.getBounds()
+  if (bounds.width !== width || bounds.height !== height) window.setSize(width, height)
 }

@@ -10,7 +10,7 @@ The project lives at https://github.com/HighRyzchs/S2TEasy. The README, MIT lice
 
 The Pages URL is https://highryzchs.github.io/S2TEasy/. GitHub Pages must have **Settings → Pages → Build and deployment → Source → GitHub Actions** selected. The repository owner enabled this during initial publication.
 
-Changes under `docs/` on `main` run the **Publish project website** workflow. The workflow can also be run manually from Actions. It uploads the static website and assets, then deploys to the `github-pages` environment. A successful deployment provides its URL in the Actions run. An initial deployment failed before Pages was enabled; this is separate from the current deployment outcome.
+Changes under `docs/` on `main` run the **Publish project website** workflow. The workflow can also be run manually from Actions. It runs `npm run build:site`, compiling the interactive HUD/update preview and copying the static website into `.site/`, then deploys that directory to the `github-pages` environment. A successful deployment provides its URL in the Actions run. An initial deployment failed before Pages was enabled; this is separate from the current deployment outcome.
 
 The connected integration can push source and run workflows, but GitHub rejected attempts to edit the repository's About metadata or enable private vulnerability reporting. Those are owner settings. If desired, add the Pages URL to About and enable private reporting under the repository security settings. No personal access token needs to be shared in chat.
 
@@ -28,3 +28,5 @@ A successful compiler/packager run does not establish real microphone, focus, pa
 4. Arrange Windows signing and verify release assets and SHA-256 digests. The in-app updater refuses a binary with a missing or mismatched GitHub SHA-256 digest.
 
 Cloud environment publication is separate from GitHub source publication, Pages deployment, and executable releases. Saving an environment draft does not perform any of those actions.
+
+The HUD/update preview uses actual React components with simulated speech and release states. It never records audio or installs an update. A production update is offered only from a published compatible GitHub Release; CI artifacts alone do not appear in the update feed.

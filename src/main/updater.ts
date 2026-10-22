@@ -18,7 +18,7 @@ import {
   type PickedAsset
 } from '../shared/release'
 import { idleUpdate, type Packaging, type UpdateStatus } from '../shared/types'
-import { isNewerVersion } from '../shared/version'
+import { isNewerVersion, tagToVersion } from '../shared/version'
 
 export function detectPackaging(): Packaging {
   if (!app.isPackaged) return 'dev'
@@ -35,7 +35,8 @@ export class UpdateLauncher {
 
   constructor(
     private readonly getToken: () => string,
-    private readonly onChange: (status: UpdateStatus) => void
+    private readonly onChange: (status: UpdateStatus) => void,
+    private readonly temporaryRoot: string = tmpdir()
   ) {
     this.status = idleUpdate(app.getVersion(), detectPackaging())
     this.status.phase = 'idle'
@@ -64,7 +65,7 @@ export class UpdateLauncher {
       if (response.status === 404) {
         this.asset = null
         this.set({
-          phase: token.trim() ? 'current' : 'error',
+          phase: 'current',
           availableVersion: '',
           message: missingLatestReleaseMessage(Boolean(token.trim()))
         })
@@ -79,6 +80,10 @@ export class UpdateLauncher {
       const release = (await response.json()) as GithubRelease
       const packaging = this.status.packaging === 'dev' ? 'portable' : this.status.packaging
       const asset = pickUpdateAsset(release, packaging)
+      if (!asset && isNewerVersion(tagToVersion(release.tag_name), this.status.currentVersion))
+        throw new Error(
+          'This release does not include a compatible Windows installer. Check the release page or try again later.'
+        )
       if (!asset || !isNewerVersion(asset.version, this.status.currentVersion)) {
         this.asset = null
         this.set({
@@ -121,7 +126,7 @@ export class UpdateLauncher {
     if (!asset) return this.getStatus()
     if (this.status.phase === 'downloading') return this.getStatus()
 
-    const dest = join(mkdtempSync(join(tmpdir(), 's2teasy-update-')), asset.name)
+    const dest = join(mkdtempSync(join(this.temporaryRoot, 's2teasy-update-')), asset.name)
     this.payloadPath = dest
     this.set({ phase: 'downloading', percent: 0, message: `Downloading ${asset.version}…` })
     try {
@@ -140,9 +145,11 @@ export class UpdateLauncher {
       }
       const total = Number(response.headers.get('content-length') || asset.size || 0)
       let received = 0
+      const hash = createHash('sha256')
       const file = createWriteStream(dest)
       const source = Readable.fromWeb(response.body as never)
       source.on('data', (chunk: Buffer) => {
+        hash.update(chunk)
         received += chunk.length
         const percent = total ? Math.min(99, Math.round((received / total) * 100)) : 0
         if (percent !== this.status.percent) {
@@ -154,10 +161,7 @@ export class UpdateLauncher {
         }
       })
       await pipeline(source, file)
-      if (
-        createHash('sha256').update(readFileSync(dest)).digest('hex') !==
-        asset.digest.slice(7).toLowerCase()
-      ) {
+      if (hash.digest('hex') !== asset.digest.slice(7).toLowerCase()) {
         rmSync(dest, { force: true })
         throw new Error('Update checksum verification failed. The downloaded file was removed.')
       }
@@ -169,6 +173,8 @@ export class UpdateLauncher {
       })
       return this.getStatus()
     } catch (error) {
+      rmSync(dest, { force: true })
+      this.payloadPath = ''
       this.set({
         phase: 'error',
         percent: 0,
@@ -189,14 +195,19 @@ export class UpdateLauncher {
       })
       return this.getStatus()
     }
-    if (
-      !this.asset?.digest ||
-      createHash('sha256').update(readFileSync(this.payloadPath)).digest('hex') !==
-        this.asset.digest.slice(7).toLowerCase()
-    ) {
+    try {
+      if (
+        !this.asset?.digest ||
+        createHash('sha256').update(readFileSync(this.payloadPath)).digest('hex') !==
+          this.asset.digest.slice(7).toLowerCase()
+      )
+        throw new Error('Update file missing or changed.')
+    } catch {
+      this.payloadPath = ''
       this.set({
         phase: 'error',
-        message: 'The update file changed or has no verified digest. Download it again.'
+        message:
+          'The update file is missing or changed. Download it again; your settings and history are unchanged.'
       })
       return this.getStatus()
     }

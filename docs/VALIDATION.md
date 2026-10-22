@@ -3,7 +3,7 @@
 Validated in the Linux cloud environment using Node.js 24.19.0, npm 11.9.0, Electron 35.7.5, and Chromium. CI is configured for Node 22 LTS. These results apply to this prepared instance, not an independently restored task or a Windows release.
 
 - Frozen installation (`npm ci`) completed twice with Electron proxy support and normal TLS/package verification. Dependency versions and integrity entries remain unchanged. The lockfile root version was subsequently synchronized from 1.0.0 to the package version 1.3.1 for publication; this does not change dependencies.
-- Unit tests: 93 tests across 22 files passed. Provider responses and native insertion are mocked in controller tests. The resampling test checks two minutes of sample timing, not a real two-minute voice recording.
+- Unit tests: 101 tests across 23 files passed. Provider responses and native insertion are mocked in controller tests. The resampling test checks two minutes of sample timing, not a real two-minute voice recording.
 - TypeScript checks for main/preload/shared and renderer passed.
 - Production main, preload, and renderer bundles compiled successfully using `npm exec -- electron-vite build`.
 - Browser checks exercised rule creation/toggling, light appearance, History correction/search, delete cancellation, practice consent, and refusal to record in browser-only preview. No page JavaScript errors occurred.
@@ -30,3 +30,11 @@ Saved installation and startup instructions, the actual `S2TEasy` mount path for
 - The repository owner enabled Pages with GitHub Actions. The initial deployment before that setting failed; the retried deployment succeeded: https://github.com/HighRyzchs/S2TEasy/actions/runs/39778628972.
 - GitHub Pages URL: https://highryzchs.github.io/S2TEasy/. The cloud execution proxy denied direct HTTP access to that hostname; deployment success was verified using the GitHub Actions and Pages APIs, not by an external browser request. Local website assets and responsive layout checks passed.
 - Attempts to edit repository About metadata and enable private vulnerability reporting returned GitHub integration permission errors. Those owner settings remain unchanged; code push and Actions permissions work.
+
+## HUD and updater revision
+
+- Ink/Frost pills, accent selection, compact mode, and optional recent transcript text replace the original default neon HUD. The Studio mixer remains opt-in. Windows overlay sizing follows the chosen layout, while the always-on-top/focus behavior still needs desktop verification.
+- The actual HUD component is rendered in the built, standalone interactive preview. Browser checks cover style selection, a 48 px compact pill, and responsive layout. Speech is simulated.
+- Update UI covers availability, downloading/progress, and user-triggered restart. Eight updater tests cover discovery, explicit downloading, digest verification, corrupt/missing artifacts, and incompatible releases. No provider or payment credentials are needed for these tests.
+- No GitHub Releases existed when the update feed was checked. End-to-end installation/replacement on Windows is still pending. A demo update is not a published release.
+- Optional hosted credits/payment architecture is proposed in CLOUD_SERVICE_PROPOSAL.md. No production billing or cloud transcription gateway was implemented.

@@ -9,6 +9,7 @@ import {
 } from '@shared/types'
 import { OverlayThemeEditor } from './OverlayThemeEditor'
 import { MicPreview } from './lib/mic'
+import { UpdatePanel } from './UpdatePanel'
 
 type Props = {
   settings: AppSettings
@@ -19,7 +20,7 @@ type Props = {
   onToast: (text: string) => void
 }
 
-export function SettingsPanel({ settings, update, onChange, onUpdate, onToast }: Props) {
+export function SettingsPanel({ settings, update, onChange, onUpdate }: Props) {
   const [apiKey, setApiKey] = useState(settings.apiKey)
   const [routerKey, setRouterKey] = useState(settings.routerAudioKey)
   const [model, setModel] = useState(settings.model)
@@ -487,41 +488,14 @@ export function SettingsPanel({ settings, update, onChange, onUpdate, onToast }:
                 files are not encrypted by the app.
               </p>
             </section>
-            <section className="block">
-              <h3>Updates</h3>
-              <p className="hint">
-                Version {update.currentVersion}. Check GitHub Releases when you choose. Windows
-                builds currently require a Windows release test.
-              </p>
-              <Toggle
-                label="Download updates automatically"
-                on={settings.autoUpdate}
-                onClick={() => save({ autoUpdate: !settings.autoUpdate })}
-              />
-              <button
-                className="ghost"
-                onClick={async () => {
-                  try {
-                    onUpdate(await window.s2t.checkUpdate())
-                    onToast('Update check complete')
-                  } catch {
-                    onToast('Could not check updates')
-                  }
-                }}
-              >
-                Check for updates
-              </button>
-              {update.phase === 'ready' && (
-                <button className="primary" onClick={() => void window.s2t.installUpdate()}>
-                  Restart to update
-                </button>
-              )}
-              {update.message && (
-                <p role="status" className="micro">
-                  {update.message}
-                </p>
-              )}
-            </section>
+            <UpdatePanel
+              update={update}
+              autoDownload={settings.autoUpdate}
+              onAutoDownload={(autoUpdate) => save({ autoUpdate })}
+              onUpdate={onUpdate}
+              onCheck={(download) => window.s2t.checkUpdate(download)}
+              onInstall={() => window.s2t.installUpdate()}
+            />
           </>
         )}
       </div>

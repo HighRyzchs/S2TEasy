@@ -8,12 +8,15 @@ import {
 } from './overlay-theme'
 
 describe('normalizeOverlayTheme', () => {
-  it('keeps the mixer default', () => {
+  it('defaults to a minimal pill while preserving the studio mixer', () => {
     const theme = defaultOverlayTheme()
     expect(theme.core).toBe('iris')
     expect(theme.wave).toBe('ribbon')
     expect(theme.bezel).toBe('ribbon')
-    expect(overlayThemeLabel(theme)).toBe('Iris · Ribbon · Signal Ribbon')
+    expect(theme.skin).toBe('minimal')
+    expect(theme.showTranscript).toBe(true)
+    expect(overlayThemeLabel(theme)).toBe('Ink · Live transcript')
+    expect(overlayThemeLabel({ ...theme, skin: 'studio' })).toBe('Iris · Ribbon · Signal Ribbon')
   })
 
   it('rejects unknown variants and clamps color', () => {

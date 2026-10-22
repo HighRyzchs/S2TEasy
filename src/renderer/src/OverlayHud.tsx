@@ -25,10 +25,135 @@ export function OverlayHud({
   if (live) classes.push('live')
   if (preview) classes.push('preview')
 
+  if (theme.skin !== 'studio') {
+    const failed = state.status === 'error'
+    const done = state.status === 'success'
+    const processing = state.status === 'transcribing' || state.status === 'inserting'
+    const text = Array.from(state.partial)
+    const subtitle = failed
+      ? state.message
+      : text.length > 120
+        ? `…${text.slice(-120).join('')}`
+        : state.partial
+    const label = failed
+      ? 'Needs attention'
+      : done
+        ? state.mode === 'practice'
+          ? 'Practice saved'
+          : 'Saved & inserted'
+        : state.status === 'arm-paste'
+          ? 'Choose a text field'
+          : processing
+            ? theme.showTranscript
+              ? 'Finishing your thought'
+              : 'Finishing'
+            : 'Listening'
+    return (
+      <div
+        className={classes.join(' ')}
+        data-status={state.status}
+        data-skin={theme.skin}
+        style={overlayThemeVars(theme) as CSSProperties}
+      >
+        <div
+          className="minimal-hud"
+          data-transcript={theme.showTranscript || failed ? 'true' : 'false'}
+        >
+          <div className={`minimal-indicator ${processing ? 'processing' : ''}`} aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              {done ? (
+                <path d="m5 12 4 4L19 6" />
+              ) : failed ? (
+                <>
+                  <path d="M12 7v6" />
+                  <path d="M12 17h.01" />
+                  <circle cx="12" cy="12" r="9" />
+                </>
+              ) : processing ? (
+                <path d="M20 12a8 8 0 1 1-5.5-7.6" />
+              ) : (
+                <>
+                  <rect x="9" y="3" width="6" height="12" rx="3" />
+                  <path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3m-3 0h6" />
+                </>
+              )}
+            </svg>
+          </div>
+          <div className="minimal-copy">
+            <div className="minimal-heading">
+              <span className="minimal-label" aria-live="polite">
+                {label}
+              </span>
+              {!failed && !done && (
+                <span className="minimal-clock">{formatElapsed(state.elapsedMs)}</span>
+              )}
+            </div>
+            {(theme.showTranscript || failed) && (
+              <div className="minimal-transcript" title={subtitle}>
+                {subtitle || 'Your next thought starts here…'}
+              </div>
+            )}
+          </div>
+          {!failed && !done && (
+            <div className="minimal-wave" aria-hidden="true">
+              {bars
+                .filter((_, i) => i % 2 === 0)
+                .slice(0, 13)
+                .map((height, index) => (
+                  <i key={index} style={{ height: `${Math.max(3, height * 24)}px` }} />
+                ))}
+            </div>
+          )}
+          {canStop && (
+            <button
+              type="button"
+              className="minimal-stop"
+              aria-label="Stop recording"
+              title="Stop recording"
+              onPointerDown={onStop}
+              onClick={onStop}
+            >
+              <svg viewBox="0 0 20 20" aria-hidden="true">
+                <rect x="6" y="6" width="8" height="8" rx="2" fill="currentColor" />
+              </svg>
+            </button>
+          )}
+          {failed && (
+            <button
+              type="button"
+              className="minimal-stop"
+              aria-label="Dismiss recording error"
+              title="Dismiss"
+              onClick={onDismiss}
+            >
+              <svg
+                viewBox="0 0 20 20"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                aria-hidden="true"
+              >
+                <path d="m6 6 8 8m0-8-8 8" />
+              </svg>
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div
       className={classes.join(' ')}
       data-status={state.status}
+      data-skin="studio"
       data-core={theme.core}
       data-wave={theme.wave}
       data-bezel={theme.bezel}

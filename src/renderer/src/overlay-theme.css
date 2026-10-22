@@ -187,8 +187,7 @@
 .overlay-root[data-bezel='glass'] .hud {
   border-radius: 40px;
   background:
-    linear-gradient(180deg, hsl(var(--bezel-h) 80% 70% / 0.1), transparent 48%),
-    var(--bezel-fill);
+    linear-gradient(180deg, hsl(var(--bezel-h) 80% 70% / 0.1), transparent 48%), var(--bezel-fill);
   border: 1px solid hsl(var(--bezel-h) 70% 70% / 0.28);
   box-shadow:
     0 8px 18px hsl(var(--bezel-h) 20% 4% / 0.16),
@@ -215,10 +214,22 @@
   opacity: 0.4;
 }
 
-.overlay-root[data-bezel='glass'] .notch.tl { top: 11px; left: 16px; }
-.overlay-root[data-bezel='glass'] .notch.tr { top: 11px; right: 16px; }
-.overlay-root[data-bezel='glass'] .notch.bl { bottom: 11px; left: 16px; }
-.overlay-root[data-bezel='glass'] .notch.br { bottom: 11px; right: 16px; }
+.overlay-root[data-bezel='glass'] .notch.tl {
+  top: 11px;
+  left: 16px;
+}
+.overlay-root[data-bezel='glass'] .notch.tr {
+  top: 11px;
+  right: 16px;
+}
+.overlay-root[data-bezel='glass'] .notch.bl {
+  bottom: 11px;
+  left: 16px;
+}
+.overlay-root[data-bezel='glass'] .notch.br {
+  bottom: 11px;
+  right: 16px;
+}
 
 .overlay-root[data-bezel='glass'] .rail {
   position: absolute;
@@ -227,7 +238,13 @@
   bottom: 7px;
   height: 1px;
   border-radius: 99px;
-  background: linear-gradient(90deg, transparent, var(--bezel-accent), var(--wave-accent-2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--bezel-accent),
+    var(--wave-accent-2),
+    transparent
+  );
   opacity: 0.45;
 }
 
@@ -235,7 +252,12 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: linear-gradient(105deg, transparent 38%, hsl(var(--bezel-h) 80% 80% / 0.08) 50%, transparent 62%);
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    hsl(var(--bezel-h) 80% 80% / 0.08) 50%,
+    transparent 62%
+  );
   background-size: 220% 100%;
   animation: sweep 3.2s ease-in-out infinite;
 }
@@ -267,7 +289,11 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 86px;
-  background: radial-gradient(circle at 38% 50%, hsl(var(--bezel-h) 80% 60% / 0.18), transparent 68%);
+  background: radial-gradient(
+    circle at 38% 50%,
+    hsl(var(--bezel-h) 80% 60% / 0.18),
+    transparent 68%
+  );
 }
 
 .overlay-root[data-bezel='amber'] .notch,
@@ -290,7 +316,12 @@
 .overlay-root[data-bezel='amber'] .scan {
   position: absolute;
   inset: 0;
-  background: linear-gradient(105deg, transparent 40%, hsl(var(--bezel-h) 80% 80% / 0.08) 50%, transparent 60%);
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    hsl(var(--bezel-h) 80% 80% / 0.08) 50%,
+    transparent 60%
+  );
   background-size: 240% 100%;
   animation: sweep 6s ease-in-out infinite;
 }
@@ -299,7 +330,11 @@
   align-items: flex-end;
   padding: 8px 12px 14px;
   border-radius: 24px;
-  background: radial-gradient(ellipse at 50% 120%, hsl(var(--bezel-h) 40% 12% / 0.28), transparent 64%);
+  background: radial-gradient(
+    ellipse at 50% 120%,
+    hsl(var(--bezel-h) 40% 12% / 0.28),
+    transparent 64%
+  );
   border: none;
   box-shadow: none;
   backdrop-filter: none;
@@ -373,16 +408,33 @@
   background: hsl(var(--bezel-h) 70% 80% / 0.55);
 }
 
-.overlay-root[data-bezel='holo'] .notch.tl { top: 20px; left: 10px; }
-.overlay-root[data-bezel='holo'] .notch.tr { top: 20px; right: 10px; }
-.overlay-root[data-bezel='holo'] .notch.bl { bottom: 20px; left: 10px; }
-.overlay-root[data-bezel='holo'] .notch.br { bottom: 20px; right: 10px; }
+.overlay-root[data-bezel='holo'] .notch.tl {
+  top: 20px;
+  left: 10px;
+}
+.overlay-root[data-bezel='holo'] .notch.tr {
+  top: 20px;
+  right: 10px;
+}
+.overlay-root[data-bezel='holo'] .notch.bl {
+  bottom: 20px;
+  left: 10px;
+}
+.overlay-root[data-bezel='holo'] .notch.br {
+  bottom: 20px;
+  right: 10px;
+}
 
 .overlay-root[data-bezel='holo'] .scan {
   position: absolute;
   inset: 16px 0;
   border-radius: 10px;
-  background: linear-gradient(180deg, transparent 0%, hsl(var(--bezel-h) 80% 80% / 0.1) 46%, transparent 52%);
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    hsl(var(--bezel-h) 80% 80% / 0.1) 46%,
+    transparent 52%
+  );
   background-size: 100% 220%;
   animation: vscan 3.6s ease-in-out infinite;
 }
@@ -427,7 +479,11 @@
     #fff 98%,
     transparent 100%
   );
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2px),
+    #000 calc(100% - 1.5px)
+  );
   mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
 }
 
@@ -456,7 +512,11 @@
 }
 
 .overlay-root[data-core='comet'] .halo {
-  background: radial-gradient(circle, hsl(var(--core-h) var(--core-s) var(--core-l) / 0.32) 0%, transparent 68%);
+  background: radial-gradient(
+    circle,
+    hsl(var(--core-h) var(--core-s) var(--core-l) / 0.32) 0%,
+    transparent 68%
+  );
   animation: halo 2.6s ease-in-out infinite;
 }
 
@@ -477,7 +537,11 @@
     #fff 98%,
     transparent 100%
   );
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2px)
+  );
   mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
 }
 
@@ -510,7 +574,11 @@
     hsl(calc(var(--core-h) + 40) var(--core-s) var(--core-l)) 94%,
     transparent 100%
   );
-  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - 2.5px),
+    #000 calc(100% - 2px)
+  );
   mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
 }
 
@@ -529,7 +597,12 @@
 
 .overlay-root[data-core='comet'] .pulse {
   inset: 12px;
-  background: radial-gradient(circle at 50% 42%, #fff 0 16%, var(--core-accent) 42%, transparent 72%);
+  background: radial-gradient(
+    circle at 50% 42%,
+    #fff 0 16%,
+    var(--core-accent) 42%,
+    transparent 72%
+  );
   box-shadow: 0 0 14px hsl(var(--core-h) var(--core-s) var(--core-l) / 0.5);
   animation: throb 1.55s ease-in-out infinite;
 }
@@ -591,7 +664,11 @@
   position: absolute;
   inset: 3px;
   border-radius: 50%;
-  background: conic-gradient(from 0deg, transparent 0 78%, hsl(var(--core-h) var(--core-s) var(--core-l) / 0.55) 100%);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 78%,
+    hsl(var(--core-h) var(--core-s) var(--core-l) / 0.55) 100%
+  );
   -webkit-mask: radial-gradient(farthest-side, transparent 58%, #000 59%);
   mask: radial-gradient(farthest-side, transparent 58%, #000 59%);
 }
@@ -608,7 +685,11 @@
 }
 
 .overlay-root[data-core='breathe'] .halo {
-  background: radial-gradient(circle, hsl(var(--core-h) var(--core-s) var(--core-l) / 0.22) 0%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    hsl(var(--core-h) var(--core-s) var(--core-l) / 0.22) 0%,
+    transparent 70%
+  );
   animation: halo 2.8s ease-in-out infinite;
 }
 
@@ -725,7 +806,12 @@
 .overlay-root[data-wave='ribbon'] .spectrum i {
   width: 3.5px;
   border-radius: 99px 99px 1px 1px;
-  background: linear-gradient(180deg, var(--wave-accent) 0%, var(--wave-accent-2) 55%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    var(--wave-accent) 0%,
+    var(--wave-accent-2) 55%,
+    transparent 100%
+  );
   box-shadow: 0 0 8px hsl(var(--wave-h) var(--wave-s) var(--wave-l) / 0.3);
 }
 
@@ -825,4 +911,154 @@
     opacity: 1;
     transform: scale(1);
   }
+}
+
+/* Minimal HUD: solid contrast, small waveform, one action. Studio remains opt-in. */
+.overlay-root[data-skin='minimal'],
+.overlay-root[data-skin='frost'] {
+  --minimal-accent: hsl(var(--wave-h) var(--wave-s) var(--wave-l));
+  --minimal-ink: #f3f5f4;
+  --minimal-dim: #a7b2af;
+  --minimal-fill: rgba(19, 24, 25, 0.97);
+  --minimal-line: rgba(255, 255, 255, 0.12);
+  --minimal-button: rgba(255, 255, 255, 0.07);
+}
+.overlay-root[data-skin='frost'] {
+  --minimal-accent: hsl(var(--wave-h) var(--wave-s) min(var(--wave-l), 35%));
+  --minimal-ink: #20332e;
+  --minimal-dim: #5c6f67;
+  --minimal-fill: rgba(250, 252, 250, 0.97);
+  --minimal-line: rgba(24, 54, 39, 0.14);
+  --minimal-button: rgba(21, 54, 40, 0.05);
+}
+.overlay-root .minimal-hud {
+  width: 424px;
+  max-width: 100%;
+  height: 64px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 13px 11px 17px;
+  border-radius: 21px;
+  color: var(--minimal-ink);
+  background: var(--minimal-fill);
+  border: 1px solid var(--minimal-line);
+  box-shadow:
+    0 5px 10px #00000015,
+    inset 0 1px 0 #ffffff05;
+  font-family: 'Outfit Variable', Outfit, system-ui, sans-serif;
+}
+.overlay-root .minimal-hud[data-transcript='false'] {
+  width: 300px;
+  height: 48px;
+  border-radius: 24px;
+}
+.overlay-root .minimal-indicator {
+  width: 22px;
+  height: 25px;
+  color: var(--minimal-accent);
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+.overlay-root .minimal-indicator svg {
+  width: 21px;
+  height: 21px;
+}
+.overlay-root .minimal-copy {
+  flex: 1;
+  min-width: 0;
+}
+.overlay-root .minimal-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.overlay-root .minimal-label {
+  font-size: 12px;
+  line-height: 17px;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  white-space: nowrap;
+}
+.overlay-root .minimal-clock {
+  font-size: 10px;
+  color: var(--minimal-dim);
+  font-variant-numeric: tabular-nums;
+}
+.overlay-root .minimal-transcript {
+  color: var(--minimal-dim);
+  font-size: 11px;
+  line-height: 16px;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.overlay-root .minimal-wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 25px;
+  flex: none;
+  width: 50px;
+  justify-content: center;
+  color: var(--minimal-accent);
+}
+.overlay-root .minimal-wave i {
+  width: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.86;
+}
+.overlay-root .minimal-stop {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--minimal-line);
+  border-radius: 50%;
+  background: var(--minimal-button);
+  color: var(--minimal-ink);
+  cursor: pointer;
+  padding: 0;
+}
+.overlay-root .minimal-stop svg {
+  width: 20px;
+  height: 20px;
+}
+.overlay-root .minimal-stop:hover {
+  background: color-mix(in srgb, var(--minimal-accent) 15%, transparent);
+}
+.overlay-root .minimal-stop:focus-visible {
+  outline: 2px solid var(--minimal-accent);
+  outline-offset: 3px;
+}
+.overlay-root .minimal-indicator.processing svg {
+  animation: minimal-spin 1.8s linear infinite;
+}
+.overlay-root[data-status='error'] .minimal-indicator {
+  color: #eaa28e;
+}
+.overlay-root[data-skin='frost'][data-status='error'] .minimal-indicator {
+  color: #a23e2c;
+}
+@keyframes minimal-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .overlay-root .minimal-indicator.processing svg {
+    animation: none;
+  }
+}
+.overlay-root[data-skin='studio'] {
+  --core-accent: hsl(var(--core-h) var(--core-s) var(--core-l));
+  --wave-accent: hsl(var(--wave-h) var(--wave-s) var(--wave-l));
+  --wave-accent-2: hsl(calc(var(--wave-h) + 46) var(--wave-s) var(--wave-l));
+  --bezel-accent: hsl(var(--bezel-h) var(--bezel-s) var(--bezel-l));
+  --bezel-fill: hsl(var(--bezel-h) 18% 8% / var(--bezel-alpha));
 }
