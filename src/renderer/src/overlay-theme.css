@@ -1,0 +1,828 @@
+/*
+ * Overlay mixer — circle, waveform, and bezel as independent layers.
+ * Colors come from --core-*, --wave-*, --bezel-* (set by mixer.html).
+ */
+
+:root {
+  --hud-width: 520px;
+  --hud-height: 80px;
+  --hud-font: 'Outfit', Outfit, system-ui, sans-serif;
+  --core-h: 190;
+  --core-s: 85%;
+  --core-l: 72%;
+  --wave-h: 190;
+  --wave-s: 80%;
+  --wave-l: 68%;
+  --bezel-h: 190;
+  --bezel-s: 55%;
+  --bezel-l: 72%;
+  --bezel-alpha: 0.34;
+  --hud-ok: #7dffc4;
+  --hud-fault: #ff7ab6;
+  --hud-text: #eef6ff;
+  --hud-dim: rgba(220, 236, 255, 0.55);
+  --core-accent: hsl(var(--core-h) var(--core-s) var(--core-l));
+  --wave-accent: hsl(var(--wave-h) var(--wave-s) var(--wave-l));
+  --wave-accent-2: hsl(calc(var(--wave-h) + 46) var(--wave-s) var(--wave-l));
+  --bezel-accent: hsl(var(--bezel-h) var(--bezel-s) var(--bezel-l));
+  --bezel-fill: hsl(var(--bezel-h) 18% 8% / var(--bezel-alpha));
+  --core-size: 38px;
+}
+
+.overlay-root,
+.overlay-root .hud {
+  box-sizing: border-box;
+}
+
+.overlay-root {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font-family: var(--hud-font);
+  user-select: none;
+}
+
+.overlay-root .hud {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  overflow: hidden;
+  pointer-events: auto;
+}
+
+.overlay-root .hud::before {
+  pointer-events: none;
+}
+
+.overlay-root .core,
+.overlay-root .spectrum,
+.overlay-root .meta,
+.overlay-root .abort {
+  position: relative;
+  z-index: 1;
+}
+
+.overlay-root .notch,
+.overlay-root .rail,
+.overlay-root .scan {
+  pointer-events: none;
+  z-index: 0;
+}
+
+.overlay-root .core {
+  width: var(--core-size);
+  height: var(--core-size);
+  flex: none;
+}
+
+.overlay-root .halo,
+.overlay-root .ring,
+.overlay-root .pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.overlay-root .ring::before,
+.overlay-root .ring::after {
+  content: none;
+}
+
+.overlay-root .meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.overlay-root .row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.overlay-root .chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--core-accent);
+}
+
+.overlay-root .chip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--core-accent);
+  box-shadow: 0 0 8px var(--core-accent);
+  animation: live 1.2s ease-in-out infinite;
+}
+
+.overlay-root .clock {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--hud-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.overlay-root .partial {
+  margin-top: 2px;
+  color: var(--hud-text);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.overlay-root .abort {
+  appearance: none;
+  flex: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+  color: var(--hud-text);
+}
+
+.overlay-root .spectrum {
+  display: flex;
+  flex: none;
+}
+
+.overlay-root .spectrum i {
+  display: block;
+}
+
+.overlay-root[data-status='success'] .chip {
+  color: var(--hud-ok);
+}
+
+.overlay-root[data-status='success'] .chip::before {
+  background: var(--hud-ok);
+  box-shadow: 0 0 8px var(--hud-ok);
+  animation: none;
+}
+
+.overlay-root[data-status='error'] .chip {
+  color: var(--hud-fault);
+}
+
+.overlay-root[data-status='error'] .chip::before {
+  background: var(--hud-fault);
+  box-shadow: 0 0 8px var(--hud-fault);
+  animation: none;
+}
+
+/* —— Bezel —— */
+
+.overlay-root[data-bezel='glass'] .hud {
+  border-radius: 40px;
+  background:
+    linear-gradient(180deg, hsl(var(--bezel-h) 80% 70% / 0.1), transparent 48%),
+    var(--bezel-fill);
+  border: 1px solid hsl(var(--bezel-h) 70% 70% / 0.28);
+  box-shadow:
+    0 8px 18px hsl(var(--bezel-h) 20% 4% / 0.16),
+    0 0 16px hsl(var(--bezel-h) 80% 60% / 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(22px) saturate(1.2);
+}
+
+.overlay-root[data-bezel='glass'] .hud::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border-radius: 35px;
+  border: 1px solid hsl(var(--bezel-h) 70% 70% / 0.12);
+}
+
+.overlay-root[data-bezel='glass'] .notch {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--bezel-accent);
+  box-shadow: 0 0 8px var(--bezel-accent);
+  opacity: 0.4;
+}
+
+.overlay-root[data-bezel='glass'] .notch.tl { top: 11px; left: 16px; }
+.overlay-root[data-bezel='glass'] .notch.tr { top: 11px; right: 16px; }
+.overlay-root[data-bezel='glass'] .notch.bl { bottom: 11px; left: 16px; }
+.overlay-root[data-bezel='glass'] .notch.br { bottom: 11px; right: 16px; }
+
+.overlay-root[data-bezel='glass'] .rail {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 7px;
+  height: 1px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, transparent, var(--bezel-accent), var(--wave-accent-2), transparent);
+  opacity: 0.45;
+}
+
+.overlay-root[data-bezel='glass'] .scan {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(105deg, transparent 38%, hsl(var(--bezel-h) 80% 80% / 0.08) 50%, transparent 62%);
+  background-size: 220% 100%;
+  animation: sweep 3.2s ease-in-out infinite;
+}
+
+.overlay-root[data-bezel='glass'] .abort,
+.overlay-root[data-bezel='amber'] .abort,
+.overlay-root[data-bezel='holo'] .abort,
+.overlay-root[data-bezel='ghost'] .abort {
+  border: 1px solid hsl(var(--bezel-h) 70% 70% / 0.32);
+  background: hsl(var(--bezel-h) 70% 70% / 0.08);
+  padding: 7px 14px;
+  border-radius: 999px;
+}
+
+.overlay-root[data-bezel='amber'] .hud {
+  border-radius: 30px;
+  background:
+    radial-gradient(ellipse at 12% 50%, hsl(var(--bezel-h) 80% 60% / 0.16), transparent 48%),
+    linear-gradient(180deg, hsl(var(--bezel-h) 40% 18% / 0.2), var(--bezel-fill));
+  border: 1px solid hsl(var(--bezel-h) 70% 70% / 0.28);
+  box-shadow:
+    0 8px 18px hsl(var(--bezel-h) 20% 4% / 0.16),
+    inset 0 1px 0 rgba(255, 230, 210, 0.14);
+  backdrop-filter: blur(22px) saturate(1.15);
+}
+
+.overlay-root[data-bezel='amber'] .hud::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 86px;
+  background: radial-gradient(circle at 38% 50%, hsl(var(--bezel-h) 80% 60% / 0.18), transparent 68%);
+}
+
+.overlay-root[data-bezel='amber'] .notch,
+.overlay-root[data-bezel='ribbon'] .notch,
+.overlay-root[data-bezel='ghost'] .notch {
+  display: none;
+}
+
+.overlay-root[data-bezel='amber'] .rail {
+  position: absolute;
+  left: 90px;
+  right: 20px;
+  bottom: 8px;
+  height: 1px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--bezel-accent), var(--wave-accent-2), transparent);
+  opacity: 0.6;
+}
+
+.overlay-root[data-bezel='amber'] .scan {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 40%, hsl(var(--bezel-h) 80% 80% / 0.08) 50%, transparent 60%);
+  background-size: 240% 100%;
+  animation: sweep 6s ease-in-out infinite;
+}
+
+.overlay-root[data-bezel='ribbon'] .hud {
+  align-items: flex-end;
+  padding: 8px 12px 14px;
+  border-radius: 24px;
+  background: radial-gradient(ellipse at 50% 120%, hsl(var(--bezel-h) 40% 12% / 0.28), transparent 64%);
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.overlay-root[data-bezel='ribbon'] .hud::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 10px;
+  height: 3px;
+  border-radius: 99px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--bezel-accent),
+    hsl(calc(var(--bezel-h) + 40) 80% 70%),
+    var(--bezel-accent),
+    transparent
+  );
+  background-size: 220% 100%;
+  box-shadow: 0 0 12px hsl(var(--bezel-h) 80% 60% / 0.45);
+  animation: flow 2.8s linear infinite;
+}
+
+.overlay-root[data-bezel='ribbon'] .rail,
+.overlay-root[data-bezel='ribbon'] .scan,
+.overlay-root[data-bezel='holo'] .rail,
+.overlay-root[data-bezel='ghost'] .rail,
+.overlay-root[data-bezel='ghost'] .scan {
+  display: none;
+}
+
+.overlay-root[data-bezel='ribbon'] .core,
+.overlay-root[data-bezel='ribbon'] .spectrum,
+.overlay-root[data-bezel='ribbon'] .meta,
+.overlay-root[data-bezel='ribbon'] .abort {
+  margin-bottom: 8px;
+}
+
+.overlay-root[data-bezel='ribbon'] .abort {
+  border: none;
+  background: transparent;
+  padding: 4px 2px;
+  border-radius: 0;
+  box-shadow: 0 1px 0 var(--bezel-accent);
+}
+
+.overlay-root[data-bezel='holo'] .hud {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.overlay-root[data-bezel='holo'] .hud::before {
+  content: '';
+  position: absolute;
+  inset: 16px 0;
+  border-radius: 10px;
+  background: hsl(var(--bezel-h) 40% 90% / 0.06);
+  border: 1px solid hsl(var(--bezel-h) 70% 75% / 0.32);
+  box-shadow: 0 0 12px hsl(var(--bezel-h) 80% 60% / 0.1);
+}
+
+.overlay-root[data-bezel='holo'] .notch {
+  position: absolute;
+  width: 12px;
+  height: 1px;
+  background: hsl(var(--bezel-h) 70% 80% / 0.55);
+}
+
+.overlay-root[data-bezel='holo'] .notch.tl { top: 20px; left: 10px; }
+.overlay-root[data-bezel='holo'] .notch.tr { top: 20px; right: 10px; }
+.overlay-root[data-bezel='holo'] .notch.bl { bottom: 20px; left: 10px; }
+.overlay-root[data-bezel='holo'] .notch.br { bottom: 20px; right: 10px; }
+
+.overlay-root[data-bezel='holo'] .scan {
+  position: absolute;
+  inset: 16px 0;
+  border-radius: 10px;
+  background: linear-gradient(180deg, transparent 0%, hsl(var(--bezel-h) 80% 80% / 0.1) 46%, transparent 52%);
+  background-size: 100% 220%;
+  animation: vscan 3.6s ease-in-out infinite;
+}
+
+.overlay-root[data-bezel='holo'] .abort {
+  border-radius: 8px;
+}
+
+.overlay-root[data-bezel='ghost'] .hud {
+  border-radius: 18px;
+  background: hsl(var(--bezel-h) 20% 10% / 0.12);
+  border: 1px solid hsl(var(--bezel-h) 70% 75% / 0.26);
+  box-shadow: none;
+  backdrop-filter: blur(14px);
+}
+
+.overlay-root[data-bezel='ghost'] .hud::before {
+  content: none;
+}
+
+/* —— Circle —— */
+
+.overlay-root[data-core='iris'] .halo {
+  box-shadow: inset 0 0 0 1px hsl(var(--core-h) var(--core-s) var(--core-l) / 0.28);
+  animation: halo 3s ease-in-out infinite;
+}
+
+.overlay-root[data-core='iris'] .ring {
+  animation: spin 2.4s linear infinite;
+}
+
+.overlay-root[data-core='iris'] .ring::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 68%,
+    hsl(var(--core-h) var(--core-s) var(--core-l) / 0.15) 80%,
+    var(--core-accent) 93%,
+    #fff 98%,
+    transparent 100%
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1.5px));
+}
+
+.overlay-root[data-core='iris'] .ring::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px var(--core-accent);
+}
+
+.overlay-root[data-core='iris'] .ring.delay {
+  display: none;
+}
+
+.overlay-root[data-core='iris'] .pulse {
+  inset: 16px;
+  background: var(--core-accent);
+  box-shadow: 0 0 10px hsl(var(--core-h) var(--core-s) var(--core-l) / 0.55);
+  animation: throb 1.8s ease-in-out infinite;
+}
+
+.overlay-root[data-core='comet'] .halo {
+  background: radial-gradient(circle, hsl(var(--core-h) var(--core-s) var(--core-l) / 0.32) 0%, transparent 68%);
+  animation: halo 2.6s ease-in-out infinite;
+}
+
+.overlay-root[data-core='comet'] .ring {
+  animation: spin 2.1s linear infinite;
+}
+
+.overlay-root[data-core='comet'] .ring::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 62%,
+    hsl(var(--core-h) var(--core-s) var(--core-l) / 0.2) 78%,
+    var(--core-accent) 92%,
+    #fff 98%,
+    transparent 100%
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+}
+
+.overlay-root[data-core='comet'] .ring::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px var(--core-accent);
+}
+
+.overlay-root[data-core='comet'] .ring.delay {
+  animation: spin 3.2s linear infinite reverse;
+}
+
+.overlay-root[data-core='comet'] .ring.delay::before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 68%,
+    hsl(calc(var(--core-h) + 40) var(--core-s) var(--core-l) / 0.25) 82%,
+    hsl(calc(var(--core-h) + 40) var(--core-s) var(--core-l)) 94%,
+    transparent 100%
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+}
+
+.overlay-root[data-core='comet'] .ring.delay::after {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: hsl(calc(var(--core-h) + 40) var(--core-s) var(--core-l));
+  box-shadow: 0 0 7px hsl(calc(var(--core-h) + 40) var(--core-s) var(--core-l));
+}
+
+.overlay-root[data-core='comet'] .pulse {
+  inset: 12px;
+  background: radial-gradient(circle at 50% 42%, #fff 0 16%, var(--core-accent) 42%, transparent 72%);
+  box-shadow: 0 0 14px hsl(var(--core-h) var(--core-s) var(--core-l) / 0.5);
+  animation: throb 1.55s ease-in-out infinite;
+}
+
+.overlay-root[data-core='dual'] .halo {
+  box-shadow: inset 0 0 0 1px hsl(var(--core-h) var(--core-s) var(--core-l) / 0.2);
+}
+
+.overlay-root[data-core='dual'] .ring {
+  animation: spin 2.6s linear infinite;
+}
+
+.overlay-root[data-core='dual'] .ring::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: var(--core-accent);
+  box-shadow: 0 0 10px var(--core-accent);
+}
+
+.overlay-root[data-core='dual'] .ring.delay {
+  animation: spin 3.8s linear infinite reverse;
+}
+
+.overlay-root[data-core='dual'] .ring.delay::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: hsl(calc(var(--core-h) + 50) var(--core-s) var(--core-l));
+  box-shadow: 0 0 8px hsl(calc(var(--core-h) + 50) var(--core-s) var(--core-l));
+}
+
+.overlay-root[data-core='dual'] .pulse {
+  inset: 16px;
+  background: hsl(var(--core-h) var(--core-s) var(--core-l) / 0.35);
+  animation: throb 2.2s ease-in-out infinite;
+}
+
+.overlay-root[data-core='radar'] .halo {
+  box-shadow: inset 0 0 0 1px hsl(var(--core-h) var(--core-s) var(--core-l) / 0.3);
+}
+
+.overlay-root[data-core='radar'] .ring {
+  animation: spin 2.8s linear infinite;
+}
+
+.overlay-root[data-core='radar'] .ring::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0 78%, hsl(var(--core-h) var(--core-s) var(--core-l) / 0.55) 100%);
+  -webkit-mask: radial-gradient(farthest-side, transparent 58%, #000 59%);
+  mask: radial-gradient(farthest-side, transparent 58%, #000 59%);
+}
+
+.overlay-root[data-core='radar'] .ring.delay {
+  display: none;
+}
+
+.overlay-root[data-core='radar'] .pulse {
+  inset: 15px;
+  background: var(--core-accent);
+  box-shadow: 0 0 8px var(--core-accent);
+  animation: throb 1.6s ease-in-out infinite;
+}
+
+.overlay-root[data-core='breathe'] .halo {
+  background: radial-gradient(circle, hsl(var(--core-h) var(--core-s) var(--core-l) / 0.22) 0%, transparent 70%);
+  animation: halo 2.8s ease-in-out infinite;
+}
+
+.overlay-root[data-core='breathe'] .ring {
+  box-shadow: inset 0 0 0 1.5px hsl(var(--core-h) var(--core-s) var(--core-l) / 0.45);
+  animation: halo 2.8s ease-in-out 0.35s infinite;
+}
+
+.overlay-root[data-core='breathe'] .ring.delay {
+  inset: 7px;
+  box-shadow: inset 0 0 0 1px hsl(var(--core-h) var(--core-s) var(--core-l) / 0.28);
+  animation: halo 2.8s ease-in-out 0.7s infinite;
+}
+
+.overlay-root[data-core='breathe'] .pulse {
+  inset: 14px;
+  background: radial-gradient(circle, #fff 0 20%, var(--core-accent) 55%, transparent 72%);
+  box-shadow: 0 0 12px hsl(var(--core-h) var(--core-s) var(--core-l) / 0.4);
+  animation: throb 2s ease-in-out infinite;
+}
+
+.overlay-root[data-core='led'] .halo,
+.overlay-root[data-core='led'] .ring,
+.overlay-root[data-core='led'] .ring.delay {
+  display: none;
+}
+
+.overlay-root[data-core='led'] .pulse {
+  inset: 13px;
+  background: var(--core-accent);
+  box-shadow:
+    0 0 10px var(--core-accent),
+    0 0 18px hsl(var(--core-h) var(--core-s) var(--core-l) / 0.45);
+  animation: throb 1.4s ease-in-out infinite;
+}
+
+.overlay-root[data-status='listening'] .ring {
+  animation-duration: 1.7s;
+}
+
+.overlay-root[data-status='transcribing'] .ring,
+.overlay-root[data-status='inserting'] .ring {
+  animation-duration: 0.95s;
+}
+
+.overlay-root[data-status='success'] .pulse {
+  background: var(--hud-ok);
+  box-shadow: 0 0 10px var(--hud-ok);
+  animation: none;
+}
+
+.overlay-root[data-status='error'] .pulse {
+  background: var(--hud-fault);
+  box-shadow: 0 0 10px var(--hud-fault);
+  animation: none;
+}
+
+.overlay-root[data-status='success'] .ring,
+.overlay-root[data-status='error'] .ring {
+  animation: none;
+}
+
+/* —— Waveform —— */
+
+.overlay-root[data-wave='filaments'] .spectrum {
+  align-items: center;
+  height: 28px;
+  width: 128px;
+  gap: 2.5px;
+}
+
+.overlay-root[data-wave='filaments'] .spectrum i {
+  width: 2.5px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, var(--wave-accent-2), var(--wave-accent));
+  box-shadow: 0 0 8px hsl(var(--wave-h) var(--wave-s) var(--wave-l) / 0.4);
+}
+
+.overlay-root[data-wave='columns'] .spectrum {
+  align-items: center;
+  height: 28px;
+  width: 120px;
+  gap: 1.5px;
+}
+
+.overlay-root[data-wave='columns'] .spectrum i {
+  width: 4px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, var(--wave-accent), var(--wave-accent-2));
+  box-shadow: 0 0 8px hsl(var(--wave-h) var(--wave-s) var(--wave-l) / 0.32);
+}
+
+.overlay-root[data-wave='needles'] .spectrum {
+  align-items: flex-end;
+  height: 26px;
+  width: 132px;
+  gap: 3.5px;
+}
+
+.overlay-root[data-wave='needles'] .spectrum i {
+  width: 1.25px;
+  border-radius: 99px;
+  background: var(--wave-accent);
+  box-shadow: 0 0 6px hsl(var(--wave-h) var(--wave-s) var(--wave-l) / 0.5);
+}
+
+.overlay-root[data-wave='ribbon'] .spectrum {
+  align-items: flex-end;
+  height: 32px;
+  width: 168px;
+  gap: 2px;
+}
+
+.overlay-root[data-wave='ribbon'] .spectrum i {
+  width: 3.5px;
+  border-radius: 99px 99px 1px 1px;
+  background: linear-gradient(180deg, var(--wave-accent) 0%, var(--wave-accent-2) 55%, transparent 100%);
+  box-shadow: 0 0 8px hsl(var(--wave-h) var(--wave-s) var(--wave-l) / 0.3);
+}
+
+.overlay-root[data-wave='mirror'] .spectrum {
+  align-items: center;
+  height: 28px;
+  width: 128px;
+  gap: 2.5px;
+}
+
+.overlay-root[data-wave='mirror'] .spectrum i {
+  position: relative;
+  width: 2.5px;
+  border-radius: 99px;
+  background: linear-gradient(180deg, var(--wave-accent-2), var(--wave-accent));
+  box-shadow: 0 0 8px hsl(var(--wave-h) var(--wave-s) var(--wave-l) / 0.35);
+}
+
+.overlay-root[data-wave='mirror'] .spectrum i::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  height: 70%;
+  border-radius: inherit;
+  background: inherit;
+  opacity: 0.28;
+  transform: scaleY(-1);
+  transform-origin: top;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes throb {
+  0%,
+  100% {
+    transform: scale(0.86);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes halo {
+  0%,
+  100% {
+    transform: scale(0.94);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+@keyframes sweep {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -40% 0;
+  }
+}
+
+@keyframes vscan {
+  0% {
+    background-position: 0 -40%;
+  }
+  100% {
+    background-position: 0 140%;
+  }
+}
+
+@keyframes flow {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 220% 0;
+  }
+}
+
+@keyframes live {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

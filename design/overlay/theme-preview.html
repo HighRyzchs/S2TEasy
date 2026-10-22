@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>S2Teasy overlay — theme preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage" id="stage" data-status="listening">
+      <div class="hud">
+        <i class="notch tl"></i>
+        <i class="notch tr"></i>
+        <i class="notch bl"></i>
+        <i class="notch br"></i>
+        <div class="rail"></div>
+        <div class="scan"></div>
+        <div class="core" aria-hidden="true">
+          <span class="halo"></span>
+          <span class="ring"></span>
+          <span class="ring delay"></span>
+          <span class="pulse"></span>
+        </div>
+        <div class="spectrum" id="spectrum" aria-hidden="true"></div>
+        <div class="meta">
+          <div class="row">
+            <span class="chip" id="chip">Listening</span>
+            <span class="clock" id="clock">0:04</span>
+          </div>
+          <div class="partial" id="partial">Speak into any text field…</div>
+        </div>
+        <button type="button" class="abort" id="abort">Stop</button>
+      </div>
+    </div>
+    <script>
+      const ALLOWED = new Set([
+        'overlay-theme.css',
+        'neon-glass.css',
+        'soft-visor.css',
+        'holoplate.css',
+        'amber-drift.css',
+        'signal-ribbon.css',
+        'crimson-ink.css',
+        'ion-veil.css',
+        'ember-haze.css'
+      ])
+      const requested = new URLSearchParams(location.search).get('css') || 'overlay-theme.css'
+      const href = ALLOWED.has(requested) ? requested : 'overlay-theme.css'
+      const link = document.createElement('link')
+      link.rel = 'stylesheet'
+      link.href = './' + href
+      document.head.appendChild(link)
+
+      const stage = document.getElementById('stage')
+      const chip = document.getElementById('chip')
+      const clock = document.getElementById('clock')
+      const partial = document.getElementById('partial')
+      const abort = document.getElementById('abort')
+      const spectrum = document.getElementById('spectrum')
+
+      const bars = Array.from({ length: 28 }, () => {
+        const el = document.createElement('i')
+        spectrum.appendChild(el)
+        return { el, value: 0.12 }
+      })
+
+      function apply(state) {
+        stage.dataset.status = state.id
+        chip.textContent = state.chip
+        clock.textContent = state.clock
+        clock.hidden = !state.clock
+        partial.textContent = state.partial
+        abort.hidden = !state.abort
+      }
+
+      window.applyOverlayState = apply
+      window.addEventListener('message', (event) => {
+        const data = event.data
+        if (!data || data.type !== 'overlay-state' || !data.state) return
+        apply(data.state)
+      })
+
+      abort.addEventListener('click', (event) => {
+        event.preventDefault()
+        abort.textContent = 'Clicked'
+        setTimeout(() => {
+          abort.textContent = 'Stop'
+        }, 700)
+      })
+
+      let t = 0
+      function tick() {
+        t += 0.016
+        const status = stage.dataset.status
+        const speaking = status === 'listening'
+        bars.forEach((bar, i) => {
+          const envelope = Math.sin((i / 27) * Math.PI)
+          const swell = 0.5 + 0.5 * Math.sin(t * 1.2 + i * 0.2)
+          const target =
+            status === 'error'
+              ? 0.06
+              : status === 'success'
+                ? 0.1 + envelope * 0.08
+                : 0.1 + envelope * (speaking ? 0.22 + 0.38 * swell : 0.2 + 0.12 * swell)
+          bar.value += (target - bar.value) * 0.1
+          bar.el.style.height = `${Math.max(4, bar.value * 28)}px`
+        })
+        requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    </script>
+  </body>
+</html>

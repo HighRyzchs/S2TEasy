@@ -1,0 +1,41 @@
+{
+  "name": "s2teasy",
+  "version": "1.3.1",
+  "description": "Windows voice dictation via router.audio live streaming or OpenRouter batch STT.",
+  "main": "./out/main/index.js",
+  "author": "S2Teasy",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "dev": "electron-vite dev",
+    "preview": "electron-vite preview",
+    "build": "node scripts/generate-icon.mjs && electron-vite build",
+    "build:win": "npm run build && electron-builder --win portable nsis --x64 --publish never",
+    "build:win:portable": "npm run build && electron-builder --win portable --x64 --publish never",
+    "ui": "vite --config vite.renderer.config.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
+    "icons": "node scripts/generate-icon.mjs"
+  },
+  "optionalDependencies": {
+    "koffi": "^2.11.0",
+    "uiohook-napi": "^1.5.4"
+  },
+  "devDependencies": {
+    "@fontsource-variable/outfit": "^5.2.5",
+    "@types/node": "^22.13.10",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^35.1.0",
+    "electron-builder": "^26.0.12",
+    "electron-vite": "^3.1.0",
+    "jsdom": "^26.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.2",
+    "vitest": "^3.0.9"
+  }
+}

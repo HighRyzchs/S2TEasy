@@ -1,0 +1,573 @@
+/*
+ * S2Teasy overlay theme — Neon Glass
+ * Translucent cyan capsule. Comet core (not a jagged spinner).
+ *
+ * Drop this in as overlay-theme.css (or send the file back).
+ * Window: 520 × 80 content. Keep glow tight. Keep .abort as a button.
+ */
+
+:root {
+  --hud-width: 520px;
+  --hud-height: 80px;
+  --hud-radius: 40px;
+  --hud-pad: 10px 14px;
+  --hud-gap: 12px;
+  --hud-ink: rgba(8, 14, 24, 0.38);
+  --hud-border: rgba(124, 231, 255, 0.22);
+  --hud-cyan: #7ce7ff;
+  --hud-mag: #ff7ab6;
+  --hud-ok: #7dffc4;
+  --hud-text: #eef6ff;
+  --hud-dim: rgba(220, 236, 255, 0.55);
+  --hud-font: 'Outfit', Outfit, system-ui, sans-serif;
+  --spectrum-width: 128px;
+  --spectrum-height: 28px;
+  --bar-width: 2.5px;
+  --bar-gap: 2.5px;
+  --core-size: 40px;
+}
+
+.stage,
+.hud {
+  box-sizing: border-box;
+}
+
+.stage {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font-family: var(--hud-font);
+  user-select: none;
+}
+
+.hud {
+  position: relative;
+  width: var(--hud-width);
+  height: var(--hud-height);
+  display: flex;
+  align-items: center;
+  gap: var(--hud-gap);
+  padding: var(--hud-pad);
+  border-radius: var(--hud-radius);
+  background:
+    linear-gradient(180deg, rgba(124, 231, 255, 0.1), transparent 48%),
+    var(--hud-ink);
+  border: 1px solid var(--hud-border);
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.18),
+    0 0 16px color-mix(in srgb, var(--hud-cyan) 14%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(22px) saturate(1.2);
+  overflow: hidden;
+  animation: glass-breathe 4.2s ease-in-out infinite;
+}
+
+.hud::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  z-index: 0;
+  border-radius: 35px;
+  border: 1px solid rgba(124, 231, 255, 0.1);
+  pointer-events: none;
+}
+
+.core,
+.spectrum,
+.meta,
+.abort {
+  position: relative;
+  z-index: 1;
+}
+
+.stage[data-status='transcribing'] .hud,
+.stage[data-status='inserting'] .hud {
+  animation-duration: 2.4s;
+  border-color: color-mix(in srgb, var(--hud-mag) 42%, var(--hud-cyan));
+}
+
+.stage[data-status='success'] .hud {
+  border-color: rgba(125, 255, 196, 0.42);
+  animation: none;
+}
+
+.stage[data-status='error'] .hud {
+  border-color: rgba(255, 122, 182, 0.5);
+  animation: glass-fault 2.4s ease-in-out infinite;
+}
+
+.notch,
+.rail,
+.scan {
+  pointer-events: none;
+  z-index: 0;
+}
+
+.notch {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--hud-cyan);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--hud-cyan) 80%, transparent);
+  opacity: 0.4;
+  animation: glass-led 2.6s ease-in-out infinite;
+}
+
+.notch.tl {
+  top: 11px;
+  left: 16px;
+}
+
+.notch.tr {
+  top: 11px;
+  right: 16px;
+  animation-delay: 0.4s;
+}
+
+.notch.bl {
+  bottom: 11px;
+  left: 16px;
+  animation-delay: 0.8s;
+}
+
+.notch.br {
+  bottom: 11px;
+  right: 16px;
+  animation-delay: 1.2s;
+}
+
+.rail {
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 7px;
+  height: 1px;
+  border-radius: 99px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--hud-cyan) 70%, transparent),
+    color-mix(in srgb, var(--hud-mag) 70%, transparent),
+    transparent
+  );
+  background-size: 220% 100%;
+  opacity: 0.45;
+  animation: glass-flow 3.6s linear infinite;
+}
+
+.stage[data-status='inserting'] .rail {
+  opacity: 0.85;
+  animation-duration: 1.2s;
+}
+
+.scan {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    transparent 38%,
+    rgba(124, 231, 255, 0.08) 50%,
+    transparent 62%
+  );
+  background-size: 220% 100%;
+  animation: glass-sweep 3.2s ease-in-out infinite;
+}
+
+.stage[data-status='listening'] .scan {
+  animation-duration: 2.2s;
+}
+
+.stage[data-status='transcribing'] .scan,
+.stage[data-status='inserting'] .scan {
+  animation-duration: 1.35s;
+}
+
+.core {
+  position: relative;
+  width: var(--core-size);
+  height: var(--core-size);
+  flex: none;
+}
+
+.halo,
+.ring,
+.pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.halo {
+  border: none;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--hud-cyan) 32%, transparent) 0%,
+    transparent 68%
+  );
+  animation: rec-halo 2.6s ease-in-out infinite;
+}
+
+.ring {
+  inset: 0;
+  border: none;
+  background: none;
+  animation: rec-spin 2.1s linear infinite;
+}
+
+.ring::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 62%,
+    color-mix(in srgb, var(--hud-cyan) 18%, transparent) 78%,
+    var(--hud-cyan) 92%,
+    #fff 98%,
+    transparent 100%
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), #000 calc(100% - 2px));
+}
+
+.ring::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 8px var(--hud-cyan),
+    0 0 3px #fff;
+}
+
+.ring.delay {
+  animation-duration: 3.2s;
+  animation-direction: reverse;
+}
+
+.ring.delay::before {
+  inset: 8px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0 68%,
+    color-mix(in srgb, var(--hud-mag) 25%, transparent) 82%,
+    var(--hud-mag) 94%,
+    transparent 100%
+  );
+}
+
+.ring.delay::after {
+  top: 7px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  background: var(--hud-mag);
+  box-shadow: 0 0 7px var(--hud-mag);
+}
+
+.stage[data-status='listening'] .ring {
+  animation-duration: 1.65s;
+}
+
+.stage[data-status='transcribing'] .ring,
+.stage[data-status='inserting'] .ring {
+  animation-duration: 0.95s;
+}
+
+.stage[data-status='transcribing'] .ring.delay,
+.stage[data-status='inserting'] .ring.delay {
+  animation-duration: 1.35s;
+}
+
+.pulse {
+  inset: 12px;
+  background: radial-gradient(
+    circle at 50% 42%,
+    rgba(255, 255, 255, 0.92) 0 16%,
+    var(--hud-cyan) 40%,
+    transparent 72%
+  );
+  box-shadow: 0 0 14px color-mix(in srgb, var(--hud-cyan) 50%, transparent);
+  animation: rec-throb 1.55s ease-in-out infinite;
+}
+
+.stage[data-status='listening'] .pulse {
+  animation-duration: 1.25s;
+}
+
+.stage[data-status='transcribing'] .pulse,
+.stage[data-status='inserting'] .pulse {
+  animation-duration: 0.8s;
+}
+
+.stage[data-status='success'] .ring,
+.stage[data-status='error'] .ring {
+  animation: none;
+}
+
+.stage[data-status='success'] .ring::before {
+  background: conic-gradient(var(--hud-ok), var(--hud-ok));
+}
+
+.stage[data-status='success'] .ring::after,
+.stage[data-status='error'] .ring::after,
+.stage[data-status='success'] .ring.delay::after,
+.stage[data-status='error'] .ring.delay::after {
+  opacity: 0;
+}
+
+.stage[data-status='success'] .pulse {
+  background: radial-gradient(circle at 50% 42%, #fff 0 16%, var(--hud-ok) 42%, transparent 72%);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--hud-ok) 50%, transparent);
+  animation: none;
+}
+
+.stage[data-status='error'] .ring::before {
+  background: conic-gradient(var(--hud-mag), var(--hud-mag));
+}
+
+.stage[data-status='error'] .pulse {
+  background: radial-gradient(circle at 50% 42%, #fff 0 16%, var(--hud-mag) 42%, transparent 72%);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--hud-mag) 50%, transparent);
+  animation: none;
+}
+
+.spectrum {
+  display: flex;
+  align-items: center;
+  gap: var(--bar-gap);
+  height: var(--spectrum-height);
+  width: var(--spectrum-width);
+  flex: none;
+}
+
+.spectrum i {
+  display: block;
+  width: var(--bar-width);
+  border-radius: 99px;
+  background: linear-gradient(180deg, var(--hud-mag), var(--hud-cyan));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--hud-cyan) 36%, transparent);
+}
+
+.stage[data-status='listening'] .spectrum i {
+  box-shadow: 0 0 10px color-mix(in srgb, var(--hud-cyan) 55%, transparent);
+}
+
+.stage[data-status='success'] .spectrum i {
+  background: linear-gradient(180deg, var(--hud-ok), var(--hud-cyan));
+}
+
+.stage[data-status='error'] .spectrum i {
+  background: linear-gradient(180deg, var(--hud-mag), #ffb1d4);
+  box-shadow: none;
+}
+
+.meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--hud-cyan);
+}
+
+.chip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hud-cyan);
+  box-shadow: 0 0 8px var(--hud-cyan);
+  animation: glass-live 1.15s ease-in-out infinite;
+}
+
+.stage[data-status='transcribing'] .chip,
+.stage[data-status='inserting'] .chip {
+  color: color-mix(in srgb, var(--hud-mag) 35%, var(--hud-cyan));
+}
+
+.stage[data-status='success'] .chip {
+  color: var(--hud-ok);
+}
+
+.stage[data-status='success'] .chip::before {
+  background: var(--hud-ok);
+  box-shadow: 0 0 8px var(--hud-ok);
+  animation: none;
+}
+
+.stage[data-status='error'] .chip {
+  color: var(--hud-mag);
+}
+
+.stage[data-status='error'] .chip::before {
+  background: var(--hud-mag);
+  box-shadow: 0 0 8px var(--hud-mag);
+  animation: none;
+}
+
+.clock {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--hud-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.partial {
+  margin-top: 2px;
+  color: var(--hud-text);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.abort {
+  appearance: none;
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--hud-cyan) 28%, transparent);
+  background: color-mix(in srgb, var(--hud-cyan) 8%, transparent);
+  color: var(--hud-text);
+  padding: 7px 14px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.abort:hover {
+  background: color-mix(in srgb, var(--hud-mag) 16%, transparent);
+  border-color: color-mix(in srgb, var(--hud-mag) 45%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--hud-mag) 28%, transparent);
+}
+
+.abort:active {
+  transform: scale(0.97);
+}
+
+@keyframes rec-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes rec-throb {
+  0%,
+  100% {
+    transform: scale(0.86);
+    opacity: 0.72;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes rec-halo {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+}
+
+@keyframes glass-breathe {
+  0%,
+  100% {
+    box-shadow:
+      0 8px 18px rgba(0, 0, 0, 0.16),
+      0 0 12px color-mix(in srgb, var(--hud-cyan) 10%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  }
+  50% {
+    box-shadow:
+      0 8px 18px rgba(0, 0, 0, 0.16),
+      0 0 20px color-mix(in srgb, var(--hud-cyan) 22%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+}
+
+@keyframes glass-fault {
+  0%,
+  100% {
+    border-color: rgba(255, 122, 182, 0.32);
+  }
+  50% {
+    border-color: rgba(255, 122, 182, 0.7);
+  }
+}
+
+@keyframes glass-sweep {
+  0% {
+    background-position: 120% 0;
+  }
+  100% {
+    background-position: -40% 0;
+  }
+}
+
+@keyframes glass-flow {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 220% 0;
+  }
+}
+
+@keyframes glass-led {
+  0%,
+  100% {
+    opacity: 0.22;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+}
+
+@keyframes glass-live {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

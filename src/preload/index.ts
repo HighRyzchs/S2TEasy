@@ -1,0 +1,112 @@
+import { contextBridge, ipcRenderer } from 'electron'
+import { IPC } from '../shared/ipc'
+import type {
+  AppSettings,
+  AppState,
+  AudioLevelPayload,
+  HistoryItem,
+  OverlayState,
+  RecordingCommand,
+  RouterProvider,
+  UpdateStatus
+} from '../shared/types'
+import type { ModelOption } from '../shared/types'
+
+export type S2TApi = {
+  getState: () => Promise<AppState>
+  saveSettings: (patch: Partial<AppSettings>) => Promise<AppSettings>
+  deleteHistory: (id: string) => Promise<HistoryItem[]>
+  clearHistory: () => Promise<HistoryItem[]>
+  editHistory: (id: string, text: string) => Promise<HistoryItem[]>
+  recoverHistory: (id: string) => Promise<HistoryItem[]>
+  exportAudio: (id: string) => Promise<boolean>
+  testKey: (key: string) => Promise<{ ok: boolean; message: string }>
+  testRouterKey: (
+    key: string,
+    provider?: RouterProvider
+  ) => Promise<{ ok: boolean; message: string }>
+  fetchModels: (key: string) => Promise<ModelOption[]>
+  toggleDictation: () => Promise<void>
+  startPractice: (intendedText: string) => Promise<void>
+  stopRecording: () => Promise<void>
+  cancelRecording: () => Promise<void>
+  copyHistory: (text: string) => Promise<boolean>
+  insertHistory: (text: string) => Promise<void>
+  getUpdate: () => Promise<UpdateStatus>
+  checkUpdate: (download?: boolean) => Promise<UpdateStatus>
+  installUpdate: () => Promise<UpdateStatus>
+  sendLevel: (payload: AudioLevelPayload, sessionId?: number) => void
+  sendPcm: (bytes: Uint8Array, sessionId?: number) => void
+  sendUtterance: (wavBase64: string, durationMs: number, sessionId?: number) => void
+  sendFinished: (payload: {
+    leftoverBase64: string
+    fullBase64: string
+    durationMs: number
+    sessionId?: number
+  }) => void
+  sendRecordingError: (message: string, sessionId?: number) => void
+  onOverlay: (cb: (state: OverlayState) => void) => () => void
+  onCommand: (cb: (payload: RecordingCommand) => void) => () => void
+  onSettings: (cb: (settings: AppSettings) => void) => () => void
+  onHistory: (cb: (history: HistoryItem[]) => void) => () => void
+  onUpdate: (cb: (status: UpdateStatus) => void) => () => void
+}
+
+const api: S2TApi = {
+  getState: () => ipcRenderer.invoke(IPC.GET_STATE),
+  saveSettings: (patch) => ipcRenderer.invoke(IPC.SAVE_SETTINGS, patch),
+  deleteHistory: (id) => ipcRenderer.invoke(IPC.DELETE_HISTORY, id),
+  clearHistory: () => ipcRenderer.invoke(IPC.CLEAR_HISTORY),
+  editHistory: (id, text) => ipcRenderer.invoke(IPC.EDIT_HISTORY, id, text),
+  recoverHistory: (id) => ipcRenderer.invoke(IPC.RECOVER_HISTORY, id),
+  exportAudio: (id) => ipcRenderer.invoke(IPC.EXPORT_AUDIO, id),
+  testKey: (key) => ipcRenderer.invoke(IPC.TEST_KEY, key),
+  testRouterKey: (key, provider) => ipcRenderer.invoke(IPC.TEST_ROUTER_KEY, key, provider),
+  fetchModels: (key) => ipcRenderer.invoke(IPC.FETCH_MODELS, key),
+  toggleDictation: () => ipcRenderer.invoke(IPC.TOGGLE_DICTATION),
+  startPractice: (intendedText) => ipcRenderer.invoke(IPC.START_PRACTICE, intendedText),
+  stopRecording: () => ipcRenderer.invoke(IPC.STOP_RECORDING),
+  cancelRecording: () => ipcRenderer.invoke(IPC.CANCEL_RECORDING),
+  copyHistory: (text) => ipcRenderer.invoke(IPC.COPY_HISTORY, text),
+  insertHistory: (text) => ipcRenderer.invoke(IPC.INSERT_HISTORY, text),
+  getUpdate: () => ipcRenderer.invoke(IPC.GET_UPDATE),
+  checkUpdate: (download) => ipcRenderer.invoke(IPC.CHECK_UPDATE, download),
+  installUpdate: () => ipcRenderer.invoke(IPC.INSTALL_UPDATE),
+  sendLevel: (payload, sessionId) => ipcRenderer.send(IPC.AUDIO_LEVEL, { payload, sessionId }),
+  sendPcm: (bytes, sessionId) => {
+    const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+    ipcRenderer.send(IPC.AUDIO_PCM, { bytes: copy, sessionId })
+  },
+  sendUtterance: (wavBase64, durationMs, sessionId) =>
+    ipcRenderer.send(IPC.AUDIO_UTTERANCE, { wavBase64, durationMs, sessionId }),
+  sendFinished: (payload) => ipcRenderer.send(IPC.RECORDING_FINISHED, payload),
+  sendRecordingError: (message, sessionId) =>
+    ipcRenderer.send(IPC.RECORDING_ERROR, { message, sessionId }),
+  onOverlay: (cb) => {
+    const listener = (_event: unknown, state: OverlayState) => cb(state)
+    ipcRenderer.on(IPC.OVERLAY_CHANGED, listener)
+    return () => ipcRenderer.removeListener(IPC.OVERLAY_CHANGED, listener)
+  },
+  onCommand: (cb) => {
+    const listener = (_event: unknown, payload: RecordingCommand) => cb(payload)
+    ipcRenderer.on(IPC.COMMAND_RECORDING, listener)
+    return () => ipcRenderer.removeListener(IPC.COMMAND_RECORDING, listener)
+  },
+  onSettings: (cb) => {
+    const listener = (_event: unknown, settings: AppSettings) => cb(settings)
+    ipcRenderer.on(IPC.SETTINGS_CHANGED, listener)
+    return () => ipcRenderer.removeListener(IPC.SETTINGS_CHANGED, listener)
+  },
+  onHistory: (cb) => {
+    const listener = (_event: unknown, history: HistoryItem[]) => cb(history)
+    ipcRenderer.on(IPC.HISTORY_CHANGED, listener)
+    return () => ipcRenderer.removeListener(IPC.HISTORY_CHANGED, listener)
+  },
+  onUpdate: (cb) => {
+    const listener = (_event: unknown, status: UpdateStatus) => cb(status)
+    ipcRenderer.on(IPC.UPDATE_CHANGED, listener)
+    return () => ipcRenderer.removeListener(IPC.UPDATE_CHANGED, listener)
+  }
+}
+
+contextBridge.exposeInMainWorld('s2t', api)

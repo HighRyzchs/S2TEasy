@@ -1,0 +1,217 @@
+/*
+ * S2Teasy overlay theme — edit this file.
+ * Copy it back into the repo (or send it in chat) when you like a look.
+ *
+ * Window: 520 × 80 content. Keep glow tight. Keep .abort as a button.
+ */
+
+:root {
+  --hud-width: 520px;
+  --hud-height: 80px;
+  --hud-radius: 28px;
+  --hud-pad: 10px 14px;
+  --hud-gap: 12px;
+  --hud-ink: rgba(8, 10, 16, 0.88);
+  --hud-border: rgba(180, 210, 255, 0.16);
+  --hud-cyan: #7ce7ff;
+  --hud-mag: #ff7ab6;
+  --hud-ok: #7dffc4;
+  --hud-text: #eef6ff;
+  --hud-dim: rgba(220, 236, 255, 0.5);
+  --hud-font: 'Outfit', Outfit, system-ui, sans-serif;
+  --spectrum-width: 128px;
+  --spectrum-height: 28px;
+  --bar-width: 3px;
+  --bar-gap: 2px;
+  --core-size: 34px;
+}
+
+.stage {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font-family: var(--hud-font);
+  user-select: none;
+}
+
+.hud {
+  position: relative;
+  width: var(--hud-width);
+  height: var(--hud-height);
+  display: flex;
+  align-items: center;
+  gap: var(--hud-gap);
+  padding: var(--hud-pad);
+  border-radius: var(--hud-radius);
+  background: var(--hud-ink);
+  border: 1px solid var(--hud-border);
+  box-shadow:
+    0 14px 28px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  backdrop-filter: blur(18px);
+  overflow: hidden;
+}
+
+.stage[data-status='success'] .hud {
+  border-color: rgba(125, 255, 196, 0.28);
+}
+
+.stage[data-status='error'] .hud {
+  border-color: rgba(255, 122, 182, 0.4);
+}
+
+.notch,
+.rail,
+.scan {
+  display: none;
+}
+
+.core {
+  position: relative;
+  width: var(--core-size);
+  height: var(--core-size);
+  flex: none;
+}
+
+.halo,
+.ring,
+.pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.halo {
+  border: 1px solid color-mix(in srgb, var(--hud-cyan) 28%, transparent);
+}
+
+.ring {
+  inset: 5px;
+  border: 1.5px solid color-mix(in srgb, var(--hud-cyan) 70%, transparent);
+  border-right-color: transparent;
+  animation: hud-spin 6s linear infinite;
+}
+
+.ring.delay {
+  inset: 9px;
+  animation-duration: 9s;
+  animation-direction: reverse;
+  border-color: color-mix(in srgb, var(--hud-mag) 45%, transparent);
+  border-left-color: transparent;
+}
+
+.pulse {
+  inset: 12px;
+  background: radial-gradient(circle, #fff 0 34%, var(--hud-cyan) 62%, transparent 72%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--hud-cyan) 55%, transparent);
+  animation: hud-throb 2.2s ease-in-out infinite;
+}
+
+.stage[data-status='transcribing'] .pulse,
+.stage[data-status='inserting'] .pulse {
+  animation-duration: 1s;
+}
+
+.stage[data-status='success'] .pulse {
+  background: radial-gradient(circle, #fff 0 34%, var(--hud-ok) 62%, transparent 72%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--hud-ok) 50%, transparent);
+  animation: none;
+}
+
+.stage[data-status='error'] .pulse {
+  background: radial-gradient(circle, #fff 0 34%, var(--hud-mag) 62%, transparent 72%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--hud-mag) 50%, transparent);
+  animation: none;
+}
+
+.spectrum {
+  display: flex;
+  align-items: center;
+  gap: var(--bar-gap);
+  height: var(--spectrum-height);
+  width: var(--spectrum-width);
+  flex: none;
+}
+
+.spectrum i {
+  display: block;
+  width: var(--bar-width);
+  border-radius: 99px;
+  background: linear-gradient(180deg, var(--hud-mag), var(--hud-cyan));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--hud-cyan) 30%, transparent);
+}
+
+.meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--hud-cyan);
+}
+
+.clock {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--hud-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.partial {
+  margin-top: 2px;
+  color: var(--hud-text);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.abort {
+  appearance: none;
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--hud-cyan) 32%, transparent);
+  background: color-mix(in srgb, var(--hud-cyan) 10%, transparent);
+  color: var(--hud-text);
+  padding: 7px 14px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.abort:hover {
+  background: color-mix(in srgb, var(--hud-mag) 16%, transparent);
+  border-color: color-mix(in srgb, var(--hud-mag) 45%, transparent);
+}
+
+@keyframes hud-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hud-throb {
+  0%,
+  100% {
+    transform: scale(0.9);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

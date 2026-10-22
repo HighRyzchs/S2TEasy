@@ -1,0 +1,539 @@
+/*
+ * S2Teasy overlay theme — Soft Visor
+ * Rounded device bezel, recessed glass, dual-tone rim. Smooth, not blocky.
+ *
+ * Drop this in as overlay-theme.css (or send the file back).
+ * Window: 520 × 80 content. Keep glow tight. Keep .abort as a button.
+ */
+
+:root {
+  --hud-width: 520px;
+  --hud-height: 80px;
+  --hud-radius: 36px;
+  --hud-pad: 10px 14px;
+  --hud-gap: 12px;
+  --hud-ink: rgba(8, 10, 16, 0.92);
+  --hud-border: rgba(180, 210, 255, 0.14);
+  --hud-cyan: #7ce7ff;
+  --hud-mag: #ff7ab6;
+  --hud-ok: #7dffc4;
+  --hud-text: #eef6ff;
+  --hud-dim: rgba(220, 236, 255, 0.5);
+  --hud-font: 'Outfit', Outfit, system-ui, sans-serif;
+  --spectrum-width: 128px;
+  --spectrum-height: 28px;
+  --bar-width: 3.5px;
+  --bar-gap: 2px;
+  --core-size: 34px;
+}
+
+.stage,
+.hud {
+  box-sizing: border-box;
+}
+
+.stage {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font-family: var(--hud-font);
+  user-select: none;
+}
+
+.hud {
+  position: relative;
+  width: var(--hud-width);
+  height: var(--hud-height);
+  display: flex;
+  align-items: center;
+  gap: var(--hud-gap);
+  padding: var(--hud-pad);
+  border-radius: var(--hud-radius);
+  border: 1px solid var(--hud-border);
+  background:
+    linear-gradient(
+      165deg,
+      rgba(72, 84, 110, 0.42) 0%,
+      rgba(14, 18, 28, 0.94) 36%,
+      rgba(7, 9, 14, 0.96) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -12px 18px rgba(0, 0, 0, 0.32),
+    inset 0 0 0 5px rgba(6, 8, 14, 0.38),
+    0 12px 26px rgba(0, 0, 0, 0.42),
+    -8px 0 18px color-mix(in srgb, var(--hud-cyan) 12%, transparent),
+    8px 0 18px color-mix(in srgb, var(--hud-mag) 10%, transparent);
+  backdrop-filter: blur(16px);
+  overflow: hidden;
+  animation: visor-breathe 5s ease-in-out infinite;
+}
+
+.hud::before {
+  content: '';
+  position: absolute;
+  inset: 6px;
+  z-index: 0;
+  border-radius: 30px;
+  border: 1px solid rgba(124, 231, 255, 0.1);
+  box-shadow: inset 0 0 12px rgba(124, 231, 255, 0.06);
+  pointer-events: none;
+}
+
+.core,
+.spectrum,
+.meta,
+.abort {
+  position: relative;
+  z-index: 1;
+}
+
+.stage[data-status='transcribing'] .hud,
+.stage[data-status='inserting'] .hud {
+  animation-duration: 2.8s;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -12px 18px rgba(0, 0, 0, 0.32),
+    inset 0 0 0 5px rgba(6, 8, 14, 0.38),
+    0 12px 26px rgba(0, 0, 0, 0.42),
+    -10px 0 22px color-mix(in srgb, var(--hud-cyan) 22%, transparent),
+    10px 0 22px color-mix(in srgb, var(--hud-mag) 20%, transparent);
+}
+
+.stage[data-status='success'] .hud {
+  border-color: rgba(125, 255, 196, 0.32);
+  animation: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -12px 18px rgba(0, 0, 0, 0.32),
+    inset 0 0 0 5px rgba(6, 8, 14, 0.38),
+    0 12px 26px rgba(0, 0, 0, 0.42),
+    0 0 18px color-mix(in srgb, var(--hud-ok) 18%, transparent);
+}
+
+.stage[data-status='error'] .hud {
+  border-color: rgba(255, 122, 182, 0.45);
+  animation: visor-fault 2.6s ease-in-out infinite;
+}
+
+.notch,
+.rail,
+.scan {
+  pointer-events: none;
+  z-index: 0;
+}
+
+.notch {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(230, 240, 255, 0.55);
+  box-shadow: 0 0 6px rgba(124, 231, 255, 0.35);
+}
+
+.notch.tl {
+  top: 13px;
+  left: 18px;
+}
+
+.notch.tr {
+  top: 13px;
+  right: 18px;
+}
+
+.notch.bl {
+  bottom: 13px;
+  left: 18px;
+  background: color-mix(in srgb, var(--hud-cyan) 70%, white);
+}
+
+.notch.br {
+  bottom: 13px;
+  right: 18px;
+  background: color-mix(in srgb, var(--hud-mag) 70%, white);
+}
+
+.rail {
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 8px;
+  height: 2px;
+  border-radius: 99px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--hud-cyan) 0%, transparent),
+    color-mix(in srgb, var(--hud-cyan) 80%, transparent) 22%,
+    color-mix(in srgb, var(--hud-mag) 80%, transparent) 78%,
+    transparent
+  );
+  opacity: 0.7;
+  filter: blur(0.2px);
+  animation: visor-lip 4.4s ease-in-out infinite;
+}
+
+.stage[data-status='listening'] .rail {
+  opacity: 0.9;
+  animation-duration: 2.6s;
+}
+
+.stage[data-status='inserting'] .rail {
+  animation-duration: 1.4s;
+  opacity: 1;
+}
+
+.scan {
+  position: absolute;
+  inset: 6px;
+  border-radius: 30px;
+  background: linear-gradient(
+    100deg,
+    transparent 42%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 58%
+  );
+  background-size: 240% 100%;
+  animation: visor-sheen 4.8s ease-in-out infinite;
+}
+
+.stage[data-status='listening'] .scan {
+  animation-duration: 2.8s;
+}
+
+.stage[data-status='transcribing'] .scan,
+.stage[data-status='inserting'] .scan {
+  animation-duration: 1.6s;
+  background: linear-gradient(
+    100deg,
+    transparent 42%,
+    rgba(124, 231, 255, 0.12) 50%,
+    transparent 58%
+  );
+  background-size: 240% 100%;
+}
+
+.core {
+  position: relative;
+  width: var(--core-size);
+  height: var(--core-size);
+  flex: none;
+}
+
+.halo,
+.ring,
+.pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.halo {
+  border: 1px solid color-mix(in srgb, var(--hud-cyan) 22%, transparent);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 10px color-mix(in srgb, var(--hud-cyan) 20%, transparent);
+  animation: visor-iris 3.2s ease-in-out infinite;
+}
+
+.ring {
+  inset: 5px;
+  border: 1.5px solid color-mix(in srgb, var(--hud-cyan) 72%, transparent);
+  border-right-color: transparent;
+  border-bottom-color: color-mix(in srgb, var(--hud-mag) 35%, transparent);
+  animation: visor-spin 6.4s linear infinite;
+}
+
+.ring.delay {
+  inset: 9px;
+  animation-duration: 9.5s;
+  animation-direction: reverse;
+  border-color: color-mix(in srgb, var(--hud-mag) 48%, transparent);
+  border-left-color: transparent;
+}
+
+.stage[data-status='transcribing'] .ring {
+  animation-duration: 2.6s;
+}
+
+.stage[data-status='transcribing'] .ring.delay {
+  animation-duration: 3.4s;
+}
+
+.stage[data-status='inserting'] .ring {
+  animation-duration: 1.9s;
+}
+
+.stage[data-status='inserting'] .ring.delay {
+  animation-duration: 2.6s;
+}
+
+.pulse {
+  inset: 12px;
+  background: radial-gradient(circle, #fff 0 30%, var(--hud-cyan) 58%, transparent 74%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--hud-cyan) 50%, transparent);
+  animation: visor-throb 2s ease-in-out infinite;
+}
+
+.stage[data-status='listening'] .pulse {
+  animation-duration: 1.5s;
+}
+
+.stage[data-status='transcribing'] .pulse,
+.stage[data-status='inserting'] .pulse {
+  animation-duration: 0.9s;
+}
+
+.stage[data-status='success'] .pulse {
+  background: radial-gradient(circle, #fff 0 30%, var(--hud-ok) 58%, transparent 74%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--hud-ok) 50%, transparent);
+  animation: none;
+}
+
+.stage[data-status='error'] .pulse {
+  background: radial-gradient(circle, #fff 0 30%, var(--hud-mag) 58%, transparent 74%);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--hud-mag) 50%, transparent);
+  animation: none;
+}
+
+.spectrum {
+  display: flex;
+  align-items: center;
+  gap: var(--bar-gap);
+  height: var(--spectrum-height);
+  width: var(--spectrum-width);
+  flex: none;
+}
+
+.spectrum i {
+  display: block;
+  width: var(--bar-width);
+  border-radius: 99px;
+  background: linear-gradient(180deg, var(--hud-cyan), color-mix(in srgb, var(--hud-mag) 55%, var(--hud-cyan)));
+  box-shadow: 0 0 7px color-mix(in srgb, var(--hud-cyan) 28%, transparent);
+}
+
+.stage[data-status='listening'] .spectrum i {
+  box-shadow: 0 0 11px color-mix(in srgb, var(--hud-cyan) 48%, transparent);
+}
+
+.stage[data-status='success'] .spectrum i {
+  background: linear-gradient(180deg, var(--hud-ok), var(--hud-cyan));
+}
+
+.stage[data-status='error'] .spectrum i {
+  background: linear-gradient(180deg, var(--hud-mag), #ffc0dc);
+  box-shadow: none;
+}
+
+.meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--hud-cyan);
+}
+
+.chip::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--hud-cyan);
+  box-shadow: 0 0 8px var(--hud-cyan);
+  animation: visor-live 1.2s ease-in-out infinite;
+}
+
+.stage[data-status='transcribing'] .chip,
+.stage[data-status='inserting'] .chip {
+  color: color-mix(in srgb, var(--hud-mag) 30%, var(--hud-cyan));
+}
+
+.stage[data-status='success'] .chip {
+  color: var(--hud-ok);
+}
+
+.stage[data-status='success'] .chip::before {
+  background: var(--hud-ok);
+  box-shadow: 0 0 8px var(--hud-ok);
+  animation: none;
+}
+
+.stage[data-status='error'] .chip {
+  color: var(--hud-mag);
+}
+
+.stage[data-status='error'] .chip::before {
+  background: var(--hud-mag);
+  box-shadow: 0 0 8px var(--hud-mag);
+  animation: none;
+}
+
+.clock {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--hud-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.partial {
+  margin-top: 2px;
+  color: var(--hud-text);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+.abort {
+  appearance: none;
+  flex: none;
+  border: 1px solid color-mix(in srgb, var(--hud-cyan) 36%, transparent);
+  background: color-mix(in srgb, var(--hud-cyan) 14%, rgba(8, 10, 16, 0.55));
+  color: var(--hud-text);
+  padding: 7px 14px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.abort:hover {
+  background: color-mix(in srgb, var(--hud-mag) 14%, transparent);
+  border-color: color-mix(in srgb, var(--hud-mag) 42%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 12px color-mix(in srgb, var(--hud-mag) 24%, transparent);
+}
+
+.abort:active {
+  transform: scale(0.97);
+}
+
+@keyframes visor-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes visor-throb {
+  0%,
+  100% {
+    transform: scale(0.9);
+    opacity: 0.78;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes visor-iris {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+@keyframes visor-breathe {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.2),
+      inset 0 -12px 18px rgba(0, 0, 0, 0.32),
+      inset 0 0 0 5px rgba(6, 8, 14, 0.38),
+      0 12px 26px rgba(0, 0, 0, 0.42),
+      -6px 0 14px color-mix(in srgb, var(--hud-cyan) 10%, transparent),
+      6px 0 14px color-mix(in srgb, var(--hud-mag) 8%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.26),
+      inset 0 -12px 18px rgba(0, 0, 0, 0.32),
+      inset 0 0 0 5px rgba(6, 8, 14, 0.38),
+      0 12px 26px rgba(0, 0, 0, 0.42),
+      -10px 0 22px color-mix(in srgb, var(--hud-cyan) 20%, transparent),
+      10px 0 22px color-mix(in srgb, var(--hud-mag) 16%, transparent);
+  }
+}
+
+@keyframes visor-fault {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 -12px 18px rgba(0, 0, 0, 0.32),
+      inset 0 0 0 5px rgba(6, 8, 14, 0.38),
+      0 12px 26px rgba(0, 0, 0, 0.42),
+      0 0 12px color-mix(in srgb, var(--hud-mag) 16%, transparent);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      inset 0 -12px 18px rgba(0, 0, 0, 0.32),
+      inset 0 0 0 5px rgba(6, 8, 14, 0.38),
+      0 12px 26px rgba(0, 0, 0, 0.42),
+      0 0 20px color-mix(in srgb, var(--hud-mag) 30%, transparent);
+  }
+}
+
+@keyframes visor-sheen {
+  0% {
+    background-position: 130% 0;
+  }
+  100% {
+    background-position: -50% 0;
+  }
+}
+
+@keyframes visor-lip {
+  0%,
+  100% {
+    opacity: 0.45;
+    filter: blur(0.2px) brightness(0.9);
+  }
+  50% {
+    opacity: 0.95;
+    filter: blur(0.2px) brightness(1.25);
+  }
+}
+
+@keyframes visor-live {
+  0%,
+  100% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

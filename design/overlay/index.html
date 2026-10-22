@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>S2Teasy overlay kit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./overlay-theme.css" />
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(ellipse at 50% 20%, rgba(124, 231, 255, 0.08), transparent 46%),
+          #07080c;
+        color: #d8e4f2;
+        font-family: Outfit, system-ui, sans-serif;
+      }
+      .desk {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 36px 24px 64px;
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 22px;
+        font-weight: 560;
+      }
+      .lede {
+        margin: 0 0 22px;
+        color: rgba(216, 228, 242, 0.62);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .lede code {
+        font-size: 12px;
+      }
+      .states {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 22px;
+      }
+      .states button {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.04);
+        color: inherit;
+        border-radius: 999px;
+        padding: 6px 12px;
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .states button.on {
+        border-color: rgba(124, 231, 255, 0.4);
+        color: #7ce7ff;
+      }
+      .frame {
+        height: 112px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px dashed rgba(255, 255, 255, 0.08);
+        border-radius: 20px;
+        background: rgba(0, 0, 0, 0.25);
+      }
+      .hint {
+        margin-top: 18px;
+        font-size: 13px;
+        color: rgba(216, 228, 242, 0.55);
+        line-height: 1.55;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="desk">
+      <h1>S2Teasy overlay kit</h1>
+      <p class="lede">
+        Edit <code>overlay-theme.css</code> and refresh. This frame is 520×80 — the real Windows
+        overlay size. Send that CSS file back when you like it. Details are in
+        <code>README.md</code>.
+      </p>
+      <div class="states" id="states"></div>
+      <div class="frame">
+        <div class="stage" id="stage" data-status="listening">
+          <div class="hud">
+            <i class="notch tl"></i>
+            <i class="notch tr"></i>
+            <i class="notch bl"></i>
+            <i class="notch br"></i>
+            <div class="rail"></div>
+            <div class="scan"></div>
+            <div class="core" aria-hidden="true">
+              <span class="halo"></span>
+              <span class="ring"></span>
+              <span class="ring delay"></span>
+              <span class="pulse"></span>
+            </div>
+            <div class="spectrum" id="spectrum" aria-hidden="true"></div>
+            <div class="meta">
+              <div class="row">
+                <span class="chip" id="chip">Listening</span>
+                <span class="clock" id="clock">0:04</span>
+              </div>
+              <div class="partial" id="partial">Speak into any text field…</div>
+            </div>
+            <button type="button" class="abort" id="abort">Stop</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">
+        Tokens at the top of the CSS are the fastest path (radius, colors, glow). Keep
+        <code>.abort</code> clickable and keep glow close to the bar — the real window is tiny.
+      </p>
+    </div>
+    <script>
+      const STATES = [
+        { id: 'listening', chip: 'Listening', clock: '0:04', partial: 'Speak into any text field…', abort: true },
+        { id: 'transcribing', chip: 'Syncing', clock: '0:12', partial: 'Hold on — finishing that phrase', abort: true },
+        { id: 'inserting', chip: 'Writing', clock: '0:13', partial: 'and drop it into the focused field', abort: true },
+        { id: 'success', chip: 'Inserted', clock: '', partial: 'Schedule a review Thursday afternoon.', abort: false },
+        { id: 'error', chip: 'Fault', clock: '', partial: 'Microphone permission denied', abort: false },
+        { id: 'arm-paste', chip: 'Click a field', clock: '', partial: 'Ready when you click a text box', abort: false }
+      ]
+
+      const stage = document.getElementById('stage')
+      const chip = document.getElementById('chip')
+      const clock = document.getElementById('clock')
+      const partial = document.getElementById('partial')
+      const abort = document.getElementById('abort')
+      const spectrum = document.getElementById('spectrum')
+      const nav = document.getElementById('states')
+
+      const bars = Array.from({ length: 28 }, () => {
+        const el = document.createElement('i')
+        spectrum.appendChild(el)
+        return { el, value: 0.12 }
+      })
+
+      function apply(state) {
+        stage.dataset.status = state.id
+        chip.textContent = state.chip
+        clock.textContent = state.clock
+        clock.hidden = !state.clock
+        partial.textContent = state.partial
+        abort.hidden = !state.abort
+        for (const button of nav.querySelectorAll('button')) {
+          button.classList.toggle('on', button.dataset.id === state.id)
+        }
+      }
+
+      for (const state of STATES) {
+        const button = document.createElement('button')
+        button.type = 'button'
+        button.dataset.id = state.id
+        button.textContent = state.chip
+        button.addEventListener('click', () => apply(state))
+        nav.appendChild(button)
+      }
+      apply(STATES[0])
+
+      abort.addEventListener('click', (event) => {
+        event.preventDefault()
+        abort.textContent = 'Clicked'
+        setTimeout(() => {
+          abort.textContent = 'Stop'
+        }, 700)
+      })
+
+      let t = 0
+      function tick() {
+        t += 0.016
+        const status = stage.dataset.status
+        const speaking = status === 'listening'
+        bars.forEach((bar, i) => {
+          const envelope = Math.sin((i / 27) * Math.PI)
+          const swell = 0.5 + 0.5 * Math.sin(t * 1.2 + i * 0.2)
+          const target =
+            status === 'error'
+              ? 0.06
+              : status === 'success'
+                ? 0.1 + envelope * 0.08
+                : 0.1 + envelope * (speaking ? 0.22 + 0.38 * swell : 0.2 + 0.12 * swell)
+          bar.value += (target - bar.value) * 0.1
+          bar.el.style.height = `${Math.max(4, bar.value * 28)}px`
+        })
+        requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    </script>
+  </body>
+</html>

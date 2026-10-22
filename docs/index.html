@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta
+      name="description"
+      content="S2Teasy is an open source Windows dictation app with live text, recoverable sessions, and a vocabulary you control."
+    />
+    <meta name="theme-color" content="#f4f7f2" />
+    <title>S2Teasy — Say it. Keep the thought.</title>
+    <link rel="icon" href="logo.svg" />
+    <link rel="stylesheet" href="site.css" />
+  </head>
+  <body>
+    <nav class="nav">
+      <a class="brand" href="#" aria-label="S2Teasy home"
+        ><img src="logo.svg" width="32" height="32" alt="" />S2Teasy</a
+      >
+      <div>
+        <a href="#features">The app</a><a href="#your-voice">Your voice</a
+        ><a href="https://github.com/HighRyzchs/S2TEasy">GitHub ↗</a>
+      </div>
+      <span class="nav-pill">OPEN SOURCE · MIT</span>
+    </nav>
+    <main>
+      <section class="hero">
+        <div class="announcement"><span></span>IN DEVELOPMENT · BUILT FOR WINDOWS</div>
+        <h1>Good ideas<br />shouldn't wait<br />for <em>your keyboard.</em></h1>
+        <p class="hero-description">
+          Speak naturally. Keep the thought.<br />Open source dictation that gives you control over
+          your words, your models, and your workspace.
+        </p>
+        <div class="hero-actions">
+          <a class="button" href="https://github.com/HighRyzchs/S2TEasy#development"
+            >Build from source <span>↗</span></a
+          ><a class="text-link" href="https://github.com/HighRyzchs/S2TEasy/releases"
+            >Browse releases →</a
+          >
+        </div>
+        <p class="fine-print">
+          Bring your own provider key or connect a local speech server.<br />No S2Teasy
+          subscription. Provider usage may cost money.
+        </p>
+        <div class="hero-visual" aria-hidden="true">
+          <div class="circle outer"></div>
+          <div class="circle inner"></div>
+          <div class="voice-symbol"><img src="logo.svg" alt="" width="96" height="96" /></div>
+          <span class="float-tag tag-one">A THOUGHT, CAPTURED.</span>
+          <div class="sample-hud">
+            <span class="listening-dot"></span>
+            <div>
+              <small>Listening · interface illustration</small>
+              <p>Let's make room for the next idea.</p>
+            </div>
+            <span class="hud-bars">▂▅▇▃▆▂</span>
+          </div>
+        </div>
+      </section>
+      <section class="principles">
+        <span>Made for your flow.</span><span>◈ Live phrases</span
+        ><span>↺ Recoverable sessions</span><span>Aa Your vocabulary</span
+        ><span>⌘ Your shortcuts</span>
+      </section>
+      <section class="app-preview"><span class="eyebrow">THE WORKSPACE</span><h2>A home for your words.</h2><img src="app-preview.png" width="1280" height="900" alt="S2Teasy development interface, showing the dictation dashboard, local history, and navigation."><p>Development interface preview with sample history. Native dictation requires the Windows desktop app.</p></section>
+<section id="features" class="features">
+        <div class="section-intro">
+          <span class="eyebrow">A CALMER WAY TO WORK</span>
+          <h2>A little less friction.<br />A lot more you.</h2>
+          <p>Dictation should stay out of the way, until you need it.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature wide">
+            <span class="feature-number">01 / STAY IN THE THOUGHT</span>
+            <h3>Your voice, already written.</h3>
+            <p>
+              Live streaming shows provisional words and inserts finalized phrases into the Windows
+              app you're using. Prefer to review a whole thought first? Insert when you stop.
+            </p>
+            <div class="phrase-demo">
+              <span>Speak freely.</span><span>Keep moving.</span
+              ><span class="cursor">Keep the thought.</span>
+            </div>
+          </article>
+          <article class="feature">
+            <span class="feature-number">02 / KEEP WHAT MATTERS</span>
+            <h3>A safety net for your words.</h3>
+            <p>
+              Text checkpoints happen before insertion. Temporary local audio lets you retry
+              interrupted takes. Clear statuses tell you what was saved and what needs attention.
+            </p>
+            <span class="feature-label">RECOVERY AUDIO · LOCAL & EXPIRING</span>
+          </article>
+          <article class="feature">
+            <span class="feature-number">03 / MAKE IT YOURS</span>
+            <h3>Your setup. Your space.</h3>
+            <p>
+              Light or dark. Toggle or hold. Mix your HUD's colors, waveform, and frame. Choose an
+              input device and tune your microphone settings.
+            </p>
+            <div class="theme-dots"><i></i><i></i><i></i><i></i></div>
+          </article>
+          <article class="feature wide model-feature">
+            <span class="feature-number">04 / CHOOSE YOUR ENGINE</span>
+            <h3>Bring the model you trust.</h3>
+            <p>
+              Choose router.audio streaming, an audio-capable OpenRouter model, or a local
+              OpenAI-compatible speech server you install yourself. Keep provider keys separate.
+            </p>
+            <div class="provider-tags">
+              <span>Live streaming</span><span>OpenRouter</span><span>Local speech</span>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section id="your-voice" class="voice-section">
+        <div>
+          <span class="eyebrow">YOUR WORDS MEAN SOMETHING</span>
+          <h2>A vocabulary<br />you can actually edit.</h2>
+          <p>
+            Names. Places. The expressions only your team uses. Add explicit corrections, see every
+            rule, and turn them off whenever you like.
+          </p>
+          <p>
+            Want to explore pronunciation learning? Opt in to local audio retention, record a
+            practice take without typing into other apps, and export the audio with its intended
+            text. You own those examples.
+          </p>
+          <p class="voice-disclosure">
+            Vocabulary corrections and prompt hints are implemented. Acoustic fine-tuning, automatic
+            accent learning, and word-level alignment are future work.
+          </p>
+          <a
+            class="text-link"
+            href="https://github.com/HighRyzchs/S2TEasy/blob/main/docs/ROADMAP.md"
+            >Read the honest roadmap →</a
+          >
+        </div>
+        <div class="vocabulary-demo">
+          <span class="demo-label">YOUR VOCABULARY · ILLUSTRATION</span>
+          <div><span>When it hears</span><span>Write instead</span></div>
+          <div><s>rosin</s><b>Roshan</b></div>
+          <div><s>super base</s><b>Supabase</b></div>
+          <div><s>notion a p i</s><b>Notion API</b></div>
+          <p>Explicit rules. No mysterious “learning.”</p>
+        </div>
+      </section>
+      <section class="privacy">
+        <span class="eyebrow">CLEAR ABOUT YOUR DATA</span>
+        <h2>Local history.<br />Explicit choices.</h2>
+        <div>
+          <p>
+            History and recovery files stay on your device. Cloud engines receive audio when you use
+            them. Local speech uses your configured local server.
+          </p>
+          <p>
+            Successful-take retention is opt-in. Recovery audio is on by default and expires. Audio
+            and transcripts are not encrypted by the app; API keys use OS encryption.
+          </p>
+          <a
+            class="text-link"
+            href="https://github.com/HighRyzchs/S2TEasy/blob/main/docs/PRIVACY.md"
+            >Read the privacy details →</a
+          >
+        </div>
+      </section>
+      <section class="contribute">
+        <span class="eyebrow">OPEN SOURCE, OPEN TO BETTER IDEAS</span>
+        <h2>Help make speaking<br />feel effortless.</h2>
+        <p>
+          Try a development build. Share a reproducible bug.<br />Improve the interface,
+          accessibility, or recognition evaluation.
+        </p>
+        <a class="button" href="https://github.com/HighRyzchs/S2TEasy/blob/main/CONTRIBUTING.md"
+          >Find your first contribution ↗</a
+        ><small
+          >Windows release validation and code signing are still pending.<br />There are no download
+          or accuracy claims hidden behind this page.</small
+        >
+      </section>
+    </main>
+    <footer>
+      <a class="brand" href="#"><img src="logo.svg" width="26" height="26" alt="" />S2Teasy</a
+      ><span>Room to think.</span
+      ><a href="https://github.com/HighRyzchs/S2TEasy/blob/main/LICENSE">MIT license</a
+      ><a href="https://github.com/HighRyzchs/S2TEasy">Source code ↗</a>
+    </footer>
+  </body>
+</html>

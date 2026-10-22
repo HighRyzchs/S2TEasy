@@ -1,0 +1,40 @@
+appId: com.s2teasy.app
+productName: S2Teasy
+copyright: Copyright © S2Teasy
+asar: true
+directories:
+  output: release
+  buildResources: resources
+files:
+  - out/**/*
+asarUnpack:
+  - node_modules/koffi/**
+  - node_modules/uiohook-napi/**
+extraMetadata:
+  main: out/main/index.js
+win:
+  icon: resources/icon.ico
+  target:
+    - target: portable
+      arch:
+        - x64
+    - target: nsis
+      arch:
+        - x64
+  artifactName: ${productName}-${version}-win-${arch}.${ext}
+nsis:
+  oneClick: true
+  perMachine: false
+  allowToChangeInstallationDirectory: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: S2Teasy
+  uninstallDisplayName: S2Teasy
+portable:
+  artifactName: S2Teasy-${version}-portable.exe
+publish:
+  provider: github
+  owner: roshan63
+  repo: S2Teasy
+  releaseType: release
+npmRebuild: true

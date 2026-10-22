@@ -1,0 +1,372 @@
+/*
+ * S2Teasy overlay theme — Crimson Ink
+ * Lacquer plate, graphite, one red accent. Tokyo signage, not neon candy.
+ *
+ * Drop this in as overlay-theme.css (or send the file back).
+ * Window: 520 × 80 content. Keep glow tight. Keep .abort as a button.
+ */
+
+:root {
+  --hud-width: 520px;
+  --hud-height: 80px;
+  --hud-radius: 16px;
+  --hud-pad: 10px 14px;
+  --hud-gap: 14px;
+  --hud-ink: rgba(10, 10, 12, 0.94);
+  --hud-border: rgba(255, 255, 255, 0.08);
+  --hud-cyan: #ff3b5c;
+  --hud-mag: #ff6b81;
+  --hud-ok: #7ee0b8;
+  --hud-text: #f4f4f6;
+  --hud-dim: rgba(220, 220, 228, 0.48);
+  --hud-font: 'Outfit', Outfit, system-ui, sans-serif;
+  --spectrum-width: 108px;
+  --spectrum-height: 22px;
+  --bar-width: 2px;
+  --bar-gap: 2px;
+  --core-size: 28px;
+}
+
+.stage,
+.hud {
+  box-sizing: border-box;
+}
+
+.stage {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font-family: var(--hud-font);
+  user-select: none;
+}
+
+.hud {
+  position: relative;
+  width: var(--hud-width);
+  height: var(--hud-height);
+  display: flex;
+  align-items: center;
+  gap: var(--hud-gap);
+  padding: var(--hud-pad);
+  border-radius: var(--hud-radius);
+  background: var(--hud-ink);
+  border: 1px solid var(--hud-border);
+  box-shadow:
+    0 10px 22px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.hud::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  z-index: 0;
+  background: var(--hud-cyan);
+  box-shadow: 0 0 10px rgba(255, 59, 92, 0.55);
+  animation: ink-pulse 2.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.core,
+.spectrum,
+.meta,
+.abort {
+  position: relative;
+  z-index: 1;
+}
+
+.stage[data-status='transcribing'] .hud::before,
+.stage[data-status='inserting'] .hud::before {
+  animation-duration: 0.9s;
+}
+
+.stage[data-status='success'] .hud::before {
+  background: var(--hud-ok);
+  box-shadow: 0 0 10px rgba(126, 224, 184, 0.45);
+  animation: none;
+}
+
+.stage[data-status='error'] .hud::before {
+  animation: ink-fault 1.6s ease-in-out infinite;
+}
+
+.notch {
+  display: none;
+}
+
+.rail {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 0;
+  height: 1px;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--hud-cyan), transparent 70%);
+  opacity: 0.7;
+  animation: ink-rail 3s linear infinite;
+}
+
+.scan {
+  display: none;
+}
+
+.core {
+  width: var(--core-size);
+  height: var(--core-size);
+  flex: none;
+  margin-left: 6px;
+}
+
+.halo,
+.ring,
+.pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.halo {
+  border: 1px solid rgba(255, 59, 92, 0.2);
+}
+
+.ring {
+  inset: 5px;
+  border: 1.5px solid rgba(255, 59, 92, 0.7);
+  border-right-color: transparent;
+  animation: ink-spin 5.5s linear infinite;
+}
+
+.ring.delay {
+  inset: 9px;
+  animation-duration: 8s;
+  animation-direction: reverse;
+  border-color: rgba(255, 255, 255, 0.18);
+  border-left-color: transparent;
+}
+
+.stage[data-status='transcribing'] .ring,
+.stage[data-status='inserting'] .ring {
+  animation-duration: 2s;
+}
+
+.pulse {
+  inset: 11px;
+  background: var(--hud-cyan);
+  box-shadow: 0 0 10px rgba(255, 59, 92, 0.55);
+  animation: ink-throb 1.8s ease-in-out infinite;
+}
+
+.stage[data-status='listening'] .pulse {
+  animation-duration: 1.2s;
+}
+
+.stage[data-status='transcribing'] .pulse,
+.stage[data-status='inserting'] .pulse {
+  animation-duration: 0.7s;
+}
+
+.stage[data-status='success'] .pulse {
+  background: var(--hud-ok);
+  box-shadow: 0 0 10px rgba(126, 224, 184, 0.5);
+  animation: none;
+}
+
+.stage[data-status='error'] .pulse {
+  background: var(--hud-mag);
+  animation: none;
+}
+
+.spectrum {
+  display: flex;
+  align-items: center;
+  gap: var(--bar-gap);
+  height: var(--spectrum-height);
+  width: var(--spectrum-width);
+  flex: none;
+}
+
+.spectrum i {
+  display: block;
+  width: var(--bar-width);
+  border-radius: 1px;
+  background: #ececf0;
+  opacity: 0.35;
+}
+
+.stage[data-status='listening'] .spectrum i {
+  background: var(--hud-cyan);
+  opacity: 0.9;
+  box-shadow: 0 0 6px rgba(255, 59, 92, 0.35);
+}
+
+.stage[data-status='transcribing'] .spectrum i,
+.stage[data-status='inserting'] .spectrum i {
+  background: #fff;
+  opacity: 0.7;
+}
+
+.stage[data-status='success'] .spectrum i {
+  background: var(--hud-ok);
+  opacity: 0.7;
+}
+
+.stage[data-status='error'] .spectrum i {
+  background: var(--hud-cyan);
+  opacity: 0.25;
+}
+
+.meta {
+  min-width: 0;
+  flex: 1;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--hud-cyan);
+}
+
+.chip::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--hud-cyan);
+  animation: ink-live 1.1s ease-in-out infinite;
+}
+
+.stage[data-status='success'] .chip {
+  color: var(--hud-ok);
+}
+
+.stage[data-status='success'] .chip::before {
+  background: var(--hud-ok);
+  animation: none;
+}
+
+.stage[data-status='error'] .chip::before {
+  animation: none;
+}
+
+.clock {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--hud-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.partial {
+  margin-top: 2px;
+  color: var(--hud-text);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 230px;
+}
+
+.abort {
+  appearance: none;
+  flex: none;
+  border: 1px solid rgba(255, 59, 92, 0.45);
+  background: transparent;
+  color: var(--hud-text);
+  padding: 6px 12px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.abort:hover {
+  background: var(--hud-cyan);
+  color: #14080c;
+}
+
+.abort:active {
+  transform: scale(0.97);
+}
+
+@keyframes ink-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ink-throb {
+  0%,
+  100% {
+    transform: scale(0.88);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes ink-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes ink-fault {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes ink-rail {
+  0% {
+    transform: translateX(-30%);
+    opacity: 0.2;
+  }
+  50% {
+    opacity: 0.85;
+  }
+  100% {
+    transform: translateX(30%);
+    opacity: 0.2;
+  }
+}
+
+@keyframes ink-live {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}

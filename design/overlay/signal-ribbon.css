@@ -1,0 +1,325 @@
+/*
+ * S2Teasy overlay theme — Signal Ribbon
+ * No chrome. The waveform is the HUD. Floating type + a ground-light.
+ *
+ * Drop this in as overlay-theme.css (or send the file back).
+ * Window: 520 × 80 content. Keep glow tight. Keep .abort as a button.
+ */
+
+:root {
+  --hud-width: 520px;
+  --hud-height: 80px;
+  --hud-radius: 24px;
+  --hud-pad: 8px 12px 14px;
+  --hud-gap: 10px;
+  --hud-ink: transparent;
+  --hud-border: transparent;
+  --hud-cyan: #8af0ff;
+  --hud-mag: #b38bff;
+  --hud-ok: #9dffc9;
+  --hud-text: #f4f1ff;
+  --hud-dim: rgba(210, 200, 255, 0.55);
+  --hud-font: 'Outfit', Outfit, system-ui, sans-serif;
+  --spectrum-width: 168px;
+  --spectrum-height: 32px;
+  --bar-width: 3.5px;
+  --bar-gap: 2px;
+  --core-size: 28px;
+}
+
+.stage,
+.hud {
+  box-sizing: border-box;
+}
+
+.stage {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  font-family: var(--hud-font);
+  user-select: none;
+}
+
+.hud {
+  position: relative;
+  width: var(--hud-width);
+  height: var(--hud-height);
+  display: flex;
+  align-items: flex-end;
+  gap: var(--hud-gap);
+  padding: var(--hud-pad);
+  border-radius: var(--hud-radius);
+  background: radial-gradient(ellipse at 50% 120%, rgba(40, 18, 70, 0.42), transparent 64%);
+  border: none;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.hud::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 10px;
+  height: 3px;
+  z-index: 0;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #7a5cff, #5ce1ff, #c77dff, #7a5cff);
+  background-size: 220% 100%;
+  box-shadow: 0 0 12px rgba(124, 140, 255, 0.45);
+  animation: ribbon-flow 2.8s linear infinite;
+  pointer-events: none;
+}
+
+.core,
+.spectrum,
+.meta,
+.abort {
+  position: relative;
+  z-index: 1;
+}
+
+.stage[data-status='listening'] .hud::before {
+  animation-duration: 1.6s;
+  box-shadow: 0 0 16px rgba(140, 230, 255, 0.6);
+}
+
+.stage[data-status='transcribing'] .hud::before,
+.stage[data-status='inserting'] .hud::before {
+  animation-duration: 1.1s;
+}
+
+.stage[data-status='success'] .hud::before {
+  background: linear-gradient(90deg, #7dffc4, #8af0ff, #7dffc4);
+  animation: none;
+}
+
+.stage[data-status='error'] .hud::before {
+  background: linear-gradient(90deg, #ff7ab6, #b38bff, #ff7ab6);
+  animation: ribbon-fault 1.8s ease-in-out infinite;
+}
+
+.notch {
+  display: none;
+}
+
+.rail {
+  display: none;
+}
+
+.scan {
+  display: none;
+}
+
+.core {
+  width: var(--core-size);
+  height: var(--core-size);
+  flex: none;
+  margin-bottom: 8px;
+}
+
+.halo,
+.ring,
+.pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.halo {
+  display: none;
+}
+
+.ring {
+  border: 1.5px solid color-mix(in srgb, var(--hud-cyan) 80%, transparent);
+  border-right-color: transparent;
+  animation: ribbon-spin 3.2s linear infinite;
+}
+
+.ring.delay {
+  inset: 4px;
+  animation-duration: 4.6s;
+  animation-direction: reverse;
+  border-color: color-mix(in srgb, var(--hud-mag) 70%, transparent);
+  border-left-color: transparent;
+}
+
+.stage[data-status='transcribing'] .ring,
+.stage[data-status='inserting'] .ring {
+  animation-duration: 1.4s;
+}
+
+.pulse {
+  inset: 5px;
+  background: var(--hud-cyan);
+  box-shadow: 0 0 10px var(--hud-cyan);
+  animation: ribbon-throb 1.4s ease-in-out infinite;
+}
+
+.stage[data-status='listening'] .pulse {
+  animation-duration: 0.9s;
+}
+
+.stage[data-status='success'] .pulse {
+  background: var(--hud-ok);
+  box-shadow: 0 0 10px var(--hud-ok);
+  animation: none;
+}
+
+.stage[data-status='error'] .pulse {
+  background: var(--hud-mag);
+  box-shadow: 0 0 10px var(--hud-mag);
+  animation: none;
+}
+
+.spectrum {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--bar-gap);
+  height: var(--spectrum-height);
+  width: var(--spectrum-width);
+  flex: none;
+  margin-bottom: 8px;
+}
+
+.spectrum i {
+  display: block;
+  width: var(--bar-width);
+  border-radius: 99px 99px 1px 1px;
+  background: linear-gradient(180deg, var(--hud-mag) 0%, var(--hud-cyan) 55%, transparent 100%);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--hud-cyan) 30%, transparent);
+}
+
+.stage[data-status='listening'] .spectrum i {
+  box-shadow: 0 0 14px color-mix(in srgb, var(--hud-cyan) 60%, transparent);
+}
+
+.stage[data-status='success'] .spectrum i {
+  background: linear-gradient(180deg, var(--hud-ok), var(--hud-cyan));
+}
+
+.stage[data-status='error'] .spectrum i {
+  background: linear-gradient(180deg, var(--hud-mag), #ffb0d8);
+  box-shadow: none;
+  filter: none;
+  opacity: 0.45;
+}
+
+.meta {
+  min-width: 0;
+  flex: 1;
+  margin-bottom: 10px;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--hud-mag);
+}
+
+.chip::before {
+  content: none;
+}
+
+.clock {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--hud-cyan);
+  font-variant-numeric: tabular-nums;
+}
+
+.partial {
+  margin-top: 1px;
+  color: var(--hud-text);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.abort {
+  appearance: none;
+  flex: none;
+  margin-bottom: 8px;
+  border: none;
+  background: transparent;
+  color: var(--hud-text);
+  padding: 4px 2px;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: inherit;
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--hud-cyan) 55%, transparent);
+  transition:
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.abort:hover {
+  color: var(--hud-mag);
+  box-shadow: 0 1px 0 var(--hud-mag);
+}
+
+.abort:active {
+  transform: translateY(1px);
+}
+
+.stage[data-status='success'] .chip {
+  color: var(--hud-ok);
+}
+
+.stage[data-status='error'] .chip {
+  color: var(--hud-mag);
+}
+
+@keyframes ribbon-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes ribbon-throb {
+  0%,
+  100% {
+    transform: scale(0.75);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes ribbon-flow {
+  0% {
+    background-position: 0 0;
+  }
+  100% {
+    background-position: 220% 0;
+  }
+}
+
+@keyframes ribbon-fault {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
