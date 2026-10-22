@@ -1,7 +1,7 @@
 {
   "name": "s2teasy",
   "version": "1.3.1",
-  "description": "Windows voice dictation via router.audio live streaming or OpenRouter batch STT.",
+  "description": "Open source Windows dictation with live text, recoverable sessions, and a vocabulary you control.",
   "main": "./out/main/index.js",
   "author": "S2Teasy",
   "license": "MIT",
@@ -37,5 +37,20 @@
     "typescript": "^5.8.2",
     "vite": "^6.2.2",
     "vitest": "^3.0.9"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/HighRyzchs/S2TEasy.git"
+  },
+  "homepage": "https://highryzchs.github.io/S2TEasy/",
+  "bugs": {
+    "url": "https://github.com/HighRyzchs/S2TEasy/issues"
+  },
+  "keywords": [
+    "dictation",
+    "speech-to-text",
+    "electron",
+    "windows",
+    "accessibility"
+  ]
 }

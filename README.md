@@ -14,7 +14,7 @@ An open source Windows dictation app with live text, recoverable sessions, and a
 [![Website](https://github.com/HighRyzchs/S2TEasy/actions/workflows/pages.yml/badge.svg)](https://github.com/HighRyzchs/S2TEasy/actions/workflows/pages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-a5e6ce.svg)](LICENSE)
 
-[Getting started](#getting-started) · [Development](#development) · [Privacy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md)
+[Project website](https://highryzchs.github.io/S2TEasy/) · [Getting started](#getting-started) · [Development](#development) · [Privacy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md)
 
 </div>
 
@@ -101,7 +101,7 @@ For pronunciation examples, open **Voice practice**, enter a short target phrase
 
 The Windows CI workflow runs tests/type checks and produces build artifacts. Tagged releases build the executables. The updater targets `HighRyzchs/S2TEasy`; automatic updates are off by default and refuse artifacts without a GitHub SHA-256 digest. Run the Windows checklist and arrange code signing before treating development builds as release-ready.
 
-`docs/index.html` is a standalone project website with no external dependencies. The **Publish project website** workflow deploys changes under `docs/` when they reach `main`, and also supports manual deployment. GitHub Pages uses **GitHub Actions** as its source.
+`docs/index.html` is a standalone project website with no external dependencies. The **Publish project website** workflow deploys changes under `docs/` when they reach `main`, and also supports manual deployment. GitHub Pages uses **GitHub Actions** as its source. See [Publishing](docs/PUBLISHING.md) for the website, Windows builds, and release checklist.
 
 ## License and attribution
 
