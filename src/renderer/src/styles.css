@@ -1450,3 +1450,21 @@ input[type='range'] {
 .asset-options select {
   margin: 0 8px;
 }
+
+.position-picker {
+  display: grid;
+  grid-template-columns: repeat(3, 46px);
+  gap: 6px;
+  margin: 16px 0;
+}
+.position-picker button {
+  height: 36px;
+  border-radius: 8px;
+  background: var(--ink-2);
+  color: var(--paper-dim);
+  border: 1px solid var(--line);
+}
+.position-picker .on {
+  background: #b2e9cf;
+  color: #102219;
+}

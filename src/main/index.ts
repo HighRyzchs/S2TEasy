@@ -1,10 +1,17 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, session } from 'electron'
+import { copyTranscript } from './inject'
+import { UsageStore } from './usage-store'
+import { app, BrowserWindow, dialog, ipcMain, session, protocol } from 'electron'
+import { randomUUID } from 'node:crypto'
+import type { WordTiming } from '../shared/word-timing'
+import { audioResponse } from './audio-response'
+import { wordExample } from './word-example'
 import { join } from 'node:path'
 import { writeFileSync } from 'node:fs'
 import { SessionJournal, pcmToWav } from './session-journal'
 import { applyVocabulary } from '../shared/vocabulary'
 import { joinUtterances } from '../shared/transcript'
 import { emptyOverlay, normalizeSettings } from '../shared/types'
+import { usageCsv } from '../shared/usage'
 import { transcribeAudio } from './openrouter'
 import { IPC } from '../shared/ipc'
 import type {
@@ -30,6 +37,13 @@ import {
   sizeOverlay
 } from './windows'
 
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 's2t-audio',
+    privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true }
+  }
+])
+
 let mainWindow: BrowserWindow | null = null
 let overlayWindow: BrowserWindow | null = null
 let recorderWindow: BrowserWindow | null = null
@@ -37,6 +51,7 @@ let quitting = false
 let store: Store
 let dictation: DictationController
 let updater: UpdateLauncher
+let usage: UsageStore
 let journal: SessionJournal
 let recoveryBusy = false
 let overlayState = emptyOverlay()
@@ -80,6 +95,7 @@ function broadcastUpdate(status: UpdateStatus): void {
 
 async function setup(): Promise<void> {
   store = new Store()
+  usage = new UsageStore(join(app.getPath('userData'), 'usage.json'))
   journal = new SessionJournal(join(app.getPath('userData'), 'sessions'))
   for (const item of journal.list(store.getSettings().audioRetentionDays)) store.addHistory(item)
   // Expire retained audio even when the app is left running for days.
@@ -117,6 +133,12 @@ async function setup(): Promise<void> {
     overlay: overlayWindow,
     journal,
     isRecovering: () => recoveryBusy,
+    onUsage: (row) => sendMain(IPC.USAGE_CHANGED, usage.record(row)),
+    onReview: (id) => {
+      mainWindow?.show()
+      mainWindow?.focus()
+      sendMain(IPC.OPEN_REVIEW, id)
+    },
     getSettings: () => store.getSettings(),
     onOverlay: overlayChanged,
     onHistoryItem: (item: HistoryItem) => {
@@ -139,7 +161,10 @@ async function setup(): Promise<void> {
     },
     placeOverlay: () => {
       if (overlayWindow && !overlayWindow.isDestroyed())
-        placeOverlay(overlayWindow, store.getSettings().overlayPosition)
+        placeOverlay(overlayWindow, store.getSettings().overlayPosition, {
+          x: store.getSettings().overlayOffsetX,
+          y: store.getSettings().overlayOffsetY
+        })
     }
   })
 
@@ -184,7 +209,8 @@ async function setup(): Promise<void> {
     history: store.getHistory(),
     version: app.getVersion(),
     update: updater.getStatus(),
-    overlay: overlayState
+    overlay: overlayState,
+    usage: usage.snapshot()
   }))
 
   ipcMain.handle(IPC.SAVE_SETTINGS, (_event, patch: Partial<AppSettings>) => {
@@ -227,6 +253,16 @@ async function setup(): Promise<void> {
     return history
   })
 
+  ipcMain.handle(IPC.EXPORT_USAGE, async () => {
+    const result = await dialog.showSaveDialog({
+      title: 'Export usage',
+      defaultPath: 'S2Teasy-usage.csv',
+      filters: [{ name: 'CSV', extensions: ['csv'] }]
+    })
+    if (result.canceled || !result.filePath) return false
+    writeFileSync(result.filePath, usageCsv(usage.snapshot().records), 'utf8')
+    return true
+  })
   ipcMain.handle(IPC.TEST_KEY, (_event, key: string) => testApiKey(key))
   ipcMain.handle(IPC.TEST_ROUTER_KEY, (_event, key: string, provider?: RouterProvider) =>
     testRouterAudioKey(key, provider ?? 'auto')
@@ -240,11 +276,11 @@ async function setup(): Promise<void> {
     dictation.toggle()
   })
   ipcMain.handle(IPC.START_PRACTICE, (_event, text: string) => dictation.startPractice(text))
+  ipcMain.handle(IPC.REVIEW_DICTATION, () => dictation.reviewCurrent())
   ipcMain.handle(IPC.STOP_RECORDING, () => dictation.stop())
   ipcMain.handle(IPC.CANCEL_RECORDING, () => dictation.cancel())
   ipcMain.handle(IPC.COPY_HISTORY, (_event, text: string) => {
-    clipboard.writeText(text)
-    return true
+    return copyTranscript(text)
   })
   ipcMain.handle(IPC.INSERT_HISTORY, (_event, text: string) => dictation.insertNow(text))
   ipcMain.handle(IPC.GET_UPDATE, () => updater.getStatus())
@@ -257,6 +293,33 @@ async function setup(): Promise<void> {
     return updater.install()
   })
 
+  protocol.handle('s2t-audio', (request) => {
+    const url = new URL(request.url)
+    const id = url.pathname.slice(1)
+    if (
+      url.hostname !== 'session' ||
+      !/^[a-zA-Z0-9-]{1,80}$/.test(id) ||
+      !store.getHistory().some((row) => row.id === id)
+    )
+      return new Response(null, { status: 404 })
+    try {
+      return audioResponse(pcmToWav(journal.readPcm(id)), request.headers.get('range'))
+    } catch {
+      return new Response(null, { status: 404 })
+    }
+  })
+  ipcMain.handle(IPC.WORD_EXAMPLE, (_event, id: string, index: number, intended: string) => {
+    if (dictation.isBusy() || recoveryBusy)
+      throw new Error('Finish recording before keeping a word example.')
+    const item = store.getHistory().find((row) => row.id === id)
+    if (!item || !journal.hasAudio(id)) throw new Error('Retained audio is unavailable.')
+    const example = wordExample(item, journal.readPcm(id), index, intended, randomUUID())
+    journal.append(example.item.id, example.pcm)
+    journal.save(example.item)
+    store.addHistory(example.item)
+    broadcastHistory()
+    return store.getHistory()
+  })
   ipcMain.handle(IPC.EDIT_HISTORY, (_event, id: string, text: string) => {
     if (dictation.isBusy() || recoveryBusy)
       throw new Error('Finish recording or recovery before editing history.')
@@ -284,6 +347,7 @@ async function setup(): Promise<void> {
     try {
       const audio = journal.readPcm(id)
       const parts: string[] = []
+      const words: WordTiming[] = []
       store.addHistory({ ...item, status: 'processing', error: undefined })
       broadcastHistory()
       // Bounded 15-second requests avoid the original full-recording timeout problem.
@@ -298,6 +362,20 @@ async function setup(): Promise<void> {
             language: settings.language,
             wavBase64: pcmToWav(audio.subarray(offset, offset + chunkBytes)).toString('base64'),
             route: settings.openrouterRoute,
+            requestWordTimings: settings.requestWordTimings,
+            onWords: (chunkWords) =>
+              words.push(
+                ...chunkWords.map((word) => ({
+                  ...word,
+                  startMs: word.startMs + offset / 32,
+                  endMs: word.endMs + offset / 32
+                }))
+              ),
+            onUsage: (row) =>
+              sendMain(
+                IPC.USAGE_CHANGED,
+                usage.record({ ...row, sessionId: id, source: 'recovery' })
+              ),
             vocabulary: settings.vocabulary.filter((row) => row.enabled).map((row) => row.meant)
           })
         )
@@ -313,6 +391,8 @@ async function setup(): Promise<void> {
         text:
           item.source === 'practice' ? item.text : applyVocabulary(rawText, settings.vocabulary),
         status: 'complete',
+        words,
+        unconfirmedText: undefined,
         error: undefined
       }
       journal.save(next)
@@ -374,22 +454,32 @@ async function setup(): Promise<void> {
     if (event.sender === recorderWindow?.webContents)
       dictation.onPcm(new Uint8Array(data.bytes), data.sessionId)
   })
-  ipcMain.on(IPC.AUDIO_UTTERANCE, (event, data: { wavBase64: string; sessionId: number }) => {
-    if (event.sender === recorderWindow?.webContents)
-      void dictation.onUtterance(data.wavBase64, data.sessionId)
-  })
+  ipcMain.on(
+    IPC.AUDIO_UTTERANCE,
+    (event, data: { wavBase64: string; sessionId: number; startMs?: number }) => {
+      if (event.sender === recorderWindow?.webContents)
+        void dictation.onUtterance(data.wavBase64, data.sessionId, data.startMs)
+    }
+  )
   ipcMain.on(
     IPC.RECORDING_FINISHED,
     (
       event,
-      data: { leftoverBase64: string; fullBase64: string; durationMs: number; sessionId: number }
+      data: {
+        leftoverBase64: string
+        fullBase64: string
+        durationMs: number
+        sessionId: number
+        leftoverStartMs?: number
+      }
     ) => {
       if (event.sender === recorderWindow?.webContents)
         void dictation.onFinished(
           data.leftoverBase64,
           data.fullBase64,
           data.durationMs,
-          data.sessionId
+          data.sessionId,
+          data.leftoverStartMs
         )
     }
   )

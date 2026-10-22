@@ -1,3 +1,5 @@
+import type { WordTiming } from '../shared/word-timing'
+import type { UsageRecord } from '../shared/usage'
 import { randomUUID } from 'node:crypto'
 import { startError } from '../shared/engine'
 import { joinUtterances, streamingAdvance, streamingPartial } from '../shared/transcript'
@@ -26,6 +28,8 @@ type Host = {
   placeOverlay: () => void
   journal: SessionJournal
   isRecovering?: () => boolean
+  onUsage?: (usage: UsageRecord) => void
+  onReview?: (id: string) => void
 }
 
 type Dependencies = {
@@ -44,6 +48,7 @@ export class DictationController {
   private state: OverlayState = emptyOverlay()
   private hideTimer: NodeJS.Timeout | null = null
   private watchdog: NodeJS.Timeout | null = null
+  private pasteAbort = new AbortController()
   private requestAbort: AbortController | null = null
   private lastLevelAt = 0
   private stream: RouterAudioClient | null = null
@@ -51,6 +56,8 @@ export class DictationController {
   private settings: AppSettings | null = null
   private failed = false
   private captureStarted = false
+  private streamUsageRecorded = false
+  private reviewRequested = false
   private practiceText: string | null = null
   private readonly dependencies: Dependencies
 
@@ -108,11 +115,14 @@ export class DictationController {
     this.clearWatchdog()
     this.requestAbort?.abort()
     this.requestAbort = new AbortController()
+    this.pasteAbort = new AbortController()
     const gen = ++this.generation
     this.busy = true
     this.recording = true
     this.failed = false
     this.captureStarted = false
+    this.reviewRequested = false
+    this.streamUsageRecorded = false
     this.settings = settings
     this.startedAt = Date.now()
     this.liveParts = []
@@ -138,6 +148,7 @@ export class DictationController {
       this.checkpoint()
       this.setState({
         ...emptyOverlay(),
+        sessionId: this.item.id,
         status: 'listening',
         message: settings.sttEngine === 'router-audio' ? 'Connecting' : 'Listening'
       })
@@ -155,7 +166,7 @@ export class DictationController {
           {
             onTranscript: (event) => {
               try {
-                this.onStreamTranscript(event.text, event.isPartial, gen)
+                this.onStreamTranscript(event.text, event.isPartial, gen, event.words)
               } catch (error) {
                 this.fail(errorMessage(error), gen)
               }
@@ -199,6 +210,8 @@ export class DictationController {
   }
 
   cancel(): void {
+    this.recordStreamUsage('cancelled')
+    this.pasteAbort.abort()
     ++this.generation
     this.recording = false
     this.busy = false
@@ -252,12 +265,12 @@ export class DictationController {
     }
   }
 
-  onUtterance(wavBase64: string, gen: number): Promise<void> {
+  onUtterance(wavBase64: string, gen: number, startMs = 0): Promise<void> {
     if (gen !== this.generation || this.settings?.sttEngine === 'router-audio')
       return Promise.resolve()
     // One ordered queue for network responses and insertion. A rejected paste never poisons future sessions.
     return this.enqueue(gen, async () => {
-      const text = await this.transcribe(wavBase64)
+      const text = await this.transcribe(wavBase64, gen, startMs)
       if (!this.valid(gen)) return
       await this.acceptFinal(text, gen)
     })
@@ -267,7 +280,8 @@ export class DictationController {
     leftoverBase64: string,
     _fullBase64: string,
     durationMs: number,
-    gen: number
+    gen: number,
+    leftoverStartMs = 0
   ): Promise<void> {
     if (!this.valid(gen)) return
     this.recording = false
@@ -285,19 +299,38 @@ export class DictationController {
       }
       if (!this.valid(gen)) return
       if (leftoverBase64 && this.settings?.sttEngine !== 'router-audio')
-        await this.onUtterance(leftoverBase64, gen)
+        await this.onUtterance(leftoverBase64, gen, leftoverStartMs)
       await this.workChain
       if (!this.valid(gen) || !this.item || !this.settings) return
+      if (this.item.unconfirmedText?.trim()) {
+        this.fail(
+          'The provider did not finalize the last words. Unconfirmed text and retained audio are kept in History for review.',
+          gen
+        )
+        return
+      }
       if (!this.item.text.trim()) {
         this.fail('No finalized speech received. Recover retained audio from History.', gen)
         return
       }
       // Persist before attempting any final insertion; focus/clipboard failures cannot erase text.
       this.checkpoint()
-      if (!this.practiceText && this.settings.insertMode === 'final')
-        await this.dependencies.injector.paste(this.item.text)
+      if (!this.practiceText && !this.reviewRequested && this.settings.insertMode === 'final') {
+        try {
+          await this.dependencies.injector.paste(this.item.text, this.pasteAbort.signal)
+        } catch (error) {
+          if (!(
+            this.reviewRequested &&
+            this.pasteAbort.signal.aborted &&
+            error instanceof Error &&
+            error.name === 'AbortError'
+          ))
+            throw error
+        }
+      }
       if (this.practiceText) this.item.text = this.practiceText
       if (!this.valid(gen)) return
+      this.recordStreamUsage('success')
       this.item.status = 'complete'
       this.item.error = undefined
       if (!this.settings.keepAudioForTraining) this.host.journal.removeAudio(this.item.id)
@@ -308,7 +341,11 @@ export class DictationController {
         ...this.state,
         status: 'success',
         partial: this.item.text,
-        message: this.practiceText ? 'Practice take saved' : 'Saved & inserted',
+        message: this.practiceText
+          ? 'Practice take saved'
+          : this.reviewRequested
+            ? 'Saved for review'
+            : 'Saved & inserted',
         elapsedMs: durationMs,
         rms: 0,
         bars: []
@@ -322,6 +359,7 @@ export class DictationController {
   async insertNow(text: string): Promise<void> {
     if (this.busy) throw new Error('Finish the current dictation before inserting from History.')
     this.busy = true
+    this.pasteAbort = new AbortController()
     const gen = ++this.generation
     this.clearHide()
     this.setState({
@@ -336,7 +374,7 @@ export class DictationController {
       await new Promise((resolve) => setTimeout(resolve, 1600))
       if (gen !== this.generation) return
       this.dependencies.injector.captureTarget()
-      await this.dependencies.injector.paste(text)
+      await this.dependencies.injector.paste(text, this.pasteAbort.signal)
       if (gen !== this.generation) return
       this.setState({ ...emptyOverlay(), status: 'success', partial: text, message: 'Inserted' })
       this.scheduleHide()
@@ -348,12 +386,46 @@ export class DictationController {
     }
   }
 
+  private recordStreamUsage(outcome: UsageRecord['outcome']): void {
+    if (this.settings?.sttEngine !== 'router-audio' || !this.item || this.streamUsageRecorded)
+      return
+    this.streamUsageRecorded = true
+    try {
+      this.host.onUsage?.({
+        id: `stream-${this.item.id}`,
+        operationId: this.item.id,
+        sessionId: this.item.id,
+        source: 'dictation',
+        createdAt: this.startedAt,
+        engine: 'router-audio',
+        model: this.item.model,
+        costUsd: null,
+        durationMs: this.item.durationMs,
+        latencyMs: Date.now() - this.startedAt,
+        attempt: 1,
+        outcome
+      })
+    } catch {
+      /* Usage must not erase speech. */
+    }
+  }
+
   private valid(gen: number): boolean {
     return gen === this.generation && this.busy && !this.failed
   }
 
-  private transcribe(wavBase64: string): Promise<string> {
+  reviewCurrent(): void {
+    if (!this.item) return
+    this.reviewRequested = true
+    this.pasteAbort.abort()
+    if (this.recording) this.stop()
+    this.host.overlay.hide()
+    this.host.onReview?.(this.item.id)
+  }
+
+  private transcribe(wavBase64: string, gen: number, startMs: number): Promise<string> {
     const settings = this.settings!
+    const sessionId = this.item!.id
     return this.dependencies.transcribe({
       apiKey: settings.apiKey,
       model: settings.sttEngine === 'local' ? settings.localModel : settings.model,
@@ -363,19 +435,48 @@ export class DictationController {
       localEndpoint: settings.localEndpoint,
       route: settings.openrouterRoute,
       signal: this.requestAbort?.signal,
+      requestWordTimings: settings.requestWordTimings,
+      onWords: (words) => {
+        if (this.valid(gen) && this.item)
+          this.item.words = [
+            ...(this.item.words ?? []),
+            ...words.map((word) => ({
+              ...word,
+              startMs: word.startMs + startMs,
+              endMs: word.endMs + startMs
+            }))
+          ].slice(-20_000)
+      },
+      onUsage: (usage) => this.host.onUsage?.({ ...usage, sessionId, source: 'dictation' }),
       vocabulary: settings.vocabulary.filter((row) => row.enabled).map((row) => row.meant)
     })
   }
 
-  private onStreamTranscript(text: string, partial: boolean, gen: number): void {
+  private onStreamTranscript(
+    text: string,
+    partial: boolean,
+    gen: number,
+    words?: WordTiming[]
+  ): void {
     if (!this.valid(gen)) return
     const committed = joinUtterances(this.liveParts)
     if (partial) {
+      if (this.item) {
+        this.item.unconfirmedText = streamingAdvance(
+          committed,
+          streamingPartial(committed, text)
+        ).delta
+        this.checkpoint()
+      }
       this.setState({
         ...this.state,
         partial: applyVocabulary(streamingPartial(committed, text), this.settings!.vocabulary)
       })
       return
+    }
+    if (this.item) {
+      this.item.unconfirmedText = undefined
+      if (words?.length) this.item.words = [...(this.item.words ?? []), ...words].slice(-20_000)
     }
     const { delta } = streamingAdvance(committed, text)
     // Update committed text synchronously; consecutive WebSocket finals must see the latest prefix.
@@ -383,9 +484,10 @@ export class DictationController {
       this.liveParts.push(delta)
       this.updateText()
       void this.enqueue(gen, async () => {
-        if (this.settings?.insertMode === 'live')
+        if (!this.reviewRequested && this.settings?.insertMode === 'live')
           await this.dependencies.injector.pasteBlock(
-            applyVocabulary(delta, this.settings.vocabulary)
+            applyVocabulary(delta, this.settings.vocabulary),
+            this.pasteAbort.signal
           )
       })
     }
@@ -395,8 +497,11 @@ export class DictationController {
     if (!text.trim() || !this.valid(gen)) return
     this.liveParts.push(text)
     this.updateText()
-    if (this.settings?.insertMode === 'live')
-      await this.dependencies.injector.pasteBlock(applyVocabulary(text, this.settings.vocabulary))
+    if (!this.reviewRequested && this.settings?.insertMode === 'live')
+      await this.dependencies.injector.pasteBlock(
+        applyVocabulary(text, this.settings.vocabulary),
+        this.pasteAbort.signal
+      )
   }
 
   private updateText(): void {
@@ -418,13 +523,23 @@ export class DictationController {
       .then(async () => {
         if (this.valid(gen)) await action()
       })
-      .catch((error: unknown) => this.fail(errorMessage(error), gen))
+      .catch((error: unknown) => {
+        if (
+          this.reviewRequested &&
+          this.pasteAbort.signal.aborted &&
+          error instanceof Error &&
+          error.name === 'AbortError'
+        )
+          return
+        this.fail(errorMessage(error), gen)
+      })
     return this.workChain
   }
 
   private checkpoint(): void {
     if (!this.item) return
-    this.item.durationMs = Math.max(this.item.durationMs, Date.now() - this.startedAt)
+    if (this.recording)
+      this.item.durationMs = Math.max(this.item.durationMs, Date.now() - this.startedAt)
     this.item.hasAudio = this.host.journal.hasAudio(this.item.id)
     this.host.journal.save(this.item)
     this.host.onHistoryItem({ ...this.item })
@@ -439,6 +554,8 @@ export class DictationController {
 
   private fail(message: string, gen: number): void {
     if (gen !== this.generation || this.failed) return
+    this.recordStreamUsage('error')
+    this.pasteAbort.abort()
     this.failed = true
     this.requestAbort?.abort()
     this.clearWatchdog()
@@ -463,7 +580,8 @@ export class DictationController {
   private showError(message: string): void {
     this.setState({ ...this.state, status: 'error', message, rms: 0, bars: [] })
     this.host.placeOverlay()
-    if (this.host.getSettings().showOverlay) this.host.overlay.showInactive()
+    if (!this.reviewRequested && this.host.getSettings().showOverlay)
+      this.host.overlay.showInactive()
     // The durable History entry owns recovery; the HUD must never trap the user.
     this.scheduleHide(8000)
   }

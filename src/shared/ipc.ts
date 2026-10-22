@@ -1,4 +1,9 @@
 export const IPC = {
+  OPEN_REVIEW: 's2t:open-review',
+  REVIEW_DICTATION: 's2t:review-dictation',
+  WORD_EXAMPLE: 's2t:word-example',
+  USAGE_CHANGED: 's2t:usage-changed',
+  EXPORT_USAGE: 's2t:export-usage',
   GET_STATE: 's2t:get-state',
   SAVE_SETTINGS: 's2t:save-settings',
   DELETE_HISTORY: 's2t:delete-history',

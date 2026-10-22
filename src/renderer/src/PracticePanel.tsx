@@ -2,17 +2,19 @@ import { useState } from 'react'
 import type { AppSettings, HistoryItem, OverlayState } from '@shared/types'
 
 export function PracticePanel({
+  initialTarget = '',
   settings,
   history,
   overlay,
   onHistory
 }: {
+  initialTarget?: string
   settings: AppSettings
   history: HistoryItem[]
   overlay: OverlayState
   onHistory: () => void
 }) {
-  const [target, setTarget] = useState('')
+  const [target, setTarget] = useState(initialTarget)
   const [consent, setConsent] = useState(false)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)

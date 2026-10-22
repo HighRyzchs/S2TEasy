@@ -27,7 +27,8 @@ window.s2t.onCommand((command) => {
           if (sessionId <= cancelledThrough) return
           active = new MicSession({
             onLevel: (level) => window.s2t.sendLevel(level, sessionId),
-            onUtterance: (wav, durationMs) => window.s2t.sendUtterance(wav, durationMs, sessionId),
+            onUtterance: (wav, durationMs, startMs) =>
+              window.s2t.sendUtterance(wav, durationMs, sessionId, startMs),
             onPcm: (bytes) => window.s2t.sendPcm(bytes, sessionId)
           })
           session = active

@@ -330,6 +330,24 @@ export function SettingsPanel({ settings, update, onChange, onUpdate }: Props) {
                   </select>
                 </Field>
               </div>
+              <Field label="Capture after Stop" id="capture-tail">
+                <select
+                  id="capture-tail"
+                  value={settings.captureTailMs}
+                  onChange={(e) => save({ captureTailMs: Number(e.target.value) })}
+                >
+                  <option value={0}>Off · immediate stop</option>
+                  <option value={300}>0.3 seconds</option>
+                  <option value={500}>0.5 seconds</option>
+                  <option value={600}>0.6 seconds · recommended</option>
+                  <option value={1000}>1 second</option>
+                  <option value={1500}>1.5 seconds</option>
+                </select>
+                <p className="hint">
+                  Keeps the microphone open briefly after Stop to catch the last word. Cancel always
+                  stops immediately.
+                </p>
+              </Field>
               <Field label="Language hint" id="language">
                 <select
                   id="language"
@@ -343,6 +361,12 @@ export function SettingsPanel({ settings, update, onChange, onUpdate }: Props) {
                   ))}
                 </select>
               </Field>
+              <Toggle
+                label="Request word timestamps"
+                hint="For compatible speech-to-text models. Enables timed playback for retained audio; unsupported models may reject this option. Off by default."
+                on={settings.requestWordTimings}
+                onClick={() => save({ requestWordTimings: !settings.requestWordTimings })}
+              />
               <Toggle
                 label="Launch at Windows startup"
                 on={settings.launchAtStartup}
@@ -464,6 +488,65 @@ export function SettingsPanel({ settings, update, onChange, onUpdate }: Props) {
                   <option value="center">Center</option>
                 </select>
               </Field>
+              <div className="position-picker" aria-label="HUD anchor position">
+                {(
+                  [
+                    'top-left',
+                    'top',
+                    'top-right',
+                    'left',
+                    'center',
+                    'right',
+                    'bottom-left',
+                    'bottom',
+                    'bottom-right'
+                  ] as const
+                ).map((position) => (
+                  <button
+                    key={position}
+                    className={settings.overlayPosition === position ? 'on' : ''}
+                    aria-label={`Place HUD ${position}`}
+                    aria-pressed={settings.overlayPosition === position}
+                    onClick={() => save({ overlayPosition: position })}
+                  >
+                    {settings.overlayPosition === position ? '●' : '·'}
+                  </button>
+                ))}
+              </div>
+              <div className="grid-2">
+                <Field id="hud-offset-x" label="Horizontal offset (screen pixels)">
+                  <input
+                    id="hud-offset-x"
+                    type="number"
+                    min={-4000}
+                    max={4000}
+                    value={settings.overlayOffsetX}
+                    onChange={(e) => save({ overlayOffsetX: Number(e.target.value) })}
+                  />
+                </Field>
+                <Field id="hud-offset-y" label="Vertical offset (screen pixels)">
+                  <input
+                    id="hud-offset-y"
+                    type="number"
+                    min={-4000}
+                    max={4000}
+                    value={settings.overlayOffsetY}
+                    onChange={(e) => save({ overlayOffsetY: Number(e.target.value) })}
+                  />
+                </Field>
+              </div>
+              <p className="hint">
+                Positive values move right or down. Placement stays inside the active display’s work
+                area. Applies to the next recording.
+              </p>
+              <button
+                className="ghost"
+                onClick={() =>
+                  save({ overlayPosition: 'bottom', overlayOffsetX: 0, overlayOffsetY: 0 })
+                }
+              >
+                Reset placement
+              </button>
             </section>
             <section className="block">
               <h3>HUD studio</h3>

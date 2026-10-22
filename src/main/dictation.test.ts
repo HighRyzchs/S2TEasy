@@ -225,7 +225,7 @@ describe('recoverable dictation sessions', () => {
     await t.controller.start()
     const next = t.controller.currentGeneration()
     await t.controller.onUtterance('normal-dictation', next)
-    expect(t.paste).toHaveBeenCalledWith('rosin')
+    expect(t.paste).toHaveBeenCalledWith('rosin', expect.any(AbortSignal))
     t.controller.cancel()
   })
 
@@ -305,4 +305,76 @@ describe('recoverable dictation sessions', () => {
     t.controller.recordingError('Failed', t.controller.currentGeneration())
     expect(t.host.overlay.showInactive).not.toHaveBeenCalled()
   })
+})
+
+it('finishes into review without inserting late text into the now-focused editor', async () => {
+  const t = setup()
+  const onReview = vi.fn()
+  Object.assign(t.host, { onReview })
+  await t.controller.start()
+  const gen = t.controller.currentGeneration()
+  t.controller.reviewCurrent()
+  await t.controller.onFinished('tail', '', 600, gen)
+  expect(onReview).toHaveBeenCalledWith(t.history[0].id)
+  expect(t.history[0]).toMatchObject({ text: 'hello', status: 'complete' })
+  expect(t.paste).not.toHaveBeenCalled()
+})
+
+it('retains unfinalized stream words and audio instead of deleting them on a seemingly successful stop', async () => {
+  const t = setup({ sttEngine: 'router-audio', routerAudioKey: 'stream-key' })
+  let handlers!: Parameters<RouterAudioClient['connect']>[1]
+  const onUsage = vi.fn()
+  Object.assign(t.host, { onUsage })
+  const client = {
+    connect: vi.fn(async (_options, callbacks) => {
+      handlers = callbacks
+    }),
+    sendPcm: vi.fn(),
+    close: vi.fn(),
+    finish: vi.fn().mockResolvedValue(undefined)
+  }
+  const controller = new DictationController(t.host, {
+    injector: { captureTarget: vi.fn(), paste: t.paste, pasteBlock: t.paste },
+    createStream: () => client as unknown as RouterAudioClient
+  })
+  await controller.start()
+  const gen = controller.currentGeneration()
+  controller.onPcm(new Uint8Array([1, 2, 3, 4]), gen)
+  handlers.onTranscript({ kind: 'transcript', text: 'hello', isPartial: false })
+  handlers.onTranscript({ kind: 'transcript', text: 'hello last words', isPartial: true })
+  controller.stop()
+  await controller.onFinished('', '', 1200, gen)
+  expect(t.history[0]).toMatchObject({
+    text: 'hello',
+    unconfirmedText: 'last words',
+    status: 'error',
+    hasAudio: true
+  })
+  expect(t.journal.list(7)[0].unconfirmedText).toBe('last words')
+  expect(onUsage).toHaveBeenCalledOnce()
+  expect(onUsage).toHaveBeenCalledWith(
+    expect.objectContaining({ costUsd: null, outcome: 'error', engine: 'router-audio' })
+  )
+  controller.cancel()
+  expect(onUsage).toHaveBeenCalledOnce()
+})
+
+it('completes successfully when Review aborts an insertion already in its pre-paste delay', async () => {
+  const t = setup({ insertMode: 'final' })
+  t.paste.mockImplementation(
+    (_text: string, signal: AbortSignal) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener(
+          'abort',
+          () => reject(new DOMException('Review requested', 'AbortError')),
+          { once: true }
+        )
+      })
+  )
+  await t.controller.start()
+  const finishing = t.controller.onFinished('final', '', 1000, t.controller.currentGeneration())
+  await vi.waitFor(() => expect(t.paste).toHaveBeenCalledOnce())
+  t.controller.reviewCurrent()
+  await finishing
+  expect(t.history[0]).toMatchObject({ status: 'complete', text: 'hello', error: undefined })
 })

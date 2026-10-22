@@ -8,20 +8,18 @@ export function HistoryPanel({
   onInsert,
   onDelete,
   onClear,
-  onEdit,
+  onReview,
   onRecover,
-  onExport,
-  onAddWord
+  onExport
 }: {
   grouped: GroupedHistory
   onCopy: (text: string) => void
   onInsert: (text: string) => void
   onDelete: (id: string) => void
   onClear: () => void
-  onEdit?: (id: string, text: string) => Promise<void>
+  onReview?: (id: string) => void
   onRecover?: (id: string) => Promise<void>
   onExport?: (id: string) => void
-  onAddWord?: (heard: string, meant: string) => Promise<void>
 }) {
   const [query, setQuery] = useState('')
   const [confirmClear, setConfirmClear] = useState(false)
@@ -107,10 +105,9 @@ export function HistoryPanel({
                   onCopy={() => onCopy(item.text)}
                   onInsert={() => onInsert(item.text)}
                   onDelete={() => onDelete(item.id)}
-                  onEdit={onEdit}
+                  onReview={onReview}
                   onRecover={onRecover}
                   onExport={onExport}
-                  onAddWord={onAddWord}
                 />
               ))}
             </section>
@@ -126,24 +123,18 @@ function HistoryCard({
   onCopy,
   onInsert,
   onDelete,
-  onEdit,
+  onReview,
   onRecover,
-  onExport,
-  onAddWord
+  onExport
 }: {
   item: HistoryItem
   onCopy: () => void
   onInsert: () => void
   onDelete: () => void
-  onEdit?: (id: string, text: string) => Promise<void>
+  onReview?: (id: string) => void
   onRecover?: (id: string) => Promise<void>
   onExport?: (id: string) => void
-  onAddWord?: (heard: string, meant: string) => Promise<void>
 }) {
-  const [editing, setEditing] = useState(false)
-  const [text, setText] = useState(item.text)
-  const [heard, setHeard] = useState('')
-  const [meant, setMeant] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -180,70 +171,14 @@ function HistoryCard({
                     : 'Saved'}
         </span>
       </div>
-      {editing ? (
-        <div className="transcript-editor">
-          <label htmlFor={`edit-${item.id}`}>Corrected transcript</label>
-          <textarea
-            id={`edit-${item.id}`}
-            rows={5}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-          />
-          <div className="inline">
-            <button
-              disabled={busy}
-              className="primary"
-              onClick={() =>
-                void run(async () => {
-                  await onEdit?.(item.id, text)
-                  setEditing(false)
-                })
-              }
-            >
-              Save correction
-            </button>
-            <button className="ghost" onClick={() => setEditing(false)}>
-              Cancel
-            </button>
-          </div>
-          <div className="correction-rule">
-            <p>Keep getting a name or phrase wrong? Add an explicit vocabulary rule.</p>
-            <div className="grid-2">
-              <input
-                aria-label="Heard phrase"
-                placeholder="Heard: rosin"
-                value={heard}
-                onChange={(e) => setHeard(e.target.value)}
-              />
-              <input
-                aria-label="Intended phrase"
-                placeholder="Meant: Roshan"
-                value={meant}
-                onChange={(e) => setMeant(e.target.value)}
-              />
-            </div>
-            <button
-              className="ghost"
-              disabled={busy || !heard.trim() || !meant.trim()}
-              onClick={() =>
-                void run(async () => {
-                  await onAddWord?.(heard, meant)
-                  setHeard('')
-                  setMeant('')
-                })
-              }
-            >
-              Remember this correction
-            </button>
-          </div>
-        </div>
-      ) : (
-        <p className={item.text ? '' : 'muted'}>
-          {item.text ||
-            (active
-              ? 'Listening for finalized speech…'
-              : 'No finalized text. Retained audio may still be recoverable.')}
-        </p>
+      <p className={item.text ? '' : 'muted'}>
+        {item.text ||
+          (active
+            ? 'Listening for finalized speech…'
+            : 'No finalized text. Review retained audio or unconfirmed words.')}
+      </p>
+      {item.unconfirmedText && (
+        <p className="notice">Unconfirmed final words: {item.unconfirmedText}</p>
       )}
       {item.source === 'practice' && (
         <div className="practice-feedback">
@@ -269,14 +204,8 @@ function HistoryCard({
           <button disabled={active || !item.text} onClick={onInsert}>
             Insert
           </button>
-          <button
-            disabled={active}
-            onClick={() => {
-              setText(item.text)
-              setEditing(!editing)
-            }}
-          >
-            Correct
+          <button disabled={active} onClick={() => onReview?.(item.id)}>
+            Review & correct
           </button>
           {item.hasAudio && (
             <>

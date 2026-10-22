@@ -931,7 +931,7 @@
   --minimal-button: rgba(21, 54, 40, 0.05);
 }
 .overlay-root .minimal-hud {
-  width: 464px;
+  width: 536px;
   max-width: 100%;
   position: relative;
   isolation: isolate;
@@ -950,10 +950,10 @@
   box-shadow:
     0 5px 10px #00000015,
     inset 0 1px 0 #ffffff05;
-  font-family: 'Outfit Variable', Outfit, system-ui, sans-serif;
+  font-family: var(--hud-font, 'Outfit Variable'), system-ui, sans-serif;
 }
 .overlay-root .minimal-hud[data-transcript='false'] {
-  width: 340px;
+  width: 412px;
   height: 48px;
   border-radius: 24px;
 }
@@ -1270,4 +1270,59 @@
 }
 .overlay-root[data-skin='pixel'] .minimal-indicator svg {
   shape-rendering: crispEdges;
+}
+
+.overlay-root .hud-tool {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border: 1px solid var(--minimal-line, #ffffff25);
+  border-radius: 9px;
+  background: var(--minimal-button, #ffffff09);
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  font: 18px system-ui;
+  -webkit-app-region: no-drag;
+}
+.overlay-root .hud-tool:disabled {
+  opacity: 0.28;
+  cursor: default;
+}
+.overlay-root .hud-tool:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+.overlay-root[data-orientation='vertical'] .minimal-actions {
+  display: grid;
+  grid-template-columns: repeat(2, 28px);
+  gap: 6px;
+}
+.overlay-root .studio-tools {
+  display: flex;
+  gap: 4px;
+  z-index: 5;
+}
+.overlay-root[data-skin='studio'] .hud {
+  width: 576px;
+}
+.overlay-root[data-skin='studio'] .partial {
+  font-family: var(--hud-font, system-ui);
+}
+.overlay-root[data-wave='needles'] .minimal-wave i {
+  width: 1px;
+}
+.overlay-root[data-wave='columns'] .minimal-wave i {
+  width: 5px;
+  border-radius: 1px;
+}
+.overlay-root[data-wave='filaments'] .minimal-wave i {
+  width: 2px;
+  opacity: 0.7;
+  box-shadow: 0 0 5px currentColor;
+}
+.overlay-root[data-wave='mirror'] .minimal-wave {
+  transform: scaleY(-1);
 }

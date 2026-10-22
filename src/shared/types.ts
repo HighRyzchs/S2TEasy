@@ -1,3 +1,5 @@
+import type { WordTiming } from './word-timing'
+import type { UsageState } from './usage'
 import { defaultOverlayTheme, normalizeOverlayTheme, type OverlayTheme } from './overlay-theme'
 import { normalizeVocabulary, type VocabularyEntry } from './vocabulary'
 
@@ -52,12 +54,14 @@ export type AppState = {
   history: HistoryItem[]
   version: string
   update: UpdateStatus
+  usage?: UsageState
   overlay?: OverlayState
 }
 
 export type AppSettings = {
   apiKey: string
   model: string
+  requestWordTimings: boolean
   openrouterRoute: OpenRouterRoute
   language: string
   hotkey: string
@@ -77,8 +81,11 @@ export type AppSettings = {
   voiceIsolation: boolean
   inputGain: number
   vadSensitivity: VadSensitivity
+  captureTailMs: number
   overlayTheme: OverlayTheme
   appearance: 'dark' | 'light' | 'system'
+  overlayOffsetX: number
+  overlayOffsetY: number
   overlayPosition: OverlayPosition
   localEndpoint: string
   localModel: string
@@ -97,6 +104,7 @@ export type CaptureConfig = {
   voiceIsolation: boolean
   inputGain: number
   vadSensitivity: VadSensitivity
+  captureTailMs: number
 }
 
 export type RecordingCommand = CaptureConfig & {
@@ -117,6 +125,8 @@ export type HistoryItem = {
   durationMs: number
   source: 'live' | 'final' | 'practice'
   practiceTarget?: string
+  words?: WordTiming[]
+  unconfirmedText?: string
   rawText?: string
   status?: 'recording' | 'processing' | 'complete' | 'interrupted' | 'error' | 'cancelled'
   error?: string
@@ -134,6 +144,7 @@ export type OverlayState = {
   elapsedMs: number
   bars: number[]
   mode?: 'dictation' | 'practice'
+  sessionId?: string
 }
 
 export type ModelOption = {
@@ -145,6 +156,7 @@ export type ModelOption = {
 export const defaultSettings = (): AppSettings => ({
   apiKey: '',
   model: 'google/gemini-2.5-flash',
+  requestWordTimings: false,
   openrouterRoute: 'auto',
   language: '',
   hotkey: 'Control+Shift+Space',
@@ -164,8 +176,11 @@ export const defaultSettings = (): AppSettings => ({
   voiceIsolation: false,
   inputGain: 1,
   vadSensitivity: 'medium',
+  captureTailMs: 600,
   overlayTheme: defaultOverlayTheme(),
   appearance: 'dark',
+  overlayOffsetX: 0,
+  overlayOffsetY: 0,
   overlayPosition: 'bottom',
   localEndpoint: 'http://127.0.0.1:8000/v1/audio/transcriptions',
   localModel: 'Systran/faster-whisper-small',
@@ -199,6 +214,10 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
     raw?.vadSensitivity === 'medium'
       ? raw.vadSensitivity
       : 'medium'
+  merged.requestWordTimings = raw?.requestWordTimings === true
+  merged.captureTailMs = Number.isFinite(raw?.captureTailMs)
+    ? Math.max(0, Math.min(1500, Math.round(raw!.captureTailMs! / 100) * 100))
+    : 600
   merged.inputGain = clampInputGain(merged.inputGain)
   merged.echoCancellation = raw?.echoCancellation !== false
   merged.noiseSuppression = raw?.noiseSuppression === true
@@ -208,6 +227,12 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
   merged.routerAudioKey = typeof merged.routerAudioKey === 'string' ? merged.routerAudioKey : ''
   merged.model =
     typeof merged.model === 'string' && merged.model.trim() ? merged.model : defaultSettings().model
+  merged.overlayOffsetX = Math.round(
+    Math.max(-4000, Math.min(4000, Number(raw?.overlayOffsetX) || 0))
+  )
+  merged.overlayOffsetY = Math.round(
+    Math.max(-4000, Math.min(4000, Number(raw?.overlayOffsetY) || 0))
+  )
   merged.overlayTheme = normalizeOverlayTheme(raw?.overlayTheme ?? merged.overlayTheme)
   merged.appearance =
     raw?.appearance === 'light' || raw?.appearance === 'system' ? raw.appearance : 'dark'
@@ -242,6 +267,7 @@ export function captureFromSettings(settings: AppSettings): CaptureConfig {
     autoGainControl: settings.autoGainControl,
     voiceIsolation: settings.voiceIsolation,
     inputGain: settings.inputGain,
+    captureTailMs: settings.captureTailMs,
     vadSensitivity: settings.vadSensitivity
   }
 }

@@ -44,36 +44,48 @@ const native = loadNative()
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+let clipboardRevision = 0
+export function copyTranscript(text: string): boolean {
+  clipboardRevision++
+  clipboard.writeText(text)
+  return true
+}
+
 export class TextInjector {
   private hwnd: unknown = null
+  constructor(private readonly bridge: NativeBridge | null = native) {}
 
   captureTarget(): void {
-    this.hwnd = native?.getForegroundWindow() ?? null
+    this.hwnd = this.bridge?.getForegroundWindow() ?? null
   }
 
-  async paste(text: string): Promise<void> {
+  async paste(text: string, signal?: AbortSignal): Promise<void> {
     if (!text) return
-    if (!native)
+    signal?.throwIfAborted()
+    if (!this.bridge)
       throw new Error(
         'Automatic typing requires Windows native input support. Your transcript is saved in History.'
       )
-    if (!this.hwnd || !native.setForegroundWindow(this.hwnd))
+    if (!this.hwnd || !this.bridge.setForegroundWindow(this.hwnd))
       throw new Error(
         'Could not restore the target window. Your transcript is saved in History; copy or insert it again.'
       )
+    const revision = clipboardRevision
     const previous = clipboard.readText()
     clipboard.writeText(text)
     try {
       await sleep(30)
-      native.sendCtrlV()
+      signal?.throwIfAborted()
+      this.bridge.sendCtrlV()
       await sleep(120)
     } finally {
       // Respect a clipboard change the user made while insertion was in progress.
-      if (clipboard.readText() === text) clipboard.writeText(previous)
+      if (revision === clipboardRevision && clipboard.readText() === text)
+        clipboard.writeText(previous)
     }
   }
 
-  async pasteBlock(text: string): Promise<void> {
-    await this.paste(withTrailingSpace(text))
+  async pasteBlock(text: string, signal?: AbortSignal): Promise<void> {
+    await this.paste(withTrailingSpace(text), signal)
   }
 }

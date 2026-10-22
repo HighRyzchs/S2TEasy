@@ -91,6 +91,10 @@ export function OverlayApp() {
       live={!preview}
       preview={preview}
       onStop={stopRecording}
+      onCopy={() => window.s2t.copyHistory(stateRef.current.partial)}
+      onReview={() => {
+        void window.s2t.reviewDictation()
+      }}
       onDismiss={() => {
         setState(emptyOverlay())
         void window.s2t.cancelRecording().catch(() => undefined)

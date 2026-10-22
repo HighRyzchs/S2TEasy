@@ -128,10 +128,14 @@ export function createRecorderWindow(): BrowserWindow {
   return window
 }
 
-export function placeOverlay(window: BrowserWindow, position: OverlayPosition = 'bottom'): void {
+export function placeOverlay(
+  window: BrowserWindow,
+  position: OverlayPosition = 'bottom',
+  offset = { x: 0, y: 0 }
+): void {
   if (window.isDestroyed()) return
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
-  const point = overlayCoordinates(display.workArea, window.getBounds(), position)
+  const point = overlayCoordinates(display.workArea, window.getBounds(), position, offset)
   window.setPosition(point.x, point.y)
   pinOverlayTopmost(window)
 }

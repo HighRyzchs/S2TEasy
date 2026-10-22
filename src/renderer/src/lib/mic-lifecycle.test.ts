@@ -89,3 +89,80 @@ describe('microphone lifecycle and volume', () => {
     await mic.stop()
   })
 })
+
+it('captures during the stop tail, drains the worklet and PCM, and releases the mic', async () => {
+  vi.useFakeTimers()
+  try {
+    const track = { stop: vi.fn() }
+    vi.stubGlobal('navigator', {
+      mediaDevices: { getUserMedia: async () => ({ getTracks: () => [track] }) }
+    })
+    const node = () => ({ connect: vi.fn(), disconnect: vi.fn(), gain: { value: 0 } })
+    const context = {
+      state: 'running',
+      sampleRate: 16000,
+      destination: {},
+      resume: async () => {},
+      close: vi.fn(async () => {}),
+      createMediaStreamSource: node,
+      createGain: node,
+      createAnalyser: node,
+      audioWorklet: { addModule: async () => {} }
+    }
+    vi.stubGlobal(
+      'AudioContext',
+      vi.fn(function () {
+        return context
+      })
+    )
+    let port: {
+      onmessage: ((event: { data: unknown }) => void) | null
+      postMessage: (data: unknown) => void
+      close: () => void
+    }
+    vi.stubGlobal(
+      'AudioWorkletNode',
+      vi.fn(function () {
+        port = {
+          onmessage: null,
+          close: vi.fn(),
+          postMessage: () => {
+            port.onmessage?.({ data: new Float32Array(800).fill(0.2) })
+            port.onmessage?.({ data: { type: 'flushed' } })
+          }
+        }
+        return { ...node(), port }
+      })
+    )
+    const pcm = vi.fn(),
+      mic = new MicSession({ onLevel: vi.fn(), onUtterance: vi.fn(), onPcm: pcm })
+    await mic.start({ ...config, engine: 'openrouter', captureTailMs: 600 })
+    const finishing = mic.finish()
+    await vi.advanceTimersByTimeAsync(500)
+    expect(track.stop).not.toHaveBeenCalled()
+    port!.onmessage?.({ data: new Float32Array(1600).fill(0.2) })
+    await vi.advanceTimersByTimeAsync(100)
+    const result = await finishing
+    expect(result.durationMs).toBe(150)
+    expect(result.leftoverBase64.length).toBeGreaterThan(100)
+    expect(pcm.mock.calls.reduce((n, [bytes]) => n + bytes.length, 0)).toBe(2400 * 2)
+    expect(track.stop).toHaveBeenCalledOnce()
+    expect(context.close).toHaveBeenCalledOnce()
+  } finally {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  }
+})
+it('cancels a pending tail immediately instead of waiting for the configured delay', async () => {
+  vi.useFakeTimers()
+  try {
+    const mic = new MicSession({ onLevel: vi.fn(), onUtterance: vi.fn() })
+    const finishing = mic.finish()
+    const rejected = expect(finishing).rejects.toMatchObject({ name: 'AbortError' })
+    await mic.stop()
+    await rejected
+    expect(vi.getTimerCount()).toBe(0)
+  } finally {
+    vi.useRealTimers()
+  }
+})

@@ -61,6 +61,18 @@ Successful-take retention for pronunciation examples is **off by default**. Turn
 
 History retains the newest 400 sessions. Older app-managed sessions and their audio are removed. Deleting a session deletes its app-managed retained audio. Exports are separate files you manage yourself. Audio and transcripts are not encrypted by the app; use OS disk encryption if needed. API keys require OS credential encryption; insecure plaintext fallback is refused. See [Privacy](docs/PRIVACY.md).
 
+## Review, customize, and track usage
+
+- **HUD:** Copy the current transcript or finish into the review editor. Settings → Appearance includes nine anchors, pixel offsets, horizontal/vertical layouts, fonts, colors, image assets, and five waveform styles. HUD studio exports/imports theme JSON and downloads a microphone SVG design source and guide. Export that design as PNG/WebP before uploading it.
+- **Corrections:** History → Review & correct suggests word/phrase replacements after saving. Choose which to remember in Vocabulary, or open Voice practice with the intended word filled in. Saving edits changes local History; copy corrections into an already-filled external app yourself.
+- **Playback:** Retained audio plays locally. Provider word timestamps enable word highlighting, seeking, and explicitly saving a labeled word clip to Voice practice. Enable the optional word-timing request for compatible STT models; untimed/older takes retain ordinary playback. This collects labeled examples and applies vocabulary rules; acoustic fine-tuning is not implemented.
+- **Usage & spend:** 7/30/90-day charts, model breakdowns, request counts, processed audio, and CSV export. Only provider-reported costs are counted. Missing costs remain unknown; this is not your provider invoice. Metrics start with this version and stay in a separate local log, without transcript text or audio.
+- **Speech tail:** Stop captures another 600 ms by default (configurable 0–1500 ms), flushes the capture worklet, and allows short trailing speech. Cancel still releases capture immediately. Unfinalized stream text remains available for review if the provider never commits it.
+
+### Test the updater
+
+Development builds **1.4.1 → 1.5.0** provide a real update test. Portable 1.4.0 has a launcher-path bug: first download and open [1.4.1](https://github.com/HighRyzchs/S2TEasy/releases/tag/v1.4.1) manually, keeping that EXE at its intended location. In that app, use Settings → Privacy & data → Check for updates, download 1.5.0, and restart. Installed 1.4.0 can use its existing updater. Confirm the version and your saved settings/history after restart. See [Windows testing](docs/WINDOWS_TESTING.md). Windows update execution still needs a real desktop test; Linux checks verify discovery, downloads, hashes, and helper generation.
+
 ## Development
 
 Use Node.js 22 LTS (the version used in CI) and npm. Node.js 24 was also used for validation in the cloud environment.

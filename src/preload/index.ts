@@ -1,3 +1,4 @@
+import type { UsageState } from '../shared/usage'
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipc'
 import type {
@@ -13,7 +14,12 @@ import type {
 import type { ModelOption } from '../shared/types'
 
 export type S2TApi = {
+  reviewDictation: () => Promise<void>
+  onReview: (cb: (id: string) => void) => () => void
+  saveWordExample: (id: string, index: number, intended: string) => Promise<HistoryItem[]>
   getState: () => Promise<AppState>
+  exportUsage: () => Promise<boolean>
+  onUsage: (cb: (usage: UsageState) => void) => () => void
   saveSettings: (patch: Partial<AppSettings>) => Promise<AppSettings>
   deleteHistory: (id: string) => Promise<HistoryItem[]>
   clearHistory: () => Promise<HistoryItem[]>
@@ -37,12 +43,18 @@ export type S2TApi = {
   installUpdate: () => Promise<UpdateStatus>
   sendLevel: (payload: AudioLevelPayload, sessionId?: number) => void
   sendPcm: (bytes: Uint8Array, sessionId?: number) => void
-  sendUtterance: (wavBase64: string, durationMs: number, sessionId?: number) => void
+  sendUtterance: (
+    wavBase64: string,
+    durationMs: number,
+    sessionId?: number,
+    startMs?: number
+  ) => void
   sendFinished: (payload: {
     leftoverBase64: string
     fullBase64: string
     durationMs: number
     sessionId?: number
+    leftoverStartMs?: number
   }) => void
   sendRecordingError: (message: string, sessionId?: number) => void
   onOverlay: (cb: (state: OverlayState) => void) => () => void
@@ -53,6 +65,20 @@ export type S2TApi = {
 }
 
 const api: S2TApi = {
+  reviewDictation: () => ipcRenderer.invoke(IPC.REVIEW_DICTATION),
+  saveWordExample: (id, index, intended) =>
+    ipcRenderer.invoke(IPC.WORD_EXAMPLE, id, index, intended),
+  onReview: (cb) => {
+    const listener = (_event: unknown, id: string) => cb(id)
+    ipcRenderer.on(IPC.OPEN_REVIEW, listener)
+    return () => ipcRenderer.removeListener(IPC.OPEN_REVIEW, listener)
+  },
+  exportUsage: () => ipcRenderer.invoke(IPC.EXPORT_USAGE),
+  onUsage: (cb) => {
+    const listener = (_event: unknown, usage: UsageState) => cb(usage)
+    ipcRenderer.on(IPC.USAGE_CHANGED, listener)
+    return () => ipcRenderer.removeListener(IPC.USAGE_CHANGED, listener)
+  },
   getState: () => ipcRenderer.invoke(IPC.GET_STATE),
   saveSettings: (patch) => ipcRenderer.invoke(IPC.SAVE_SETTINGS, patch),
   deleteHistory: (id) => ipcRenderer.invoke(IPC.DELETE_HISTORY, id),
@@ -77,8 +103,8 @@ const api: S2TApi = {
     const copy = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
     ipcRenderer.send(IPC.AUDIO_PCM, { bytes: copy, sessionId })
   },
-  sendUtterance: (wavBase64, durationMs, sessionId) =>
-    ipcRenderer.send(IPC.AUDIO_UTTERANCE, { wavBase64, durationMs, sessionId }),
+  sendUtterance: (wavBase64, durationMs, sessionId, startMs) =>
+    ipcRenderer.send(IPC.AUDIO_UTTERANCE, { wavBase64, durationMs, sessionId, startMs }),
   sendFinished: (payload) => ipcRenderer.send(IPC.RECORDING_FINISHED, payload),
   sendRecordingError: (message, sessionId) =>
     ipcRenderer.send(IPC.RECORDING_ERROR, { message, sessionId }),

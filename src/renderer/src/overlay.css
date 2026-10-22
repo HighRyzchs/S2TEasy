@@ -16,14 +16,13 @@ body,
 
 .overlay-root.preview {
   background:
-    radial-gradient(ellipse at 50% 80%, rgba(124, 231, 255, 0.08), transparent 42%),
-    #07080c;
+    radial-gradient(ellipse at 50% 80%, rgba(124, 231, 255, 0.08), transparent 42%), #07080c;
 }
 
 .overlay-root.preview .hud {
-  width: 520px;
+  width: 576px;
   height: 80px;
-  max-width: 520px;
+  max-width: 576px;
 }
 
 .overlay-root.live .hud {

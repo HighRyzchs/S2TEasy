@@ -4,6 +4,19 @@ import { defaultOverlayTheme } from './overlay-theme'
 import { OVERLAY_POSITIONS } from './types'
 
 describe('overlay placement', () => {
+  it('applies custom offsets and clamps to the display work area', () => {
+    const area = { x: -1000, y: -200, width: 1000, height: 800 },
+      size = { width: 500, height: 100 }
+    expect(overlayCoordinates(area, size, 'center', { x: 100, y: -50 })).toEqual({
+      x: -650,
+      y: 100
+    })
+    expect(overlayCoordinates(area, size, 'center', { x: 9000, y: -9000 })).toEqual({
+      x: -500,
+      y: -200
+    })
+  })
+
   it('keeps every placement inside a display with negative coordinates', () => {
     const area = { x: -1920, y: -200, width: 1920, height: 1040 }
     for (const position of OVERLAY_POSITIONS) {

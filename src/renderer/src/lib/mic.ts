@@ -8,10 +8,16 @@ import type { AudioLevelPayload, CaptureConfig } from '@shared/types'
 
 const WORKLET = `
 class PcmCapture extends AudioWorkletProcessor {
+  constructor() {
+    super(); this.active = true;
+    this.port.onmessage = (event) => {
+      if (event.data?.type === 'finish') { this.active = false; this.port.postMessage({ type: 'flushed' }); }
+    };
+  }
   process(inputs) {
     const input = inputs[0]
     const channel = input && input[0]
-    if (channel && channel.length) {
+    if (this.active && channel && channel.length) {
       this.port.postMessage(new Float32Array(channel))
     }
     return true
@@ -50,18 +56,23 @@ export class MicSession {
   private framer = new PcmFramer()
   private resampler: StreamingResampler | null = null
   private consume: ((frame: Float32Array) => void) | null = null
+  private tailWait: { timer: ReturnType<typeof setTimeout>; resolve: () => void } | null = null
+  private flushWait: {
+    timer: ReturnType<typeof setTimeout>
+    resolve: (flushed: boolean) => void
+  } | null = null
+  private capturedSamples = 0
   private generation = 0
   private running = false
-  private startedAt = 0
   private lastLevelAt = 0
   private config: CaptureConfig | null = null
   private onLevel: (level: AudioLevelPayload) => void
-  private onUtterance: (wavBase64: string, durationMs: number) => void
+  private onUtterance: (wavBase64: string, durationMs: number, startMs?: number) => void
   private onPcm: (bytes: Uint8Array) => void
 
   constructor(handlers: {
     onLevel: (level: AudioLevelPayload) => void
-    onUtterance: (wavBase64: string, durationMs: number) => void
+    onUtterance: (wavBase64: string, durationMs: number, startMs?: number) => void
     onPcm?: (bytes: Uint8Array) => void
   }) {
     this.onLevel = handlers.onLevel
@@ -79,8 +90,8 @@ export class MicSession {
     })
     this.framer.reset()
     this.running = true
-    this.startedAt = performance.now()
     this.lastLevelAt = 0
+    this.capturedSamples = 0
 
     const stream = await openMic(config)
     if (generation !== this.generation) {
@@ -106,6 +117,7 @@ export class MicSession {
 
     const consume = (resampled: Float32Array) => {
       if (!this.running || !this.context || !this.config || !resampled.length) return
+      this.capturedSamples += resampled.length
       const now = performance.now()
       if (now - this.lastLevelAt >= 32) {
         this.lastLevelAt = now
@@ -116,7 +128,11 @@ export class MicSession {
       if (this.config.engine === 'router-audio') return
       for (const item of this.vad.push(resampled)) {
         if (item.type === 'utterance') {
-          this.onUtterance(frameToWav(item.pcm), (item.pcm.length / SAMPLE_RATE) * 1000)
+          this.onUtterance(
+            frameToWav(item.pcm),
+            (item.pcm.length / SAMPLE_RATE) * 1000,
+            Math.max(0, ((this.capturedSamples - item.pcm.length) / SAMPLE_RATE) * 1000)
+          )
         }
       }
     }
@@ -136,7 +152,10 @@ export class MicSession {
       }
       if (generation !== this.generation) return
       this.worklet = new AudioWorkletNode(this.context, 'pcm-capture')
-      this.worklet.port.onmessage = (event: MessageEvent<Float32Array>) => onPcm(event.data)
+      this.worklet.port.onmessage = (event: MessageEvent<Float32Array | { type: string }>) => {
+        if (event.data instanceof Float32Array) onPcm(event.data)
+        else if (event.data?.type === 'flushed') this.flushWait?.resolve(true)
+      }
       this.gain.connect(this.worklet)
       this.worklet.connect(this.mute)
     } catch {
@@ -151,21 +170,66 @@ export class MicSession {
     this.mute.connect(this.context.destination)
   }
 
-  async finish(): Promise<{ leftoverBase64: string; fullBase64: string; durationMs: number }> {
+  async finish(): Promise<{
+    leftoverBase64: string
+    fullBase64: string
+    durationMs: number
+    leftoverStartMs: number
+  }> {
+    const generation = this.generation
+    this.vad.beginFinish()
+    const delay = this.config?.captureTailMs ?? 600
+    if (delay)
+      await new Promise<void>((resolve) => {
+        const done = () => {
+          if (this.tailWait) clearTimeout(this.tailWait.timer)
+          this.tailWait = null
+          resolve()
+        }
+        this.tailWait = { timer: setTimeout(done, delay), resolve: done }
+      })
+    if (generation !== this.generation) throw new DOMException('Recording cancelled', 'AbortError')
+    if (this.worklet) {
+      const flushed = await new Promise<boolean>((resolve) => {
+        const done = (ok: boolean) => {
+          if (this.flushWait) clearTimeout(this.flushWait.timer)
+          this.flushWait = null
+          resolve(ok)
+        }
+        this.flushWait = { timer: setTimeout(() => done(false), 1500), resolve: done }
+        this.worklet!.port.postMessage({ type: 'finish' })
+      })
+      if (generation !== this.generation)
+        throw new DOMException('Recording cancelled', 'AbortError')
+      if (!flushed)
+        throw new Error(
+          'The microphone did not flush its final buffer. Saved audio is available in History.'
+        )
+    }
+    this.source?.disconnect()
     if (this.resampler) this.consume?.(this.resampler.flush())
     this.running = false
     const leftoverPcm = this.config?.engine !== 'router-audio' ? this.vad.finish() : null
-    const leftoverBase64 = leftoverPcm ? frameToWav(leftoverPcm) : ''
+    // Quiet right-context helps speech decoders finalize a last phoneme; it is never sent alone.
+    const padded = leftoverPcm ? new Float32Array(leftoverPcm.length + SAMPLE_RATE * 0.2) : null
+    if (padded && leftoverPcm) padded.set(leftoverPcm)
+    const leftoverBase64 = padded ? frameToWav(padded) : ''
     const flushed = this.framer.flush()
     if (flushed) this.onPcm(flushed)
-    const durationMs = this.startedAt ? performance.now() - this.startedAt : 0
-    const fullBase64 = '' // No unbounded full-session allocation; all batch engines consume bounded VAD clips.
+    const durationMs = (this.capturedSamples / SAMPLE_RATE) * 1000
     await this.stop()
-    return { leftoverBase64, fullBase64, durationMs }
+    return {
+      leftoverBase64,
+      fullBase64: '',
+      durationMs,
+      leftoverStartMs: Math.max(0, durationMs - ((leftoverPcm?.length ?? 0) / SAMPLE_RATE) * 1000)
+    }
   }
 
   async stop(): Promise<void> {
     ++this.generation
+    this.tailWait?.resolve()
+    this.flushWait?.resolve(false)
     this.running = false
     this.config = null
     this.resampler = null

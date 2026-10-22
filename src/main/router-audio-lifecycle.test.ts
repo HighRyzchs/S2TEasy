@@ -52,7 +52,7 @@ describe('stream lifecycle', () => {
     socket.open()
     await connecting
     const finishing = client.finish()
-    await vi.advanceTimersByTimeAsync(1500)
+    await vi.advanceTimersByTimeAsync(4500)
     socket.transcript('last words')
     expect(callbacks.onTranscript).toHaveBeenCalledWith(
       expect.objectContaining({ text: 'last words' })

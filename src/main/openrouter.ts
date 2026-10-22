@@ -1,3 +1,6 @@
+import { readWordTimings, type WordTiming } from '../shared/word-timing'
+import { randomUUID } from 'node:crypto'
+import type { UsageMeasurement } from '../shared/usage'
 import { OPENROUTER_BASE } from '../shared/constants'
 import { parseTranscriptionPayload } from '../shared/transcript'
 import type { ModelOption, OpenRouterRoute } from '../shared/types'
@@ -22,6 +25,9 @@ export type TranscribeInput = {
   vocabulary?: string[]
   route?: OpenRouterRoute
   signal?: AbortSignal
+  onUsage?: (usage: UsageMeasurement) => void
+  onWords?: (words: WordTiming[]) => void
+  requestWordTimings?: boolean
 }
 
 export function localTranscriptionUrl(value: string): URL {
@@ -54,16 +60,73 @@ export async function transcribeAudio(input: TranscribeInput): Promise<string> {
       'speech.wav'
     )
     form.append('model', input.model.trim())
+    if (input.requestWordTimings) {
+      form.append('response_format', 'verbose_json')
+      form.append('timestamp_granularities[]', 'word')
+    }
     if (input.language) form.append('language', input.language)
     if (glossary) form.append('prompt', glossary)
   }
   // Dedicated ASR uses the STT JSON contract; multimodal chat uses audio content parts.
   // https://openrouter.ai/openapi.json — STTRequest / ChatGenerationParams
+  const operationId = randomUUID()
+  const wav = Buffer.from(input.wavBase64, 'base64')
+  const durationMs =
+    wav.length >= 44 && wav.toString('ascii', 0, 4) === 'RIFF' && wav.readUInt32LE(28) > 0
+      ? Math.max(0, ((wav.length - 44) / wav.readUInt32LE(28)) * 1000)
+      : 0
   for (let attempt = 0; ; attempt++) {
     input.signal?.throwIfAborted()
     const controller = new AbortController()
     const timer = setTimeout(() => controller.abort(), 60_000)
     let retry = false
+    const began = Date.now()
+    let logged = false
+    const record = (json: unknown, outcome: UsageMeasurement['outcome']) => {
+      if (logged) return
+      logged = true
+      const usage =
+        json && typeof json === 'object'
+          ? (
+              json as {
+                usage?: {
+                  cost?: unknown
+                  prompt_tokens?: number
+                  input_tokens?: number
+                  completion_tokens?: number
+                  output_tokens?: number
+                }
+              }
+            ).usage
+          : undefined
+      const raw = usage?.cost
+      const costUsd = local
+        ? 0
+        : (typeof raw === 'number' || typeof raw === 'string') &&
+            String(raw).trim() !== '' &&
+            Number.isFinite(Number(raw)) &&
+            Number(raw) >= 0
+          ? Number(raw)
+          : null
+      try {
+        input.onUsage?.({
+          id: randomUUID(),
+          operationId,
+          createdAt: began,
+          engine: local ? 'local' : 'openrouter',
+          model: input.model.trim(),
+          costUsd,
+          durationMs,
+          latencyMs: Date.now() - began,
+          attempt: attempt + 1,
+          outcome,
+          inputTokens: usage?.input_tokens ?? usage?.prompt_tokens,
+          outputTokens: usage?.output_tokens ?? usage?.completion_tokens
+        })
+      } catch {
+        /* Usage persistence must not discard a transcript. */
+      }
+    }
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -84,6 +147,9 @@ export async function transcribeAudio(input: TranscribeInput): Promise<string> {
             ? JSON.stringify({
                 model: input.model.trim(),
                 input_audio: { data: input.wavBase64, format: 'wav' },
+                ...(input.requestWordTimings
+                  ? { response_format: 'verbose_json', timestamp_granularities: ['word'] }
+                  : {}),
                 ...(input.language ? { language: input.language } : {})
               })
             : JSON.stringify({
@@ -102,6 +168,7 @@ export async function transcribeAudio(input: TranscribeInput): Promise<string> {
       })
       const json: unknown = await response.json().catch(() => null)
       if (!response.ok) {
+        record(json, 'error')
         if (attempt < 2 && [429, 502, 503, 504].includes(response.status)) retry = true
         else
           throw new OpenRouterError(
@@ -110,14 +177,22 @@ export async function transcribeAudio(input: TranscribeInput): Promise<string> {
           )
       } else {
         try {
-          return parseTranscriptionPayload(json)
+          const text = parseTranscriptionPayload(json)
+          const words = readWordTimings(
+            json && typeof json === 'object' ? (json as { words?: unknown }).words : undefined
+          )
+          record(json, 'success')
+          if (words.length) input.onWords?.(words)
+          return text
         } catch (error) {
+          record(json, 'error')
           throw new OpenRouterError(
             `${input.model.trim()} (${route}): ${error instanceof Error ? error.message : 'Unexpected transcription response'}`
           )
         }
       }
     } catch (error) {
+      record(null, input.signal?.aborted ? 'cancelled' : 'error')
       if (input.signal?.aborted) throw input.signal.reason
       if (error instanceof Error && error.name === 'AbortError')
         throw new OpenRouterError(

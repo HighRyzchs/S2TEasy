@@ -16,6 +16,7 @@ export const OVERLAY_SKINS = [
 ] as const
 
 export type OverlayTheme = {
+  font: 'outfit' | 'system' | 'mono' | 'serif'
   skin: (typeof OVERLAY_SKINS)[number]['id']
   orientation: 'horizontal' | 'vertical'
   scale: number
@@ -66,6 +67,7 @@ export const OVERLAY_BEZEL_OPTIONS: { id: OverlayBezel; label: string }[] = [
 /** Ink is the default; Studio mixer fields remain available for customization. */
 export function defaultOverlayTheme(): OverlayTheme {
   return {
+    font: 'outfit',
     skin: 'minimal',
     orientation: 'horizontal',
     scale: 1,
@@ -110,6 +112,7 @@ export function normalizeOverlayTheme(raw?: Partial<OverlayTheme> | null): Overl
   const fallback = defaultOverlayTheme()
   const next = { ...fallback, ...(raw ?? {}) }
   return {
+    font: oneOf(next.font, ['outfit', 'system', 'mono', 'serif'] as const, 'outfit'),
     skin: oneOf(
       next.skin,
       OVERLAY_SKINS.map((skin) => skin.id),
@@ -139,6 +142,12 @@ export function normalizeOverlayTheme(raw?: Partial<OverlayTheme> | null): Overl
 
 export function overlayThemeVars(theme: OverlayTheme): Record<string, string> {
   return {
+    '--hud-font': {
+      outfit: '"Outfit Variable", Outfit, system-ui, sans-serif',
+      system: 'system-ui, sans-serif',
+      mono: 'Consolas, monospace',
+      serif: 'Georgia, serif'
+    }[theme.font],
     '--overlay-scale': String(theme.scale),
     '--core-h': String(theme.coreHue),
     '--core-s': `${theme.coreSat}%`,

@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { overlayThemeVars, validOverlayAsset, type OverlayTheme } from '@shared/overlay-theme'
 import type { OverlayState } from '@shared/types'
 
@@ -10,8 +10,12 @@ export function OverlayHud({
   live,
   preview,
   onStop,
-  onDismiss
+  onDismiss,
+  onCopy,
+  onReview
 }: {
+  onCopy?: () => Promise<unknown>
+  onReview?: () => void
   state: OverlayState
   bars: number[]
   theme: OverlayTheme
@@ -21,6 +25,50 @@ export function OverlayHud({
   onDismiss?: () => void
   onStop?: (event: { preventDefault: () => void; stopPropagation: () => void }) => void
 }) {
+  const [copied, setCopied] = useState(false)
+  const [copyError, setCopyError] = useState(false)
+  const tools = (
+    <>
+      <button
+        type="button"
+        className="hud-tool"
+        disabled={!state.partial.trim()}
+        aria-label={
+          copyError
+            ? 'Copy failed. Try again'
+            : copied
+              ? 'Copied transcript'
+              : 'Copy live transcript'
+        }
+        title={copyError ? 'Copy failed. Try again' : copied ? 'Copied' : 'Copy transcript'}
+        onClick={() => {
+          setCopyError(false)
+          void (onCopy ? onCopy() : navigator.clipboard.writeText(state.partial))
+            .then(() => {
+              setCopied(true)
+              setTimeout(() => setCopied(false), 1800)
+            })
+            .catch(() => setCopyError(true))
+        }}
+      >
+        {copyError ? '!' : copied ? '✓' : '⧉'}
+      </button>
+      <button
+        type="button"
+        className="hud-tool"
+        disabled={!onReview || (!state.sessionId && !preview)}
+        aria-label="Review and edit transcript"
+        title={
+          onReview
+            ? 'Finish and review transcript'
+            : 'Transcript review is available in the desktop app'
+        }
+        onClick={onReview}
+      >
+        ✎
+      </button>
+    </>
+  )
   const classes = ['overlay-root']
   if (live) classes.push('live')
   if (preview) classes.push('preview')
@@ -42,7 +90,7 @@ export function OverlayHud({
           ? 'Practice saved'
           : preview
             ? 'Preview complete'
-            : 'Saved & inserted'
+            : 'Transcript saved'
         : state.status === 'arm-paste'
           ? 'Choose a text field'
           : processing
@@ -55,6 +103,7 @@ export function OverlayHud({
         className={classes.join(' ')}
         data-status={state.status}
         data-skin={theme.skin === 'studio' ? 'minimal' : theme.skin}
+        data-wave={theme.wave}
         data-orientation={theme.orientation}
         style={overlayThemeVars(theme) as CSSProperties}
       >
@@ -126,6 +175,7 @@ export function OverlayHud({
             </div>
           )}
           <div className="minimal-actions">
+            {tools}
             {canStop && (
               <button
                 type="button"
@@ -207,6 +257,7 @@ export function OverlayHud({
           <span className="ring delay" />
           <span className="pulse" />
         </div>
+        <div className="studio-tools">{tools}</div>
         <div className="spectrum" aria-hidden="true">
           {bars.map((height, index) => (
             <i key={index} style={{ height: `${Math.max(4, height * 30)}px` }} />

@@ -1,3 +1,6 @@
+import { emptyUsage, type UsageState } from '@shared/usage'
+import { TranscriptReview } from './TranscriptReview'
+import { UsagePanel } from './UsagePanel'
 import { useEffect, useMemo, useState } from 'react'
 import { formatHotkey } from '@shared/hotkey'
 import {
@@ -15,11 +18,14 @@ import { VocabularyPanel } from './VocabularyPanel'
 import { PracticePanel } from './PracticePanel'
 
 const preview = import.meta.env.VITE_BROWSER_PREVIEW === '1'
-type Tab = 'overview' | 'history' | 'vocabulary' | 'practice' | 'settings'
+type Tab = 'overview' | 'history' | 'vocabulary' | 'practice' | 'settings' | 'usage'
 
 export function App() {
+  const [reviewId, setReviewId] = useState<string | null>(null)
+  const [practiceTarget, setPracticeTarget] = useState('')
   const [tab, setTab] = useState<Tab>('overview')
   const [settings, setSettings] = useState<AppSettings>(defaultSettings())
+  const [usage, setUsage] = useState<UsageState>(emptyUsage)
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [overlay, setOverlay] = useState<OverlayState>(emptyOverlay())
   const [update, setUpdate] = useState<UpdateStatus>(idleUpdate())
@@ -36,6 +42,7 @@ export function App() {
         if (!alive) return
         setSettings(state.settings)
         setHistory(state.history)
+        setUsage(state.usage ?? emptyUsage())
         setUpdate(state.update)
         setVersion(state.version)
         setOverlay(state.overlay ?? emptyOverlay())
@@ -45,7 +52,12 @@ export function App() {
         setToast('Could not load app data. Restart the app; local session files are preserved.')
       )
     const off = [
+      window.s2t.onReview((id) => {
+        setReviewId(id)
+        setTab('history')
+      }),
       window.s2t.onSettings(setSettings),
+      window.s2t.onUsage(setUsage),
       window.s2t.onHistory(setHistory),
       window.s2t.onUpdate(setUpdate),
       window.s2t.onOverlay(setOverlay)
@@ -126,6 +138,7 @@ export function App() {
             [
               ['overview', 'Overview', '◫'],
               ['history', 'History', '◷'],
+              ['usage', 'Usage & spend', '↗'],
               ['vocabulary', 'Vocabulary', 'Aa'],
               ['practice', 'Voice practice', '≋'],
               ['settings', 'Settings', '⚙']
@@ -182,8 +195,8 @@ export function App() {
         <main className="panel">
           {preview && (
             <div className="notice preview-notice">
-              Interface preview · sample history · desktop dictation, secure key storage, and
-              recovery require the Electron app.
+              Interface preview · sample history and simulated spend · desktop dictation, secure key
+              storage, and recovery require the Electron app.
             </div>
           )}
           {tab === 'overview' && (
@@ -335,6 +348,9 @@ export function App() {
               </div>
             </>
           )}
+          {tab === 'usage' && (
+            <UsagePanel usage={usage} onExport={() => void run(() => window.s2t.exportUsage())} />
+          )}
           {tab === 'history' && (
             <HistoryPanel
               grouped={grouped}
@@ -349,10 +365,7 @@ export function App() {
                 void run(async () => setHistory(await window.s2t.deleteHistory(id)))
               }
               onClear={() => void run(async () => setHistory(await window.s2t.clearHistory()))}
-              onEdit={async (id, text) => {
-                setHistory(await window.s2t.editHistory(id, text))
-                setToast('Transcript corrected')
-              }}
+              onReview={setReviewId}
               onRecover={async (id) => {
                 setHistory(await window.s2t.recoverHistory(id))
                 setToast('Recovered. Review the text before inserting.')
@@ -363,7 +376,6 @@ export function App() {
                     setToast('Audio and labeled transcript exported')
                 })
               }
-              onAddWord={addWord}
             />
           )}
           {tab === 'vocabulary' && (
@@ -374,6 +386,8 @@ export function App() {
           )}
           {tab === 'practice' && (
             <PracticePanel
+              key={practiceTarget}
+              initialTarget={practiceTarget}
               settings={settings}
               history={history}
               overlay={overlay}
@@ -392,6 +406,26 @@ export function App() {
           )}
         </main>
       </div>
+      {reviewId && history.find((row) => row.id === reviewId) && (
+        <TranscriptReview
+          key={reviewId}
+          item={history.find((row) => row.id === reviewId)!}
+          onClose={() => setReviewId(null)}
+          onSave={async (text) => {
+            setHistory(await window.s2t.editHistory(reviewId, text))
+          }}
+          onRemember={addWord}
+          onPractice={(text) => {
+            setPracticeTarget(text)
+            setReviewId(null)
+            setTab('practice')
+          }}
+          onExample={async (index, intended) => {
+            setHistory(await window.s2t.saveWordExample(reviewId, index, intended))
+            setToast('Labeled clip saved in Voice practice')
+          }}
+        />
+      )}
       {toast && (
         <div className="toast" role="status">
           {toast}

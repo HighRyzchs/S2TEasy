@@ -1,3 +1,4 @@
+import { readWordTimings, type WordTiming } from '../shared/word-timing'
 import { ROUTER_AUDIO_LISTEN, SAMPLE_RATE } from '../shared/constants'
 import type { RouterProvider } from '../shared/types'
 
@@ -12,6 +13,7 @@ export type RouterTranscript = {
   kind: 'transcript'
   text: string
   isPartial: boolean
+  words?: WordTiming[]
 }
 
 export type RouterEvent = RouterTranscript | { kind: 'error'; message: string } | { kind: 'ignore' }
@@ -52,7 +54,14 @@ export function parseListenMessage(raw: string): RouterEvent {
   if (type && type !== 'transcript' && type !== 'result' && type !== 'results') {
     return { kind: 'ignore' }
   }
-  return { kind: 'transcript', text, isPartial: readPartial(obj) }
+  const channel = obj.channel as { alternatives?: { words?: unknown }[] } | undefined
+  const words = readWordTimings(obj.words ?? channel?.alternatives?.[0]?.words)
+  return {
+    kind: 'transcript',
+    text,
+    isPartial: readPartial(obj),
+    ...(words.length ? { words } : {})
+  }
 }
 
 export function closeReason(code: number, reason: string): string | null {
@@ -164,7 +173,7 @@ export class RouterAudioClient {
     ws.send(bytes)
   }
 
-  async finish(drainMs = 4000): Promise<void> {
+  async finish(drainMs = 6000): Promise<void> {
     this.finishing = true
     const ws = this.ws
     if (ws && ws.readyState === WebSocket.OPEN) {

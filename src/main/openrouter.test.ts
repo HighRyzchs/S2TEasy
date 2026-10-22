@@ -147,3 +147,66 @@ describe('local speech', () => {
     expect(() => localTranscriptionUrl('http://user:pass@localhost/transcribe')).toThrow()
   })
 })
+
+it('records actual reported cost and genuine word timings without pricing guesses', async () => {
+  const onUsage = vi.fn(),
+    onWords = vi.fn()
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(
+      response({
+        text: 'hello',
+        usage: { cost: '0.0012', prompt_tokens: 17 },
+        words: [{ word: 'hello', start: 0.2, end: 0.6 }]
+      })
+    )
+  )
+  await transcribeAudio({
+    ...input,
+    route: 'transcription',
+    requestWordTimings: true,
+    onUsage,
+    onWords
+  })
+  expect(onUsage).toHaveBeenCalledWith(
+    expect.objectContaining({ costUsd: 0.0012, inputTokens: 17, outcome: 'success', attempt: 1 })
+  )
+  expect(onWords).toHaveBeenCalledWith([{ text: 'hello', startMs: 200, endMs: 600 }])
+  expect(
+    JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string).timestamp_granularities
+  ).toEqual(['word'])
+})
+it('keeps absent costs unknown and logs malformed responses as errors', async () => {
+  const onUsage = vi.fn()
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue(response({ unknown: true, usage: { cost: 0.002 } }))
+  )
+  await expect(transcribeAudio({ ...input, route: 'transcription', onUsage })).rejects.toThrow()
+  expect(onUsage).toHaveBeenLastCalledWith(
+    expect.objectContaining({ costUsd: 0.002, outcome: 'error' })
+  )
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ text: 'hello' })))
+  await transcribeAudio({ ...input, route: 'transcription', onUsage })
+  expect(onUsage).toHaveBeenLastCalledWith(expect.objectContaining({ costUsd: null }))
+})
+it('records every billable retry under the same audio operation', async () => {
+  vi.useFakeTimers()
+  try {
+    const onUsage = vi.fn()
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce(response({ error: { message: 'busy' }, usage: { cost: 0.01 } }, 503))
+        .mockResolvedValue(response({ text: 'hello', usage: { cost: 0.02 } }))
+    )
+    const pending = transcribeAudio({ ...input, route: 'transcription', onUsage })
+    await vi.runAllTimersAsync()
+    await pending
+    expect(onUsage.mock.calls.map(([row]) => row.costUsd)).toEqual([0.01, 0.02])
+    expect(onUsage.mock.calls[0][0].operationId).toBe(onUsage.mock.calls[1][0].operationId)
+  } finally {
+    vi.useRealTimers()
+  }
+})

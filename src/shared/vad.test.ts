@@ -6,6 +6,20 @@ function frame(level: number, n = 320): Float32Array {
 }
 
 describe('EnergyVad', () => {
+  it('keeps a short final word even when the capture tail triggers a silence flush', () => {
+    const vad = new EnergyVad()
+    vad.push(frame(0, 3200))
+    vad.push(frame(0.3, 960))
+    vad.beginFinish()
+    const emitted = vad.push(frame(0, 9600)).filter((event) => event.type === 'utterance')
+    expect(emitted).toHaveLength(1)
+    if (emitted[0]?.type === 'utterance') expect(emitted[0].pcm.length).toBe(1920 + 960 + 9600)
+    expect(vad.finish()).toBeNull()
+    vad.reset()
+    vad.push(frame(0.3, 80))
+    expect(vad.finish()).toBeNull()
+  })
+
   it('emits an utterance after speech then silence', () => {
     const vad = new EnergyVad({
       sampleRate: 16_000,

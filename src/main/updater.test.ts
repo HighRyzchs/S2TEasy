@@ -124,3 +124,46 @@ describe('verified application updates', () => {
     expect(app.quit).not.toHaveBeenCalled()
   })
 })
+
+it('recognizes an applied receipt only for this running version, including PowerShell UTF-8 BOM', () => {
+  const { directory } = setup()
+  writeFileSync(
+    join(directory, 'update-result.json'),
+    '\uFEFF' + JSON.stringify({ status: 'applied', fromVersion: '1.3.0', toVersion: '1.3.1' })
+  )
+  expect(
+    new UpdateLauncher(
+      () => '',
+      () => {},
+      directory,
+      directory
+    ).getStatus()
+  ).toMatchObject({ phase: 'current', message: 'Updated from 1.3.0 to 1.3.1.' })
+  writeFileSync(
+    join(directory, 'update-result.json'),
+    JSON.stringify({ status: 'applied', fromVersion: '1.3.1', toVersion: '1.4.0' })
+  )
+  expect(
+    new UpdateLauncher(
+      () => '',
+      () => {},
+      directory,
+      directory
+    ).getStatus().phase
+  ).toBe('idle')
+})
+it('reports a failed helper receipt without claiming the app updated', () => {
+  const { directory } = setup()
+  writeFileSync(
+    join(directory, 'update-result.json'),
+    JSON.stringify({ status: 'failed', message: 'Portable EXE is locked' })
+  )
+  expect(
+    new UpdateLauncher(
+      () => '',
+      () => {},
+      directory,
+      directory
+    ).getStatus()
+  ).toMatchObject({ phase: 'error', message: expect.stringMatching(/locked/) })
+})

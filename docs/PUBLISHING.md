@@ -23,10 +23,10 @@ A successful compiler/packager run does not establish real microphone, focus, pa
 ## Tagged releases
 
 1. Run the Windows checklist and inspect the resulting binaries. Use synthetic recordings and never put API keys or private audio in release evidence.
-2. Choose and update the package version, keep the lockfile root version consistent, and commit the change. Use a prerelease version until native behavior is verified.
+2. Choose and update the package version, keep the lockfile root version consistent, and commit the change. Normally use a prerelease version until native behavior is verified. The explicitly labeled 1.4.1/1.5.0 development update-test pair uses ordinary tags so the existing latest-release updater can discover it; this does not establish stable Windows validation.
 3. Tag the reviewed commit with its matching `v...` version and push the tag. The existing **Release Windows** workflow builds and publishes the executables. Review its release settings before using it for a prerelease.
 4. Arrange Windows signing and verify release assets and SHA-256 digests. The in-app updater refuses a binary with a missing or mismatched GitHub SHA-256 digest.
 
 Cloud environment publication is separate from GitHub source publication, Pages deployment, and executable releases. Saving an environment draft does not perform any of those actions.
 
-The HUD/update preview uses actual React components with simulated speech and release states. It never records audio or installs an update. A production update is offered only from a published compatible GitHub Release; CI artifacts alone do not appear in the update feed.
+The HUD/update preview uses actual React components with simulated speech and release states. Its optional microphone preview measures volume locally without storing/uploading audio. It never installs an update. A production update is offered only from a published compatible GitHub Release; CI artifacts alone do not appear in the update feed.

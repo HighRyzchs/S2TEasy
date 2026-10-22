@@ -38,6 +38,9 @@ export function vadFromSensitivity(
  */
 export class EnergyVad {
   private readonly options: VadOptions
+  private finalizing = false
+  private preRoll: Float32Array[] = []
+  private preRollSamples = 0
   private speaking = false
   private speech: Float32Array[] = []
   private speechSamples = 0
@@ -56,6 +59,17 @@ export class EnergyVad {
   }
 
   reset(): void {
+    this.finalizing = false
+    this.preRoll = []
+    this.preRollSamples = 0
+    this.resetSpeech()
+  }
+
+  beginFinish(): void {
+    this.finalizing = true
+  }
+
+  private resetSpeech(): void {
     this.speaking = false
     this.speech = []
     this.speechSamples = 0
@@ -72,8 +86,10 @@ export class EnergyVad {
     if (isSpeech) {
       if (!this.speaking) {
         this.speaking = true
-        this.speech = []
-        this.speechSamples = 0
+        this.speech = this.preRoll
+        this.speechSamples = this.preRollSamples
+        this.preRoll = []
+        this.preRollSamples = 0
       }
       this.speech.push(new Float32Array(frame))
       this.speechSamples += frame.length
@@ -86,7 +102,19 @@ export class EnergyVad {
       return events
     }
 
-    if (!this.speaking) return events
+    if (!this.speaking) {
+      this.preRoll.push(new Float32Array(frame))
+      this.preRollSamples += frame.length
+      const limit = Math.round(this.options.sampleRate * 0.12)
+      while (this.preRollSamples > limit && this.preRoll.length) {
+        const first = this.preRoll[0]!
+        const remove = Math.min(first.length, this.preRollSamples - limit)
+        if (remove === first.length) this.preRoll.shift()
+        else this.preRoll[0] = first.slice(remove)
+        this.preRollSamples -= remove
+      }
+      return events
+    }
 
     this.speech.push(new Float32Array(frame))
     this.speechSamples += frame.length
@@ -100,6 +128,7 @@ export class EnergyVad {
 
   /** Remaining audio when the user stops — may be short trailing speech. */
   finish(): Float32Array | null {
+    this.finalizing = true
     return this.flushSpeech()
   }
 
@@ -107,8 +136,11 @@ export class EnergyVad {
     const parts = this.speech
     const samples = this.speechSamples
     const voiced = this.voicedSamples
-    this.reset()
-    if (voiced < this.minSpeech) return null
+    this.resetSpeech()
+    const minimum = this.finalizing
+      ? Math.min(this.minSpeech, this.options.sampleRate * 0.04)
+      : this.minSpeech
+    if (voiced < minimum) return null
     const out = new Float32Array(samples)
     let offset = 0
     for (const part of parts) {
