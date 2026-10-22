@@ -30,3 +30,9 @@ Linux unit/browser tests do not substitute for these checks.
 4. Save a `rosin → Roshan` correction. Remember it in Vocabulary, then test a new take. Practise this should prefill Roshan. Keep audio for training, enable optional word timings with a compatible STT model, record, and inspect word highlighting/seek. Save a labeled word clip and verify its actual audio and intended text in Voice practice. An old untimed recording must show ordinary playback without fabricated timing.
 5. Check usage for a successful paid call, unknown-cost response, failed call, retry, recovery call and local call. Compare reported costs with provider billing, allowing for missing metadata. CSV should contain no transcript, recording or key. Deleting History must not silently erase metrics.
 6. Set anchors/offsets on multiple displays and Windows scaling. Check Copy/Review/Stop/Cancel are reachable in all skins, vertical/compact layouts and size ranges. Download/import a theme and edit the SVG design source in an external editor, export PNG, then upload it. Restart and check persistence.
+
+## 1.5.1 updater regression
+
+- Rapidly click Restart and trigger the tray update action. Only one hidden PowerShell helper should launch. The Settings and tray update actions must be disabled while applying; the new helper must never run FINDSTR/TASKLIST or a CMD polling loop.
+- Make helper launch fail in a disposable environment. Confirm the app remains open and reports the error. Restart before download verification must not queue a future automatic installation.
+- If reproducing the old 1.4.0 loop in a disposable VM, quit the app and stop only the matching legacy helper process tree using UPDATE_TROUBLESHOOTING.md. Do not treat installing a newer version as proof that an old orphaned helper was terminated.

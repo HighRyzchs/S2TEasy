@@ -38,7 +38,7 @@ export type RouterProvider = (typeof ROUTER_PROVIDERS)[number]
 export type Packaging = 'portable' | 'installed' | 'dev'
 
 export type UpdatePhase =
-  'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'current' | 'error'
+  'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'applying' | 'current' | 'error'
 
 export type UpdateStatus = {
   phase: UpdatePhase

@@ -1,3 +1,4 @@
+import { EventEmitter } from 'node:events'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
@@ -9,6 +10,8 @@ const app = vi.hoisted(() => ({
   getPath: () => '/tmp/s2teasy-unused-test-state',
   quit: vi.fn()
 }))
+const launcher = vi.hoisted(() => ({ spawn: vi.fn() }))
+vi.mock('node:child_process', () => ({ spawn: launcher.spawn }))
 vi.mock('electron', () => ({ app }))
 import { UpdateLauncher } from './updater'
 const directories: string[] = []
@@ -54,8 +57,10 @@ function setup(remote = release(), payload: Uint8Array = bytes) {
 beforeEach(() => {
   app.isPackaged = true
   vi.clearAllMocks()
+  launcher.spawn.mockReset()
 })
 afterEach(() => {
+  vi.useRealTimers()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
   directories.splice(0).forEach((p) => rmSync(p, { recursive: true, force: true }))
@@ -166,4 +171,56 @@ it('reports a failed helper receipt without claiming the app updated', () => {
       directory
     ).getStatus()
   ).toMatchObject({ phase: 'error', message: expect.stringMatching(/locked/) })
+})
+
+it('launches one hidden helper despite repeated Restart clicks or checks during handoff', async () => {
+  vi.useFakeTimers()
+  const child = Object.assign(new EventEmitter(), { unref: vi.fn() })
+  launcher.spawn.mockReturnValue(child)
+  const { updater, fetchMock } = setup()
+  await updater.check({ download: true })
+  expect(updater.install().phase).toBe('applying')
+  updater.install()
+  updater.install()
+  expect((await updater.check({ force: true })).phase).toBe('applying')
+  expect((await updater.download()).phase).toBe('applying')
+  expect(launcher.spawn).toHaveBeenCalledOnce()
+  expect(fetchMock).toHaveBeenCalledTimes(2)
+  const [executable, args, options] = launcher.spawn.mock.calls[0]
+  expect(executable).toBe('powershell.exe')
+  expect(args).toContain('-WindowStyle')
+  expect(args[args.indexOf('-WindowStyle') + 1]).toBe('Hidden')
+  expect(options).toMatchObject({ windowsHide: true, detached: true, stdio: 'ignore' })
+  const script = Buffer.from(args[args.indexOf('-EncodedCommand') + 1], 'base64').toString(
+    'utf16le'
+  )
+  expect(script).not.toMatch(/findstr|tasklist|cmd\.exe/i)
+  expect(script).toContain('Wait-Process -Timeout 120')
+  expect(app.quit).not.toHaveBeenCalled()
+  child.emit('spawn')
+  await vi.advanceTimersByTimeAsync(250)
+  expect(app.quit).toHaveBeenCalledOnce()
+})
+it('keeps the app open if its helper cannot launch', async () => {
+  vi.useFakeTimers()
+  const child = Object.assign(new EventEmitter(), { unref: vi.fn() })
+  launcher.spawn.mockReturnValue(child)
+  const { updater } = setup()
+  await updater.check({ download: true })
+  updater.install()
+  child.emit('error', new Error('PowerShell unavailable'))
+  await vi.runAllTimersAsync()
+  expect(updater.getStatus()).toMatchObject({
+    phase: 'error',
+    message: expect.stringMatching(/Could not start/)
+  })
+  expect(app.quit).not.toHaveBeenCalled()
+})
+it('does not queue automatic restarts or downloads when no verified update is ready', () => {
+  const { updater, fetchMock } = setup()
+  updater.install()
+  updater.install()
+  expect(fetchMock).not.toHaveBeenCalled()
+  expect(launcher.spawn).not.toHaveBeenCalled()
+  expect(updater.getStatus().message).toMatch(/Download and verify/)
 })

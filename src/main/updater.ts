@@ -63,7 +63,8 @@ export class UpdateLauncher {
   }
 
   async check(opts: { force?: boolean; download?: boolean } = {}): Promise<UpdateStatus> {
-    if (this.checking || this.status.phase === 'downloading') return this.getStatus()
+    if (this.checking || this.status.phase === 'downloading' || this.status.phase === 'applying')
+      return this.getStatus()
     const now = Date.now()
     if (!opts.force && now - this.lastCheck < 15 * 60_000 && this.status.phase !== 'idle') {
       return this.getStatus()
@@ -130,6 +131,7 @@ export class UpdateLauncher {
   }
 
   async download(): Promise<UpdateStatus> {
+    if (this.status.phase === 'applying') return this.getStatus()
     if (this.status.packaging === 'dev') {
       this.set({ message: 'Dev build — publish a GitHub release to install on Windows.' })
       return this.getStatus()
@@ -200,14 +202,13 @@ export class UpdateLauncher {
   }
 
   install(): UpdateStatus {
+    if (this.status.phase === 'applying') return this.getStatus()
     if (this.status.packaging === 'dev') {
       this.set({ message: 'Cannot replace a dev build. Use a packaged Windows exe.' })
       return this.getStatus()
     }
     if (this.status.phase !== 'ready' || !this.payloadPath) {
-      void this.download().then(() => {
-        if (this.status.phase === 'ready') this.install()
-      })
+      this.set({ message: 'Download and verify an update before restarting.' })
       return this.getStatus()
     }
     try {
@@ -239,12 +240,16 @@ export class UpdateLauncher {
         fromVersion: this.status.currentVersion,
         toVersion: this.asset!.version
       })
+      // Claim the transition before spawning; IPC, tray clicks and status callbacks may re-enter.
+      this.set({ phase: 'applying', message: 'Closing to apply the verified update…' })
       const child = spawn(
         'powershell.exe',
         [
           '-NoLogo',
           '-NoProfile',
           '-NonInteractive',
+          '-WindowStyle',
+          'Hidden',
           '-EncodedCommand',
           Buffer.from(script, 'utf16le').toString('base64')
         ],
@@ -255,16 +260,19 @@ export class UpdateLauncher {
           cwd: this.temporaryRoot
         }
       )
-      child.once('error', () =>
+      let quitTimer: ReturnType<typeof setTimeout> | undefined
+      child.once('error', () => {
+        if (quitTimer) clearTimeout(quitTimer)
         this.set({
           phase: 'error',
           message:
             'Could not start the update helper. The app has not been replaced; try again or install manually.'
         })
-      )
-      child.once('spawn', () => setTimeout(() => app.quit(), 250))
+      })
+      child.once('spawn', () => {
+        quitTimer = setTimeout(() => app.quit(), 250)
+      })
       child.unref()
-      this.set({ message: 'Closing to apply the verified update…' })
     } catch (error) {
       this.set({
         phase: 'error',

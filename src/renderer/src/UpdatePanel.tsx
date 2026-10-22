@@ -19,6 +19,7 @@ export function UpdatePanel({
 }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const applying = update.phase === 'applying'
   const checking = update.phase === 'checking'
   const downloading = update.phase === 'downloading'
   const run = async (action: () => Promise<UpdateStatus>) => {
@@ -144,7 +145,7 @@ export function UpdatePanel({
       <div className="update-panel-footer">
         <button
           className="ghost"
-          disabled={pending || checking || downloading}
+          disabled={pending || checking || downloading || applying}
           onClick={() => void run(() => onCheck())}
         >
           {checking ? 'Checking…' : 'Check for updates'}
@@ -157,7 +158,7 @@ export function UpdatePanel({
             aria-label="Download updates automatically"
             aria-checked={autoDownload}
             className={autoDownload ? 'update-switch enabled' : 'update-switch'}
-            disabled={pending}
+            disabled={pending || applying}
             onClick={() => onAutoDownload(!autoDownload)}
           >
             <i />

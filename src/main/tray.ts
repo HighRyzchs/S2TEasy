@@ -13,6 +13,7 @@ export function createTray(opts: {
   tray.setToolTip('S2Teasy')
 
   const refresh = (update: UpdateStatus) => {
+    const applying = update.phase === 'applying'
     const ready = update.phase === 'ready'
     const available = update.phase === 'available' || update.phase === 'downloading'
     tray.setToolTip(ready ? `S2Teasy · ${update.availableVersion} ready` : 'S2Teasy')
@@ -31,11 +32,14 @@ export function createTray(opts: {
         },
         { type: 'separator' },
         {
-          label: ready
-            ? `Restart to update (${update.availableVersion})`
-            : available
-              ? `Update ${update.availableVersion}…`
-              : 'Check for updates',
+          enabled: !applying,
+          label: applying
+            ? 'Applying update…'
+            : ready
+              ? `Restart to update (${update.availableVersion})`
+              : available
+                ? `Update ${update.availableVersion}…`
+                : 'Check for updates',
           click: () => {
             if (ready) opts.onInstallUpdate()
             else opts.onCheckUpdate()

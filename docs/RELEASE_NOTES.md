@@ -1,17 +1,11 @@
-## Development update-test target — v1.5.0
+## Update helper hotfix — v1.5.1
 
-A real target for testing in-app updates from 1.4.1. These are unsigned development builds; native Windows microphone, focus, and update execution require desktop testing.
+- Allow only one update helper per restart attempt. Repeated Restart clicks, tray actions and concurrent update checks cannot launch extra helpers or overwrite an installation in progress.
+- Explicitly hide the PowerShell helper window, in addition to Windows process-window suppression.
+- Require a downloaded, verified update before restarting; do not queue background install callbacks from premature Restart requests.
 
-- Add Usage & spend: daily charts, 7/30/90-day views, model breakdowns, audio/request counts and CSV export. Only provider-reported costs are counted; missing data is marked unknown. Metrics stay local and separate from transcripts.
-- Capture a configurable 0–1500 ms after Stop (600 ms default), flush the worklet, retain short final speech, and preserve unfinalized stream words for review. Cancel remains immediate.
-- Add Copy and Review controls to the recording HUD. Review finishes recording and prevents queued speech from being inserted into the editor.
-- Add a shared transcript review editor, opt-in Vocabulary suggestions, and a prefilled Voice practice action.
-- Play retained audio locally. Genuine provider word timings support highlighting, seeking and explicitly saving a labeled word clip. Optional timing requests default off for compatibility; old untimed audio still plays normally.
-- Add custom HUD offsets and an anchor picker, font choices, waveform styles, downloadable theme/microphone design templates, and theme import/export.
-- Retain the repaired portable updater: original launcher replacement, SHA-256 verification, rollback copy, and restart result receipt.
+The `findstr /I "<PID>"` terminal loop belongs to the old 1.4.0 updater, not clipboard insertion. Its parent batch script can respawn `findstr` after that window is closed. Versions 1.4.1 and later use a bounded PowerShell wait instead; this release additionally prevents duplicate helper launches.
 
-**Portable 1.4.0:** download and open the [1.4.1 baseline](https://github.com/HighRyzchs/S2TEasy/releases/tag/v1.4.1) once manually. Then Check for updates → download 1.5.0 → restart. The old 1.4.0 updater replaces a temporary extracted EXE and cannot provide a reliable persistent portable update test.
+If an old loop is already running: quit S2Teasy from the tray, then open Task Manager → Details, enable the Command line column, and end the process tree of the specific `cmd.exe` running `%TEMP%\s2teasy-apply-<PID>.cmd`. Do not end unrelated terminals or processes solely by the displayed PID. Then open S2Teasy again. See docs/UPDATE_TROUBLESHOOTING.md in the repository for steps.
 
-**Installed 1.4.0 or 1.4.1:** Check for updates → download → restart. Confirm 1.5.0 and your existing settings/history. Report the packaging type and any update error when testing.
-
-Word examples do not automatically train a speech model. No hosted payment service or corporate API key is included.
+Installed x64 users can install this over the existing app; no uninstall or data reset is needed. This cannot terminate an old batch script already running on your computer. Native Windows update behavior still requires desktop verification. No changes to dictation, clipboard insertion or stored settings/history are included.

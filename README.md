@@ -69,6 +69,8 @@ History retains the newest 400 sessions. Older app-managed sessions and their au
 - **Usage & spend:** 7/30/90-day charts, model breakdowns, request counts, processed audio, and CSV export. Only provider-reported costs are counted. Missing costs remain unknown; this is not your provider invoice. Metrics start with this version and stay in a separate local log, without transcript text or audio.
 - **Speech tail:** Stop captures another 600 ms by default (configurable 0–1500 ms), flushes the capture worklet, and allows short trailing speech. Cancel still releases capture immediately. Unfinalized stream text remains available for review if the provider never commits it.
 
+For recurring `findstr` terminals after an older update, see [update troubleshooting](docs/UPDATE_TROUBLESHOOTING.md).
+
 ### Test the updater
 
 Development builds **1.4.1 → 1.5.0** provide a real update test. Portable 1.4.0 has a launcher-path bug: first download and open [1.4.1](https://github.com/HighRyzchs/S2TEasy/releases/tag/v1.4.1) manually, keeping that EXE at its intended location. In that app, use Settings → Privacy & data → Check for updates, download 1.5.0, and restart. Installed 1.4.0 can use its existing updater. Confirm the version and your saved settings/history after restart. See [Windows testing](docs/WINDOWS_TESTING.md). Windows update execution still needs a real desktop test; Linux checks verify discovery, downloads, hashes, and helper generation.
