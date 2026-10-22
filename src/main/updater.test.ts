@@ -3,7 +3,12 @@ import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { mkdtempSync, rmSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-const app = vi.hoisted(() => ({ isPackaged: true, getVersion: () => '1.3.1', quit: vi.fn() }))
+const app = vi.hoisted(() => ({
+  isPackaged: true,
+  getVersion: () => '1.3.1',
+  getPath: () => '/tmp/s2teasy-unused-test-state',
+  quit: vi.fn()
+}))
 vi.mock('electron', () => ({ app }))
 import { UpdateLauncher } from './updater'
 const directories: string[] = []
@@ -41,6 +46,7 @@ function setup(remote = release(), payload: Uint8Array = bytes) {
   const updater = new UpdateLauncher(
     () => '',
     () => undefined,
+    directory,
     directory
   )
   return { updater, fetchMock, directory }

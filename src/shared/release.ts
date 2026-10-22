@@ -95,38 +95,3 @@ export function downloadHeaders(token: string): Record<string, string> {
 export function downloadUrl(asset: PickedAsset, token: string): string {
   return token.trim() ? asset.apiUrl : asset.browserUrl
 }
-
-/**
- * CMD script that waits for this process to exit, then either copies a new
- * portable EXE over the running one or silently runs the NSIS installer.
- */
-export function buildApplyScript(opts: {
-  kind: 'portable' | 'installed'
-  currentExe: string
-  payloadPath: string
-  pid: number
-}): string {
-  const current = opts.currentExe.replace(/"/g, '')
-  const payload = opts.payloadPath.replace(/"/g, '')
-  const wait = [
-    ':wait',
-    `tasklist /FI "PID eq ${opts.pid}" | findstr /I "${opts.pid}" >nul`,
-    'if not errorlevel 1 (',
-    '  timeout /t 1 /nobreak >nul',
-    '  goto wait',
-    ')'
-  ]
-  const apply =
-    opts.kind === 'installed'
-      ? [`"${payload}" /S`, 'timeout /t 2 /nobreak >nul']
-      : [`copy /Y "${payload}" "${current}"`]
-  return [
-    '@echo off',
-    'setlocal',
-    ...wait,
-    ...apply,
-    `if exist "${current}" start "" "${current}"`,
-    `del /F /Q "${payload}"`,
-    'del /F /Q "%~f0"'
-  ].join('\r\n')
-}

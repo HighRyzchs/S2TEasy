@@ -21,11 +21,21 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run typecheck
+      - run: node scripts/check-update-helper.mjs
       - run: npm run build:win
+      - name: Write artifact checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem release/*.exe | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          } | Set-Content release/SHA256SUMS.txt -Encoding ascii
       - uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          body_path: docs/RELEASE_NOTES.md
           files: |
             release/*.exe
+            release/SHA256SUMS.txt
             release/latest.yml
             release/*.blockmap

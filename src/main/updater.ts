@@ -1,5 +1,5 @@
 import { app } from 'electron'
-import { createWriteStream, writeFileSync, readFileSync, rmSync, mkdtempSync } from 'node:fs'
+import { createWriteStream, readFileSync, rmSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
@@ -7,7 +7,6 @@ import { pipeline } from 'node:stream/promises'
 import { createHash } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import {
-  buildApplyScript,
   downloadHeaders,
   downloadUrl,
   githubHeaders,
@@ -18,6 +17,7 @@ import {
   type PickedAsset
 } from '../shared/release'
 import { idleUpdate, type Packaging, type UpdateStatus } from '../shared/types'
+import { buildVerifiedApplyScript, updateTargetPath } from '../shared/update-install'
 import { isNewerVersion, tagToVersion } from '../shared/version'
 
 export function detectPackaging(): Packaging {
@@ -36,11 +36,26 @@ export class UpdateLauncher {
   constructor(
     private readonly getToken: () => string,
     private readonly onChange: (status: UpdateStatus) => void,
-    private readonly temporaryRoot: string = tmpdir()
+    private readonly temporaryRoot: string = tmpdir(),
+    private readonly stateDirectory: string = app.getPath('userData')
   ) {
     this.status = idleUpdate(app.getVersion(), detectPackaging())
     this.status.phase = 'idle'
     this.status.message = 'Updates install in place — no uninstall.'
+    try {
+      const receipt = JSON.parse(
+        readFileSync(join(this.stateDirectory, 'update-result.json'), 'utf8').replace(/^\uFEFF/, '')
+      )
+      if (receipt.status === 'applied' && receipt.toVersion === app.getVersion()) {
+        this.status.phase = 'current'
+        this.status.message = `Updated from ${receipt.fromVersion} to ${receipt.toVersion}.`
+      } else if (receipt.status === 'failed') {
+        this.status.phase = 'error'
+        this.status.message = `Previous update could not be applied: ${String(receipt.message).slice(0, 300)} Your original app and local data are kept.`
+      }
+    } catch {
+      /* First launch or no valid update receipt. */
+    }
   }
 
   getStatus(): UpdateStatus {
@@ -211,26 +226,51 @@ export class UpdateLauncher {
       })
       return this.getStatus()
     }
-    const kind = this.status.packaging === 'installed' ? 'installed' : 'portable'
-    const scriptPath = join(tmpdir(), `s2teasy-apply-${process.pid}.cmd`)
-    writeFileSync(
-      scriptPath,
-      buildApplyScript({
+    try {
+      const kind = this.status.packaging === 'installed' ? 'installed' : 'portable'
+      const target = updateTargetPath(this.status.packaging, process.execPath, process.env)
+      const script = buildVerifiedApplyScript({
         kind,
-        currentExe: process.execPath,
+        currentExe: target,
         payloadPath: this.payloadPath,
-        pid: process.pid
-      }),
-      'utf8'
-    )
-    const child = spawn(process.env.ComSpec || 'cmd.exe', ['/d', '/c', scriptPath], {
-      detached: true,
-      stdio: 'ignore',
-      windowsHide: true,
-      cwd: tmpdir()
-    })
-    child.unref()
-    setTimeout(() => app.quit(), 250)
+        pid: process.pid,
+        expectedSha256: this.asset!.digest!.slice(7),
+        receiptPath: join(this.stateDirectory, 'update-result.json'),
+        fromVersion: this.status.currentVersion,
+        toVersion: this.asset!.version
+      })
+      const child = spawn(
+        'powershell.exe',
+        [
+          '-NoLogo',
+          '-NoProfile',
+          '-NonInteractive',
+          '-EncodedCommand',
+          Buffer.from(script, 'utf16le').toString('base64')
+        ],
+        {
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true,
+          cwd: this.temporaryRoot
+        }
+      )
+      child.once('error', () =>
+        this.set({
+          phase: 'error',
+          message:
+            'Could not start the update helper. The app has not been replaced; try again or install manually.'
+        })
+      )
+      child.once('spawn', () => setTimeout(() => app.quit(), 250))
+      child.unref()
+      this.set({ message: 'Closing to apply the verified update…' })
+    } catch (error) {
+      this.set({
+        phase: 'error',
+        message: error instanceof Error ? error.message : 'Could not apply update.'
+      })
+    }
     return this.getStatus()
   }
 

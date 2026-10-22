@@ -34,7 +34,7 @@ portable:
   artifactName: S2Teasy-${version}-portable.exe
 publish:
   provider: github
-  owner: roshan63
-  repo: S2Teasy
+  owner: HighRyzchs
+  repo: S2TEasy
   releaseType: release
 npmRebuild: true
