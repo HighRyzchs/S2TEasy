@@ -1415,3 +1415,38 @@ input[type='range'] {
 .practice-feedback p {
   margin: 6px 0 0;
 }
+
+.overlay-editor .overlay-preview-frame {
+  height: auto;
+  overflow: hidden;
+  transition: min-height 0.15s;
+}
+.overlay-editor .overlay-preview-frame .overlay-root {
+  height: 100%;
+}
+.overlay-assets {
+  border-top: 1px solid var(--line, #64786c40);
+  margin: 18px 0;
+  padding-top: 16px;
+}
+.overlay-assets .asset-upload {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+.overlay-assets small {
+  display: block;
+  margin: 8px 0;
+  font-size: 10px;
+  opacity: 0.65;
+}
+.asset-options {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.asset-options select {
+  margin: 0 8px;
+}

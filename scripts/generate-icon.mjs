@@ -36,29 +36,26 @@ function fillRoundRect(x0, y0, x1, y1, r, color) {
   }
 }
 
-function fillCircle(cx, cy, r, color) {
-  const x0 = Math.floor(cx - r - 1)
-  const y0 = Math.floor(cy - r - 1)
-  const x1 = Math.ceil(cx + r + 1)
-  const y1 = Math.ceil(cy + r + 1)
-  for (let y = y0; y <= y1; y++) {
-    for (let x = x0; x <= x1; x++) {
-      const d = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2)
-      if (d <= r) blend(x, y, color, 1)
-      else if (d < r + 1) blend(x, y, color, r + 1 - d)
-    }
-  }
-}
-
+// Same mint tile and five rounded signal bars as docs/logo.svg.
 const bitmap = Buffer.alloc(SIZE * SIZE * 4)
-fillRoundRect(18, 18, 238, 238, 56, [12, 13, 17, 255])
-fillRoundRect(22, 18, 238, 238, 56, [18, 20, 27, 255])
-fillCircle(78, 128, 18, [226, 164, 90, 255])
-const bars = [18, 32, 48, 28, 40, 22, 36, 16]
-bars.forEach((h, i) => {
-  const x = 118 + i * 12
-  fillRoundRect(x, 128 - h, x + 6, 128 + h, 3, [232, 228, 220, 230])
-})
+fillRoundRect(0, 0, SIZE, SIZE, 80, [165, 230, 206, 255])
+for (const [x, y0, y1] of [
+  [20, 38, 44],
+  [30, 26, 56],
+  [40, 18, 62],
+  [50, 28, 52],
+  [60, 38, 44]
+]) {
+  const scale = SIZE / 80
+  fillRoundRect(
+    Math.round((x - 3) * scale),
+    Math.round((y0 - 3) * scale),
+    Math.round((x + 3) * scale),
+    Math.round((y1 + 3) * scale),
+    Math.round(3 * scale),
+    [18, 44, 36, 255]
+  )
+}
 
 function crc32(buf) {
   let crc = ~0
@@ -101,38 +98,43 @@ function encodePng(size, rgba) {
 function scale(src, from, to) {
   const out = Buffer.alloc(to * to * 4)
   const ratio = from / to
-  for (let y = 0; y < to; y++) {
+  for (let y = 0; y < to; y++)
     for (let x = 0; x < to; x++) {
-      const sx = Math.min(from - 1, Math.floor(x * ratio))
-      const sy = Math.min(from - 1, Math.floor(y * ratio))
-      src.copy(out, (y * to + x) * 4, (sy * from + sx) * 4, (sy * from + sx) * 4 + 4)
+      const sums = [0, 0, 0, 0]
+      let weight = 0
+      for (let sy = Math.floor(y * ratio); sy < Math.ceil((y + 1) * ratio); sy++)
+        for (let sx = Math.floor(x * ratio); sx < Math.ceil((x + 1) * ratio); sx++) {
+          const w =
+            (Math.min(sx + 1, (x + 1) * ratio) - Math.max(sx, x * ratio)) *
+            (Math.min(sy + 1, (y + 1) * ratio) - Math.max(sy, y * ratio))
+          const i = (sy * from + sx) * 4
+          for (let c = 0; c < 4; c++) sums[c] += src[i + c] * w
+          weight += w
+        }
+      for (let c = 0; c < 4; c++) out[(y * to + x) * 4 + c] = Math.round(sums[c] / weight)
     }
-  }
   return out
 }
 
-const png256 = encodePng(SIZE, bitmap)
-writeFileSync(join(outDir, 'icon.png'), png256)
-
-const png32 = encodePng(32, scale(bitmap, SIZE, 32))
-writeFileSync(join(outDir, 'icon-32.png'), png32)
-
-function icoFromPng(png) {
-  const header = Buffer.alloc(6)
-  header.writeUInt16LE(0, 0)
-  header.writeUInt16LE(1, 2)
-  header.writeUInt16LE(1, 4)
+const sizes = [16, 24, 32, 48, 64, 128, 256]
+const images = sizes.map((size) =>
+  encodePng(size, size === SIZE ? bitmap : scale(bitmap, SIZE, size))
+)
+writeFileSync(join(outDir, 'icon.png'), images.at(-1))
+writeFileSync(join(outDir, 'icon-32.png'), images[2])
+const header = Buffer.alloc(6)
+header.writeUInt16LE(1, 2)
+header.writeUInt16LE(sizes.length, 4)
+let offset = 6 + sizes.length * 16
+const entries = images.map((png, index) => {
   const entry = Buffer.alloc(16)
-  entry[0] = 0
-  entry[1] = 0
-  entry[2] = 0
-  entry[3] = 0
+  entry[0] = entry[1] = sizes[index] === 256 ? 0 : sizes[index]
   entry.writeUInt16LE(1, 4)
   entry.writeUInt16LE(32, 6)
   entry.writeUInt32LE(png.length, 8)
-  entry.writeUInt32LE(22, 12)
-  return Buffer.concat([header, entry, png])
-}
-
-writeFileSync(join(outDir, 'icon.ico'), icoFromPng(png256))
-console.log('Wrote resources/icon.png and resources/icon.ico')
+  entry.writeUInt32LE(offset, 12)
+  offset += png.length
+  return entry
+})
+writeFileSync(join(outDir, 'icon.ico'), Buffer.concat([header, ...entries, ...images]))
+console.log('Wrote mint waveform icons: PNG + multi-resolution Windows ICO (16–256px)')

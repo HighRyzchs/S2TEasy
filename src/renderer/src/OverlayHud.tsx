@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { overlayThemeVars, type OverlayTheme } from '@shared/overlay-theme'
+import { overlayThemeVars, validOverlayAsset, type OverlayTheme } from '@shared/overlay-theme'
 import type { OverlayState } from '@shared/types'
 
 export function OverlayHud({
@@ -25,7 +25,7 @@ export function OverlayHud({
   if (live) classes.push('live')
   if (preview) classes.push('preview')
 
-  if (theme.skin !== 'studio') {
+  if (theme.skin !== 'studio' || theme.orientation === 'vertical') {
     const failed = state.status === 'error'
     const done = state.status === 'success'
     const processing = state.status === 'transcribing' || state.status === 'inserting'
@@ -40,7 +40,9 @@ export function OverlayHud({
       : done
         ? state.mode === 'practice'
           ? 'Practice saved'
-          : 'Saved & inserted'
+          : preview
+            ? 'Preview complete'
+            : 'Saved & inserted'
         : state.status === 'arm-paste'
           ? 'Choose a text field'
           : processing
@@ -52,39 +54,51 @@ export function OverlayHud({
       <div
         className={classes.join(' ')}
         data-status={state.status}
-        data-skin={theme.skin}
+        data-skin={theme.skin === 'studio' ? 'minimal' : theme.skin}
+        data-orientation={theme.orientation}
         style={overlayThemeVars(theme) as CSSProperties}
       >
         <div
           className="minimal-hud"
           data-transcript={theme.showTranscript || failed ? 'true' : 'false'}
         >
+          {theme.assetRole === 'background' && validOverlayAsset(theme.assetDataUrl) && (
+            <img className="hud-background" src={theme.assetDataUrl} alt="" draggable={false} />
+          )}
           <div className={`minimal-indicator ${processing ? 'processing' : ''}`} aria-hidden="true">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              {done ? (
-                <path d="m5 12 4 4L19 6" />
-              ) : failed ? (
-                <>
-                  <path d="M12 7v6" />
-                  <path d="M12 17h.01" />
-                  <circle cx="12" cy="12" r="9" />
-                </>
-              ) : processing ? (
-                <path d="M20 12a8 8 0 1 1-5.5-7.6" />
-              ) : (
-                <>
-                  <rect x="9" y="3" width="6" height="12" rx="3" />
-                  <path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3m-3 0h6" />
-                </>
-              )}
-            </svg>
+            {theme.assetRole === 'emblem' &&
+            validOverlayAsset(theme.assetDataUrl) &&
+            !failed &&
+            !done &&
+            !processing ? (
+              <img className="hud-emblem" src={theme.assetDataUrl} alt="" draggable={false} />
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                {done ? (
+                  <path d="m5 12 4 4L19 6" />
+                ) : failed ? (
+                  <>
+                    <path d="M12 7v6" />
+                    <path d="M12 17h.01" />
+                    <circle cx="12" cy="12" r="9" />
+                  </>
+                ) : processing ? (
+                  <path d="M20 12a8 8 0 1 1-5.5-7.6" />
+                ) : (
+                  <>
+                    <rect x="9" y="3" width="6" height="12" rx="3" />
+                    <path d="M6 11v1a6 6 0 0 0 12 0v-1M12 18v3m-3 0h6" />
+                  </>
+                )}
+              </svg>
+            )}
           </div>
           <div className="minimal-copy">
             <div className="minimal-heading">
@@ -111,39 +125,48 @@ export function OverlayHud({
                 ))}
             </div>
           )}
-          {canStop && (
-            <button
-              type="button"
-              className="minimal-stop"
-              aria-label="Stop recording"
-              title="Stop recording"
-              onPointerDown={onStop}
-              onClick={onStop}
-            >
-              <svg viewBox="0 0 20 20" aria-hidden="true">
-                <rect x="6" y="6" width="8" height="8" rx="2" fill="currentColor" />
-              </svg>
-            </button>
-          )}
-          {failed && (
-            <button
-              type="button"
-              className="minimal-stop"
-              aria-label="Dismiss recording error"
-              title="Dismiss"
-              onClick={onDismiss}
-            >
-              <svg
-                viewBox="0 0 20 20"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                aria-hidden="true"
+          <div className="minimal-actions">
+            {canStop && (
+              <button
+                type="button"
+                className="minimal-stop"
+                aria-label={processing ? 'Cancel processing' : 'Stop recording'}
+                title={
+                  processing ? 'Cancel processing · saved work stays in History' : 'Stop recording'
+                }
+                onClick={processing ? onDismiss : onStop}
               >
-                <path d="m6 6 8 8m0-8-8 8" />
-              </svg>
-            </button>
-          )}
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <rect x="6" y="6" width="8" height="8" rx="2" fill="currentColor" />
+                </svg>
+              </button>
+            )}
+            {(failed || done || state.status === 'arm-paste' || state.status === 'listening') && (
+              <button
+                type="button"
+                className="minimal-stop"
+                aria-label={
+                  failed
+                    ? 'Dismiss recording error'
+                    : state.status === 'listening'
+                      ? 'Cancel recording'
+                      : 'Dismiss overlay'
+                }
+                title="Dismiss"
+                onClick={onDismiss}
+              >
+                <svg
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  aria-hidden="true"
+                >
+                  <path d="m6 6 8 8m0-8-8 8" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -154,6 +177,7 @@ export function OverlayHud({
       className={classes.join(' ')}
       data-status={state.status}
       data-skin="studio"
+      data-orientation="horizontal"
       data-core={theme.core}
       data-wave={theme.wave}
       data-bezel={theme.bezel}
@@ -166,7 +190,18 @@ export function OverlayHud({
         <i className="notch br" />
         <div className="rail" />
         <div className="scan" />
+        {theme.assetRole === 'background' && validOverlayAsset(theme.assetDataUrl) && (
+          <img className="hud-background" src={theme.assetDataUrl} alt="" draggable={false} />
+        )}
         <div className="core" aria-hidden="true">
+          {theme.assetRole === 'emblem' && validOverlayAsset(theme.assetDataUrl) && (
+            <img
+              className="hud-emblem studio-emblem"
+              src={theme.assetDataUrl}
+              alt=""
+              draggable={false}
+            />
+          )}
           <span className="halo" />
           <span className="ring" />
           <span className="ring delay" />
@@ -190,25 +225,37 @@ export function OverlayHud({
           </div>
           {state.partial ? <div className="partial">{state.partial}</div> : null}
         </div>
-        {state.status === 'error' && (
+        {!canStop &&
+          (state.status === 'error' ||
+            state.status === 'success' ||
+            state.status === 'arm-paste') && (
+            <button
+              type="button"
+              className="abort"
+              aria-label={state.status === 'error' ? 'Dismiss recording error' : 'Dismiss overlay'}
+              onClick={onDismiss}
+            >
+              <span>Dismiss</span>
+            </button>
+          )}
+        {state.status === 'listening' && (
           <button
             type="button"
-            className="abort"
-            aria-label="Dismiss recording error"
+            className="abort studio-cancel"
+            aria-label="Cancel recording"
             onClick={onDismiss}
           >
-            <span>Dismiss</span>
+            ×
           </button>
         )}
         {canStop ? (
           <button
             type="button"
             className="abort"
-            aria-label="Stop recording"
-            onPointerDown={onStop}
-            onClick={onStop}
+            aria-label={state.status === 'listening' ? 'Stop recording' : 'Cancel processing'}
+            onClick={state.status === 'listening' ? onStop : onDismiss}
           >
-            <span>Stop</span>
+            <span>{state.status === 'listening' ? 'Stop' : 'Cancel'}</span>
           </button>
         ) : null}
       </div>

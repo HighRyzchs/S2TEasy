@@ -297,6 +297,7 @@ async function setup(): Promise<void> {
             localEndpoint: settings.localEndpoint,
             language: settings.language,
             wavBase64: pcmToWav(audio.subarray(offset, offset + chunkBytes)).toString('base64'),
+            route: settings.openrouterRoute,
             vocabulary: settings.vocabulary.filter((row) => row.enabled).map((row) => row.meant)
           })
         )

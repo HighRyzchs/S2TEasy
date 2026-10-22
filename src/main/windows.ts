@@ -1,5 +1,7 @@
 import { BrowserWindow, nativeImage, screen, shell } from 'electron'
 import { join } from 'node:path'
+import { overlaySize, overlayCoordinates } from '../shared/overlay-layout'
+import type { OverlayPosition } from '../shared/types'
 import type { OverlayTheme } from '../shared/overlay-theme'
 import iconPath from '../../resources/icon.png?asset'
 import { attachOverlayTopmost, pinOverlayTopmost } from './overlay-topmost'
@@ -114,7 +116,8 @@ export function createRecorderWindow(): BrowserWindow {
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
-      backgroundThrottling: false
+      backgroundThrottling: false,
+      autoplayPolicy: 'no-user-gesture-required'
     }
   })
   if (isDev && process.env.ELECTRON_RENDERER_URL) {
@@ -125,21 +128,17 @@ export function createRecorderWindow(): BrowserWindow {
   return window
 }
 
-export function placeOverlay(window: BrowserWindow, position: 'top' | 'bottom' = 'bottom'): void {
+export function placeOverlay(window: BrowserWindow, position: OverlayPosition = 'bottom'): void {
+  if (window.isDestroyed()) return
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
-  const { width, height } = display.workArea
-  const bounds = window.getBounds()
-  window.setPosition(
-    display.workArea.x + Math.round(width / 2 - bounds.width / 2),
-    position === 'top' ? display.workArea.y + 28 : display.workArea.y + height - bounds.height - 28
-  )
+  const point = overlayCoordinates(display.workArea, window.getBounds(), position)
+  window.setPosition(point.x, point.y)
   pinOverlayTopmost(window)
 }
 
 export function sizeOverlay(window: BrowserWindow, theme: OverlayTheme): void {
   if (window.isDestroyed()) return
-  const width = theme.skin === 'studio' ? 536 : theme.showTranscript ? 456 : 332
-  const height = theme.skin === 'studio' || theme.showTranscript ? 96 : 80
+  const { width, height } = overlaySize(theme)
   const bounds = window.getBounds()
   if (bounds.width !== width || bounds.height !== height) window.setSize(width, height)
 }

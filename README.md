@@ -23,8 +23,8 @@ An open source Windows dictation app with live text, recoverable sessions, and a
 ## What it does
 
 - **Dictation into Windows apps.** A configurable global shortcut, toggle or hold mode, and live phrase insertion or insertion on stop.
-- **Minimal HUD styles.** Ink, Frost, custom accent colors, optional recent transcript text, and the original Studio mixer as an opt-in.
-- **Live HUD.** Provisional text, finalized phrases, microphone activity, configurable colors/components, and top/bottom placement on the display nearest your pointer. The overlay avoids taking keyboard focus. Failures remain visible.
+- **Six HUD styles.** Ink, Frost, Liquid Glass, Cyberpunk, 8-bit, and the Studio mixer. Choose horizontal or vertical layout, size, accent color, waveform sensitivity, and your own local emblem/background image.
+- **Live HUD.** Provisional text, finalized phrases, microphone activity, nine placements on the display nearest your pointer, and speech-volume-reactive waveforms. Stop finishes a recording; Cancel releases the microphone and keeps saved work. Errors dismiss automatically after eight seconds and remain recoverable in History. The overlay avoids taking keyboard focus.
 - **Recoverable sessions.** Finalized text is checkpointed before insertion. Temporary local audio enables retry after connection or paste failures. History distinguishes saved, interrupted, failed, and cancelled sessions.
 - **Your choice of engine.** router.audio streaming, OpenRouter audio-input models, or an already-running local speech server.
 - **Explicit vocabulary.** Add, disable, or remove whole-word and phrase corrections. Original recognition text is retained alongside corrected text.
@@ -38,10 +38,12 @@ Windows x64 is the native dictation target. Build an executable on Windows using
 1. Open **Settings → Speech engine** and choose an engine.
 2. **Streaming:** enter a router.audio or supported provider key. **OpenRouter:** enter your OpenRouter key, test it, load the audio-compatible model list, and select a model slug. **Local:** configure the loopback transcription endpoint and model served by your local server.
 3. In **Settings → Dictation**, test your microphone and choose your shortcut. The default is `Ctrl + Shift + Space`.
-4. Focus a text field and use the shortcut. Press it again to finish (or release it in hold mode).
+4. Focus a text field and use the shortcut. Press it again to finish (or release it in hold mode). While finishing, press again to cancel processing and dismiss the HUD; saved checkpoints remain in History.
 5. Review the transcript in **History**. If typing or transcription failed, saved text remains available. Retained audio can be recovered using OpenRouter or Local speech, or exported.
 
 OpenRouter and streaming provider keys are **separate**. An OpenRouter key is not silently sent to router.audio. A key test verifies authentication, not whether a particular audio model can transcribe your voice.
+
+OpenRouter operation selection defaults to **Auto**, using the model’s advertised output modality. Dedicated speech models (including `qwen/qwen3-asr-1.7b` and `x-ai/grok-stt-1.0`) use `/audio/transcriptions`; audio chat models use `/chat/completions`. **Settings → Speech engine → API operation** can override this for a newly introduced slug. The model list explicitly requests both text and transcription output; OpenRouter’s default text-only catalogue omits ASR models. No model is silently substituted on failure.
 
 ### Local speech
 
@@ -94,7 +96,7 @@ See [Architecture](docs/ARCHITECTURE.md) and [Windows smoke test](docs/WINDOWS_T
 
 The vocabulary is a deterministic, case-insensitive post-pass over **each finalized segment**. It matches whole words/phrases using Unicode boundaries, prefers longer matches, and never cascades replacements. Rules spanning separate finalized segments are not applied. Use distinctive phrases: a rule for a common word changes every matching occurrence in new dictations.
 
-For OpenRouter and Local speech, enabled intended words also become prompt hints. These are preferences; model compliance is not guaranteed. Streaming provider keyword boosting is not implemented because provider contracts differ. No acoustic adaptation or automatic fine-tuning occurs.
+For OpenRouter audio chat and Local speech, enabled intended words also become prompt hints. Dedicated OpenRouter ASR requests omit optional keyterms because support differs by provider; your correction rules still apply to their output. These are preferences; model compliance is not guaranteed. Streaming provider keyword boosting is not implemented because provider contracts differ. No acoustic adaptation or automatic fine-tuning occurs.
 
 For pronunciation examples, open **Voice practice**, enter a short target phrase, consent to saving that take, and record it. No text is inserted into another application. Review the recognition in Voice practice or History, correct the intended text if necessary, and export WAV + JSON. Practice takes retain their audio even when successful-take retention is globally off, because each take has its own consent. Exported labels pair the **whole take** with the intended transcript; they are not word-aligned. Text-only historical recordings cannot recover an accent. Real adaptation requires consented audio/text pairs, an engine that supports adaptation, and evaluation on held-out recordings. See the [roadmap](docs/ROADMAP.md).
 
@@ -102,7 +104,7 @@ For pronunciation examples, open **Voice practice**, enter a short target phrase
 
 The Windows CI workflow runs tests/type checks and produces build artifacts. Tagged releases build the executables. The updater targets `HighRyzchs/S2TEasy`; automatic updates are off by default and refuse artifacts without a GitHub SHA-256 digest. Run the Windows checklist and arrange code signing before treating development builds as release-ready.
 
-`docs/index.html` is the project website. `npm run build:site` builds it into `.site/`, including the interactive HUD/update showcase using the actual app components. The showcase uses simulated speech and release states, does not access the microphone, and does not download or install updates. The **Publish project website** workflow deploys changes under `docs/` when they reach `main`, and also supports manual deployment. GitHub Pages uses **GitHub Actions** as its source. See [Publishing](docs/PUBLISHING.md) for the website, Windows builds, and release checklist.
+`docs/index.html` is the project website. `npm run build:site` builds it into `.site/`, including the interactive HUD/update showcase using the actual app components. The showcase starts with simulated speech and release states. “Use my microphone” explicitly requests local volume metering; no preview audio is recorded or sent to a service. Stop, End preview, or leaving the page releases the microphone. Updates are simulated without downloads or installation. The **Publish project website** workflow deploys changes under `docs/` when they reach `main`, and also supports manual deployment. GitHub Pages uses **GitHub Actions** as its source. See [Publishing](docs/PUBLISHING.md) for the website, Windows builds, and release checklist.
 
 ## License and attribution
 

@@ -2,8 +2,8 @@
 
 Validated in the Linux cloud environment using Node.js 24.19.0, npm 11.9.0, Electron 35.7.5, and Chromium. CI is configured for Node 22 LTS. These results apply to this prepared instance, not an independently restored task or a Windows release.
 
-- Frozen installation (`npm ci`) completed twice with Electron proxy support and normal TLS/package verification. Dependency versions and integrity entries remain unchanged. The lockfile root version was subsequently synchronized from 1.0.0 to the package version 1.3.1 for publication; this does not change dependencies.
-- Unit tests: 101 tests across 23 files passed. Provider responses and native insertion are mocked in controller tests. The resampling test checks two minutes of sample timing, not a real two-minute voice recording.
+- Frozen installation (`npm ci`) completed twice with Electron proxy support and normal TLS/package verification. Dependency versions and integrity entries remain unchanged. The lockfile root version was subsequently synchronized from 1.0.0 to the package version 1.4.0 for publication; this does not change dependencies.
+- Unit tests: 116 tests across 26 files passed. Provider responses and native insertion are mocked in controller tests. The resampling test checks two minutes of sample timing, not a real two-minute voice recording.
 - TypeScript checks for main/preload/shared and renderer passed.
 - Production main, preload, and renderer bundles compiled successfully using `npm exec -- electron-vite build`.
 - Browser checks exercised rule creation/toggling, light appearance, History correction/search, delete cancellation, practice consent, and refusal to record in browser-only preview. No page JavaScript errors occurred.
@@ -12,7 +12,7 @@ Validated in the Linux cloud environment using Node.js 24.19.0, npm 11.9.0, Elec
 
 ## Pending validation
 
-- Paid/live OpenRouter and router.audio requests; no provider key was configured. API shape tests are mocked and do not establish model availability or recognition accuracy.
+- Paid/live OpenRouter and router.audio requests; no provider key was configured. An unauthenticated live catalogue read confirms Qwen ASR and Grok STT advertise transcription output. Paid transcription itself remains unverified; request/response tests are mocked and do not establish recognition accuracy.
 - A local speech server/model; the loopback adapter was tested with mocked multipart responses, not an installed acoustic model.
 - Windows microphone capture, continuous multi-minute speech, global shortcuts, native target focus/paste, overlay z-order, installer execution/upgrade behavior, and executable signing. Follow WINDOWS_TESTING.md.
 - Acoustic personalization/fine-tuning and held-out accuracy evaluation. Vocabulary rules, prompt hints for batch engines, labeled practice takes, and audio/text export are implemented; model adaptation is not.
@@ -34,7 +34,17 @@ Saved installation and startup instructions, the actual `S2TEasy` mount path for
 ## HUD and updater revision
 
 - Ink/Frost pills, accent selection, compact mode, and optional recent transcript text replace the original default neon HUD. The Studio mixer remains opt-in. Windows overlay sizing follows the chosen layout, while the always-on-top/focus behavior still needs desktop verification.
-- The actual HUD component is rendered in the built, standalone interactive preview. Browser checks cover style selection, a 48 px compact pill, and responsive layout. Speech is simulated.
+- The actual HUD component and theme editor are rendered in the built, standalone interactive preview. It starts with simulated speech and provides opt-in local microphone metering. Preview updates are simulated.
 - Update UI covers availability, downloading/progress, and user-triggered restart. Eight updater tests cover discovery, explicit downloading, digest verification, corrupt/missing artifacts, and incompatible releases. No provider or payment credentials are needed for these tests.
 - No GitHub Releases existed when the update feed was checked. End-to-end installation/replacement on Windows is still pending. A demo update is not a published release.
 - Optional hosted credits/payment architecture is proposed in CLOUD_SERVICE_PROPOSAL.md. No production billing or cloud transcription gateway was implemented.
+
+## Liquid Glass, lifecycle and audio routing revision (1.4.0)
+
+- Added Liquid Glass, Cyberpunk and 8-bit alongside Ink, Frost and Studio; vertical layout, nine screen placements, 80–140% size, wave sensitivity, and local raster emblem/background uploads.
+- Browser checks exercised all six skins’ Stop → Finishing → Cancel flow and recording cancellation/replay. Clock and waveform change over time. Scaled vertical controls fit within the HUD. Local image import/background/removal and rejection of SVG were checked.
+- A browser Web Audio check feeds a synthetic signal through the actual volume meter. Silence settles to 3 px bars, and a louder signal raises them to approximately 24 px. The meter uses a muted output graph to keep processing active without audio feedback. This is not a hardware microphone test. End preview releases the stream; permission-error dismissal works.
+- Lifecycle tests cover cancelling a pending microphone permission result, starting another session before old setup resolves, rejecting late events/responses, aborting HTTP transcription, and retaining recovery audio after timed error hiding. Audio capture explicitly resumes its context; errors auto-hide after eight seconds.
+- Official OpenRouter OpenAPI and TypeScript SDK confirm distinct STT and chat contracts. The model request now includes transcription output; auto routing selects `/audio/transcriptions` for the two reported ASR slugs and `/chat/completions` for audio chat models. The explicit API-operation selector bypasses discovery for new slugs. Unsupported optional provider features are omitted.
+- Build-time icon generation now matches the mint waveform logo, with seven Windows ICO sizes from 16 to 256 px. A version bump and new EXE are required; an older downloaded EXE is not changed by a source/website update.
+- Native Windows interactions, real microphone capture, paid-provider accuracy, and desktop glass composition still require the Windows smoke test.

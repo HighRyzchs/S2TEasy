@@ -1,201 +1,148 @@
 import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { defaultOverlayTheme, type OverlayTheme } from '@shared/overlay-theme'
-import { emptyOverlay, type OverlayState } from '@shared/types'
-import { OverlayHud } from './OverlayHud'
-import { UpdatePanel } from './UpdatePanel'
+import { defaultOverlayTheme, OVERLAY_SKINS, type OverlayTheme } from '@shared/overlay-theme'
 import { idleUpdate, type UpdateStatus } from '@shared/types'
+import { OverlayHud } from './OverlayHud'
+import { OverlayThemeEditor } from './OverlayThemeEditor'
+import { UpdatePanel } from './UpdatePanel'
+import { useHudPreview } from './useHudPreview'
 import './overlay-theme.css'
 import './overlay-showcase.css'
 
-const bars = [
-  0.1, 0.22, 0.35, 0.6, 0.8, 0.45, 0.25, 0.5, 0.7, 0.9, 0.5, 0.3, 0.18, 0.3, 0.6, 0.8, 0.6, 0.4,
-  0.2, 0.4, 0.7, 0.9, 0.5, 0.3, 0.4, 0.3, 0.15, 0.1
-]
-const listening: OverlayState = {
-  ...emptyOverlay(),
-  status: 'listening',
-  message: 'Listening',
-  partial: 'Let’s make room for the next idea.',
-  elapsedMs: 12000,
-  bars
+const descriptions: Record<OverlayTheme['skin'], string> = {
+  minimal: 'Quiet, focused, always in reach.',
+  frost: 'A little light for your thoughts.',
+  glass: 'Frosted edges. Soft reflections. Light through glass.',
+  cyberpunk: 'After-hours signal. Mint meets ultraviolet.',
+  pixel: 'One more thought. One more level.',
+  studio: 'The original mixer, with six cores and five waves.'
 }
-function Hud({ theme, state = listening }: { theme: OverlayTheme; state?: OverlayState }) {
+function Sample({ skin, vertical = false }: { skin: OverlayTheme['skin']; vertical?: boolean }) {
+  const demo = useHudPreview()
+  const theme = {
+    ...defaultOverlayTheme(),
+    skin,
+    showTranscript: !vertical,
+    orientation: vertical ? ('vertical' as const) : ('horizontal' as const)
+  }
   return (
-    <OverlayHud
-      theme={theme}
-      state={state}
-      bars={bars}
-      canStop={state.status === 'listening'}
-      preview
-    />
+    <article className={`sample sample-${skin}`}>
+      <div className="sample-caption">
+        <span>
+          {OVERLAY_SKINS.find((entry) => entry.id === skin)?.label}
+          {vertical ? ' · Vertical' : ''}
+        </span>
+        <button onClick={demo.start} title="Restart this preview">
+          Replay ↗
+        </button>
+      </div>
+      <div className={`hud-stage ${vertical ? 'vertical-stage' : ''}`}>
+        <div className="desktop-texture" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </div>
+        {demo.state.status !== 'hidden' ? (
+          <OverlayHud
+            theme={theme}
+            state={demo.state}
+            bars={demo.bars}
+            canStop={['listening', 'transcribing', 'inserting'].includes(demo.state.status)}
+            onStop={demo.stop}
+            onDismiss={demo.dismiss}
+            preview
+          />
+        ) : (
+          <button className="replay-hud" onClick={demo.start}>
+            Overlay dismissed · Replay
+          </button>
+        )}
+      </div>
+      <p>{descriptions[skin]}</p>
+    </article>
   )
 }
 function Showcase() {
+  const [theme, setTheme] = useState<OverlayTheme>({ ...defaultOverlayTheme(), skin: 'glass' })
   const [update, setUpdate] = useState<UpdateStatus>({
-    ...idleUpdate('1.3.1', 'portable'),
+    ...idleUpdate('1.4.0', 'portable'),
     phase: 'available',
-    availableVersion: '1.4.0',
+    availableVersion: '1.5.0',
     message: 'Simulated update preview'
   })
   const [autoDownload, setAutoDownload] = useState(false)
-  const [skin, setSkin] = useState<OverlayTheme['skin']>('minimal')
-  const [showTranscript, setShowTranscript] = useState(true)
-  const theme = { ...defaultOverlayTheme(), skin, showTranscript }
-  const legacy: OverlayTheme = {
-    ...defaultOverlayTheme(),
-    skin: 'studio',
-    coreHue: 190,
-    coreSat: 85,
-    coreLight: 72,
-    waveHue: 190,
-    waveSat: 80,
-    waveLight: 68,
-    bezelHue: 268
-  }
   return (
     <main className="showcase">
       <section id="overlay-comparison">
         <header>
-          <span className="studio-wordmark">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-            >
-              <path d="M4 10v4m4-8v12m4-15v18m4-15v12m4-8v4" />
+          <a className="studio-wordmark" href="../">
+            <svg viewBox="0 0 40 40" aria-hidden="true">
+              <rect width="40" height="40" rx="12" fill="#a5e6ce" />
+              <path
+                d="M10 19v3m5-9v15m5-19v22m5-17v12m5-7v3"
+                stroke="#122c24"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
             </svg>
             S2Teasy <span>/ Overlay studio</span>
+          </a>
+          <span className="build-label">
+            <i /> LIVE COMPONENT PREVIEW
           </span>
-          <span className="build-label">ACTUAL APP COMPONENTS · SIMULATED SPEECH</span>
         </header>
         <div className="study-title">
-          <span className="overline">A LITTLE LESS INTERFACE</span>
-          <h1>Stay in the thought.</h1>
-          <p>A smaller silhouette. A quieter waveform. Your words, clearly.</p>
+          <span className="overline">YOUR VOICE. YOUR ATMOSPHERE.</span>
+          <h1>
+            A small window.
+            <br />A world of possibilities.
+          </h1>
+          <p>Six looks. Moving waveforms. Make room for your own kind of flow.</p>
         </div>
-        <div className="comparison-grid">
-          <article className="sample old-sample">
-            <div className="sample-caption">
-              <span>BEFORE</span>
-              <small>Original Studio HUD · 520 × 80</small>
-            </div>
-            <div className="hud-stage">
-              <Hud theme={legacy} />
-            </div>
-          </article>
-          <article className="sample new-sample">
-            <div className="sample-caption">
-              <span>NOW</span>
-              <small>Ink · 424 × 64</small>
-            </div>
-            <div className="hud-stage">
-              <Hud theme={defaultOverlayTheme()} />
-            </div>
-          </article>
+        <div className="options-head">
+          <h2>Find your frequency.</h2>
+          <span>SIMULATED SPEECH · TRY STOP, CANCEL & REPLAY</span>
+        </div>
+        <div className="looks-grid">
+          {OVERLAY_SKINS.map(({ id }) => (
+            <Sample key={id} skin={id} />
+          ))}
         </div>
         <div className="design-notes">
           <span>
-            <b>01</b> One clear Stop control
+            <b>01</b> Volume-driven waveforms
           </span>
           <span>
-            <b>02</b> Recent words stay readable
+            <b>02</b> Stop, finish & dismiss
           </span>
           <span>
-            <b>03</b> No scan lines or glowing rings
+            <b>03</b> Your image. Your layout.
           </span>
         </div>
-        <div className="options-head">
-          <h2>Three ways to make it yours.</h2>
-          <span>Same component. Saved theme preferences.</span>
-        </div>
-        <div className="looks-grid">
-          <article>
-            <span className="look-label">
-              INK <small>the new default</small>
-            </span>
-            <div className="mini-stage ink-stage">
-              <Hud theme={{ ...defaultOverlayTheme(), showTranscript: false }} />
-            </div>
-          </article>
-          <article>
-            <span className="look-label">
-              FROST <small>light, with contrast</small>
-            </span>
-            <div className="mini-stage frost-stage">
-              <Hud theme={{ ...defaultOverlayTheme(), skin: 'frost', showTranscript: false }} />
-            </div>
-          </article>
-          <article>
-            <span className="look-label">
-              LILAC <small>your accent color</small>
-            </span>
-            <div className="mini-stage lilac-stage">
-              <Hud
-                theme={{
-                  ...defaultOverlayTheme(),
-                  waveHue: 265,
-                  waveSat: 75,
-                  waveLight: 83,
-                  showTranscript: false
-                }}
-              />
-            </div>
-          </article>
-        </div>
-        <div className="states-head">
-          <h2>Clear at every step.</h2>
-          <span>Finishing, saved, or needing attention.</span>
-        </div>
-        <div className="state-grid">
-          <div className="hud-stage">
-            <Hud
-              theme={defaultOverlayTheme()}
-              state={{ ...listening, status: 'transcribing', message: 'Finishing' }}
-            />
-          </div>
-          <div className="hud-stage">
-            <Hud
-              theme={defaultOverlayTheme()}
-              state={{ ...listening, status: 'success', message: 'Saved & inserted' }}
-            />
-          </div>
-        </div>
-        <footer>
-          Rendered from the Electron app’s React HUD. This shows appearance; Windows z-order and
-          microphone behavior need a desktop test.
-        </footer>
       </section>
-      <section className="try-controls">
-        <h2>Try the look</h2>
-        <div className="controls">
-          <label>
-            Style{' '}
-            <select value={skin} onChange={(e) => setSkin(e.target.value as OverlayTheme['skin'])}>
-              <option value="minimal">Ink</option>
-              <option value="frost">Frost</option>
-              <option value="studio">Original Studio</option>
-            </select>
-          </label>
-          <label>
-            <input
-              type="checkbox"
-              checked={showTranscript}
-              onChange={(e) => setShowTranscript(e.target.checked)}
-            />{' '}
-            Live transcript
-          </label>
+      <section className="try-controls" id="playground">
+        <div className="options-head">
+          <div>
+            <span className="overline">MAKE YOURSELF AT HOME</span>
+            <h2>Your overlay, your way.</h2>
+          </div>
+          <span>LOCAL PREVIEW · NOTHING IS UPLOADED</span>
         </div>
-        <div className="interactive-stage">
-          <Hud theme={theme} />
-        </div>
+        <p className="section-intro">
+          Try your microphone, switch to a vertical layout, tune the color and size, or bring an
+          image of your own. The controls below use the app’s actual overlay editor.
+        </p>
+        <OverlayThemeEditor theme={theme} onChange={setTheme} />
+        <p className="desktop-note">
+          Desktop placement options: top, bottom, four corners, either side, or center. Glass
+          transparency and desktop blur depend on Windows composition; this browser preview can blur
+          the scene behind it. Windows focus and always-on-top behavior require a desktop test.
+        </p>
       </section>
       <section id="update-preview">
         <div className="options-head">
           <h2>In-app updates</h2>
-          <span>SIMULATED STATES · NO RELEASE IS DOWNLOADED</span>
+          <span>SIMULATION · NO DOWNLOAD</span>
         </div>
         <UpdatePanel
           update={update}
@@ -214,6 +161,10 @@ function Showcase() {
           })}
         />
       </section>
+      <footer className="site-footer">
+        <a href="https://github.com/HighRyzchs/S2TEasy">Open source. Open to your ideas. ↗</a>
+        <span>Built for thoughts worth keeping.</span>
+      </footer>
     </main>
   )
 }

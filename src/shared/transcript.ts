@@ -27,7 +27,8 @@ export function streamingPartial(committed: string, incoming: string): string {
   const right = normalizeTranscript(incoming)
   if (!right) return left
   if (!left) return right
-  if (right.startsWith(left) || left.startsWith(right)) return right.length >= left.length ? right : left
+  if (right.startsWith(left) || left.startsWith(right))
+    return right.length >= left.length ? right : left
   return joinUtterances([left, right])
 }
 
@@ -59,6 +60,12 @@ export function parseTranscriptionPayload(payload: unknown): string {
   if (typeof body.text === 'string') return normalizeTranscript(body.text)
   const content = body.choices?.[0]?.message?.content
   if (typeof content === 'string') return normalizeTranscript(content)
+  if (Array.isArray(content)) {
+    const parts = content.filter(
+      (part) => part && part.type === 'text' && typeof part.text === 'string'
+    )
+    if (parts.length) return joinUtterances(parts.map((part) => part.text))
+  }
   throw new Error('OpenRouter did not return transcribed text')
 }
 

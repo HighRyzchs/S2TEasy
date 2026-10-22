@@ -43,6 +43,9 @@ export class DictationController {
   private workChain: Promise<void> = Promise.resolve()
   private state: OverlayState = emptyOverlay()
   private hideTimer: NodeJS.Timeout | null = null
+  private watchdog: NodeJS.Timeout | null = null
+  private requestAbort: AbortController | null = null
+  private lastLevelAt = 0
   private stream: RouterAudioClient | null = null
   private item: HistoryItem | null = null
   private settings: AppSettings | null = null
@@ -75,6 +78,7 @@ export class DictationController {
 
   toggle(): void {
     if (this.recording) this.stop()
+    else if (this.busy) this.cancel()
     else if (!this.busy) void this.start()
   }
 
@@ -101,6 +105,9 @@ export class DictationController {
       return
     }
     this.clearHide()
+    this.clearWatchdog()
+    this.requestAbort?.abort()
+    this.requestAbort = new AbortController()
     const gen = ++this.generation
     this.busy = true
     this.recording = true
@@ -160,7 +167,15 @@ export class DictationController {
       if (gen !== this.generation || !this.recording) return
       this.setState({ ...this.state, message: 'Listening' })
       this.captureStarted = true
+      this.lastLevelAt = Date.now()
       this.command('start')
+      this.watchdog = setInterval(() => {
+        if (this.recording && Date.now() - this.lastLevelAt > 20_000)
+          this.fail(
+            'No microphone audio received. Check microphone permission and device, then try again. Any saved work is in History.',
+            gen
+          )
+      }, 1000)
     } catch (error) {
       this.fail(errorMessage(error), gen)
     }
@@ -173,6 +188,12 @@ export class DictationController {
       return
     }
     this.recording = false
+    this.clearWatchdog()
+    const gen = this.generation
+    this.watchdog = setTimeout(
+      () => this.fail('Finishing timed out. Recover any saved audio from History.', gen),
+      180_000
+    )
     this.setState({ ...this.state, status: 'transcribing', message: 'Finishing' })
     this.command('stop')
   }
@@ -182,6 +203,8 @@ export class DictationController {
     this.recording = false
     this.busy = false
     this.failed = true
+    this.requestAbort?.abort()
+    this.clearWatchdog()
     this.stream?.close()
     this.stream = null
     this.command('cancel')
@@ -193,10 +216,9 @@ export class DictationController {
       try {
         this.checkpoint()
       } catch {
-        this.showError(
-          'Could not save cancelled session to disk. Copy visible text before quitting.'
-        )
-        return
+        this.item.error =
+          'Could not save cancellation to disk. Earlier checkpoints may still be available.'
+        this.host.onHistoryItem({ ...this.item })
       }
     }
     this.setState(emptyOverlay())
@@ -210,6 +232,7 @@ export class DictationController {
 
   setLevel(payload: AudioLevelPayload | number, gen = this.generation): void {
     if (gen !== this.generation || !this.recording) return
+    this.lastLevelAt = Date.now()
     this.setState({
       ...this.state,
       rms: typeof payload === 'number' ? payload : payload.rms,
@@ -280,6 +303,7 @@ export class DictationController {
       if (!this.settings.keepAudioForTraining) this.host.journal.removeAudio(this.item.id)
       this.checkpoint()
       this.busy = false
+      this.clearWatchdog()
       this.setState({
         ...this.state,
         status: 'success',
@@ -316,6 +340,9 @@ export class DictationController {
       if (gen !== this.generation) return
       this.setState({ ...emptyOverlay(), status: 'success', partial: text, message: 'Inserted' })
       this.scheduleHide()
+    } catch (error) {
+      if (gen === this.generation) this.showError(errorMessage(error))
+      throw error
     } finally {
       if (gen === this.generation) this.busy = false
     }
@@ -334,6 +361,8 @@ export class DictationController {
       wavBase64,
       engine: settings.sttEngine === 'local' ? 'local' : 'openrouter',
       localEndpoint: settings.localEndpoint,
+      route: settings.openrouterRoute,
+      signal: this.requestAbort?.signal,
       vocabulary: settings.vocabulary.filter((row) => row.enabled).map((row) => row.meant)
     })
   }
@@ -411,6 +440,8 @@ export class DictationController {
   private fail(message: string, gen: number): void {
     if (gen !== this.generation || this.failed) return
     this.failed = true
+    this.requestAbort?.abort()
+    this.clearWatchdog()
     this.recording = false
     this.busy = false
     this.stream?.close()
@@ -432,21 +463,25 @@ export class DictationController {
   private showError(message: string): void {
     this.setState({ ...this.state, status: 'error', message, rms: 0, bars: [] })
     this.host.placeOverlay()
-    this.host.overlay.showInactive()
-    // Errors remain visible until the next action. No timer silently hides a failure.
-    this.clearHide()
+    if (this.host.getSettings().showOverlay) this.host.overlay.showInactive()
+    // The durable History entry owns recovery; the HUD must never trap the user.
+    this.scheduleHide(8000)
   }
 
   private setState(state: OverlayState): void {
     this.state = { ...state, mode: this.practiceText ? 'practice' : 'dictation' }
     this.host.onOverlay(this.state)
   }
-  private scheduleHide(): void {
+  private scheduleHide(delay = 1400): void {
     this.clearHide()
     this.hideTimer = setTimeout(() => {
       this.setState(emptyOverlay())
       if (!this.host.overlay.isDestroyed()) this.host.overlay.hide()
-    }, 1400)
+    }, delay)
+  }
+  private clearWatchdog(): void {
+    if (this.watchdog) clearTimeout(this.watchdog)
+    this.watchdog = null
   }
   private clearHide(): void {
     if (this.hideTimer) clearTimeout(this.hideTimer)

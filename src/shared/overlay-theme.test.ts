@@ -40,3 +40,18 @@ describe('hsl hex round-trip', () => {
     expect(hsl.h).toBeLessThan(210)
   })
 })
+
+describe('saved custom overlay images', () => {
+  it('keeps bounded raster images while rejecting executable or remote assets', () => {
+    expect(
+      normalizeOverlayTheme({ assetDataUrl: 'data:image/png;base64,aGVsbG8=' }).assetDataUrl
+    ).toContain('image/png')
+    for (const assetDataUrl of [
+      'https://example.com/logo.png',
+      'file:///private/photo.png',
+      'data:image/svg+xml;base64,AAAA',
+      'data:image/png;base64,' + 'A'.repeat(2_000_000)
+    ])
+      expect(normalizeOverlayTheme({ assetDataUrl }).assetDataUrl).toBe('')
+  })
+})

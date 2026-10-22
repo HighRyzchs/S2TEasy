@@ -50,6 +50,7 @@ export class MicSession {
   private framer = new PcmFramer()
   private resampler: StreamingResampler | null = null
   private consume: ((frame: Float32Array) => void) | null = null
+  private generation = 0
   private running = false
   private startedAt = 0
   private lastLevelAt = 0
@@ -70,6 +71,7 @@ export class MicSession {
 
   async start(config: CaptureConfig): Promise<void> {
     await this.stop()
+    const generation = this.generation
     this.config = config
     this.vad = new EnergyVad({
       sampleRate: SAMPLE_RATE,
@@ -80,8 +82,17 @@ export class MicSession {
     this.startedAt = performance.now()
     this.lastLevelAt = 0
 
-    this.stream = await openMic(config)
+    const stream = await openMic(config)
+    if (generation !== this.generation) {
+      stream.getTracks().forEach((track) => track.stop())
+      return
+    }
+    this.stream = stream
     this.context = new AudioContext()
+    await this.context.resume()
+    if (generation !== this.generation) return
+    if (this.context.state !== 'running')
+      throw new Error('Microphone audio could not start. Check your audio device and try again.')
     this.resampler = new StreamingResampler(this.context.sampleRate, SAMPLE_RATE)
     this.source = this.context.createMediaStreamSource(this.stream)
     this.gain = this.context.createGain()
@@ -118,13 +129,18 @@ export class MicSession {
     try {
       const blob = new Blob([WORKLET], { type: 'application/javascript' })
       const url = URL.createObjectURL(blob)
-      await this.context.audioWorklet.addModule(url)
-      URL.revokeObjectURL(url)
+      try {
+        await this.context.audioWorklet.addModule(url)
+      } finally {
+        URL.revokeObjectURL(url)
+      }
+      if (generation !== this.generation) return
       this.worklet = new AudioWorkletNode(this.context, 'pcm-capture')
       this.worklet.port.onmessage = (event: MessageEvent<Float32Array>) => onPcm(event.data)
       this.gain.connect(this.worklet)
       this.worklet.connect(this.mute)
     } catch {
+      if (generation !== this.generation) return
       this.processor = this.context.createScriptProcessor(4096, 1, 1)
       this.processor.onaudioprocess = (event) => {
         onPcm(event.inputBuffer.getChannelData(0))
@@ -149,6 +165,7 @@ export class MicSession {
   }
 
   async stop(): Promise<void> {
+    ++this.generation
     this.running = false
     this.config = null
     this.resampler = null
@@ -238,7 +255,12 @@ async function openMic(
 ): Promise<MediaStream> {
   try {
     return await navigator.mediaDevices.getUserMedia({ audio: audioConstraints(config) })
-  } catch {
+  } catch (error) {
+    if (
+      !(error instanceof DOMException) ||
+      !['OverconstrainedError', 'ConstraintNotSatisfiedError'].includes(error.name)
+    )
+      throw error
     return navigator.mediaDevices.getUserMedia({
       audio: {
         deviceId: config.microphoneId ? { exact: config.microphoneId } : undefined,

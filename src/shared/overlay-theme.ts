@@ -6,8 +6,22 @@ export type OverlayCore = (typeof OVERLAY_CORES)[number]
 export type OverlayWave = (typeof OVERLAY_WAVES)[number]
 export type OverlayBezel = (typeof OVERLAY_BEZELS)[number]
 
+export const OVERLAY_SKINS = [
+  { id: 'minimal', label: 'Ink' },
+  { id: 'frost', label: 'Frost' },
+  { id: 'glass', label: 'Liquid Glass' },
+  { id: 'cyberpunk', label: 'Cyberpunk' },
+  { id: 'pixel', label: '8-bit' },
+  { id: 'studio', label: 'Studio' }
+] as const
+
 export type OverlayTheme = {
-  skin: 'minimal' | 'frost' | 'studio'
+  skin: (typeof OVERLAY_SKINS)[number]['id']
+  orientation: 'horizontal' | 'vertical'
+  scale: number
+  sensitivity: number
+  assetDataUrl: string
+  assetRole: 'emblem' | 'background'
   showTranscript: boolean
   core: OverlayCore
   wave: OverlayWave
@@ -53,6 +67,11 @@ export const OVERLAY_BEZEL_OPTIONS: { id: OverlayBezel; label: string }[] = [
 export function defaultOverlayTheme(): OverlayTheme {
   return {
     skin: 'minimal',
+    orientation: 'horizontal',
+    scale: 1,
+    sensitivity: 1,
+    assetDataUrl: '',
+    assetRole: 'emblem',
     showTranscript: true,
     core: 'iris',
     wave: 'ribbon',
@@ -91,7 +110,16 @@ export function normalizeOverlayTheme(raw?: Partial<OverlayTheme> | null): Overl
   const fallback = defaultOverlayTheme()
   const next = { ...fallback, ...(raw ?? {}) }
   return {
-    skin: oneOf(next.skin, ['minimal', 'frost', 'studio'] as const, fallback.skin),
+    skin: oneOf(
+      next.skin,
+      OVERLAY_SKINS.map((skin) => skin.id),
+      fallback.skin
+    ),
+    orientation: oneOf(next.orientation, ['horizontal', 'vertical'] as const, 'horizontal'),
+    scale: clamp(Number(next.scale), 0.8, 1.4),
+    sensitivity: clamp(Number(next.sensitivity), 0.5, 3),
+    assetDataUrl: validOverlayAsset(next.assetDataUrl) ? next.assetDataUrl : '',
+    assetRole: next.assetRole === 'background' ? 'background' : 'emblem',
     showTranscript: next.showTranscript !== false,
     core: oneOf(next.core, OVERLAY_CORES, fallback.core),
     wave: oneOf(next.wave, OVERLAY_WAVES, fallback.wave),
@@ -111,6 +139,7 @@ export function normalizeOverlayTheme(raw?: Partial<OverlayTheme> | null): Overl
 
 export function overlayThemeVars(theme: OverlayTheme): Record<string, string> {
   return {
+    '--overlay-scale': String(theme.scale),
     '--core-h': String(theme.coreHue),
     '--core-s': `${theme.coreSat}%`,
     '--core-l': `${theme.coreLight}%`,
@@ -160,9 +189,18 @@ export function hexToHsl(hex: string): { h: number; s: number; l: number } {
 
 export function overlayThemeLabel(theme: OverlayTheme): string {
   if (theme.skin !== 'studio')
-    return `${theme.skin === 'frost' ? 'Frost' : 'Ink'} · ${theme.showTranscript ? 'Live transcript' : 'Compact'}`
+    return `${OVERLAY_SKINS.find((skin) => skin.id === theme.skin)?.label ?? 'Ink'} · ${theme.showTranscript ? 'Live transcript' : 'Compact'}`
   const core = OVERLAY_CORE_OPTIONS.find((item) => item.id === theme.core)?.label ?? theme.core
   const wave = OVERLAY_WAVE_OPTIONS.find((item) => item.id === theme.wave)?.label ?? theme.wave
   const bezel = OVERLAY_BEZEL_OPTIONS.find((item) => item.id === theme.bezel)?.label ?? theme.bezel
   return `${core} · ${wave} · ${bezel}`
+}
+
+/** Only bounded raster data is embedded in saved themes. No file paths, URLs or SVG markup. */
+export function validOverlayAsset(value: unknown): value is string {
+  return (
+    typeof value === 'string' &&
+    value.length <= 2_000_000 &&
+    /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/.test(value)
+  )
 }

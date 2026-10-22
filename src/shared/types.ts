@@ -6,6 +6,19 @@ export type { OverlayTheme }
 export type InsertMode = 'live' | 'final'
 export type HotkeyMode = 'toggle' | 'hold'
 export type SttEngine = 'router-audio' | 'openrouter' | 'local'
+export type OpenRouterRoute = 'auto' | 'transcription' | 'chat'
+export const OVERLAY_POSITIONS = [
+  'bottom',
+  'top',
+  'top-left',
+  'top-right',
+  'bottom-left',
+  'bottom-right',
+  'left',
+  'right',
+  'center'
+] as const
+export type OverlayPosition = (typeof OVERLAY_POSITIONS)[number]
 export type VadSensitivity = 'low' | 'medium' | 'high'
 
 export const ROUTER_PROVIDERS = [
@@ -45,6 +58,7 @@ export type AppState = {
 export type AppSettings = {
   apiKey: string
   model: string
+  openrouterRoute: OpenRouterRoute
   language: string
   hotkey: string
   hotkeyMode: HotkeyMode
@@ -65,7 +79,7 @@ export type AppSettings = {
   vadSensitivity: VadSensitivity
   overlayTheme: OverlayTheme
   appearance: 'dark' | 'light' | 'system'
-  overlayPosition: 'bottom' | 'top'
+  overlayPosition: OverlayPosition
   localEndpoint: string
   localModel: string
   recoveryAudio: boolean
@@ -125,11 +139,13 @@ export type OverlayState = {
 export type ModelOption = {
   slug: string
   name: string
+  route?: Exclude<OpenRouterRoute, 'auto'>
 }
 
 export const defaultSettings = (): AppSettings => ({
   apiKey: '',
   model: 'google/gemini-2.5-flash',
+  openrouterRoute: 'auto',
   language: '',
   hotkey: 'Control+Shift+Space',
   hotkeyMode: 'toggle',
@@ -195,7 +211,13 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
   merged.overlayTheme = normalizeOverlayTheme(raw?.overlayTheme ?? merged.overlayTheme)
   merged.appearance =
     raw?.appearance === 'light' || raw?.appearance === 'system' ? raw.appearance : 'dark'
-  merged.overlayPosition = raw?.overlayPosition === 'top' ? 'top' : 'bottom'
+  merged.overlayPosition = OVERLAY_POSITIONS.includes(raw?.overlayPosition as OverlayPosition)
+    ? raw!.overlayPosition!
+    : 'bottom'
+  merged.openrouterRoute =
+    raw?.openrouterRoute === 'chat' || raw?.openrouterRoute === 'transcription'
+      ? raw.openrouterRoute
+      : 'auto'
   merged.localEndpoint =
     typeof merged.localEndpoint === 'string'
       ? merged.localEndpoint

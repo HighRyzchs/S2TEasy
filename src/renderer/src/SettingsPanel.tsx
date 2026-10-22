@@ -201,10 +201,31 @@ export function SettingsPanel({ settings, update, onChange, onUpdate }: Props) {
                     {models.map((m) => (
                       <option key={m.slug} value={m.slug}>
                         {m.name}
+                        {m.route
+                          ? ` · ${m.route === 'transcription' ? 'Speech-to-text' : 'Audio chat'}`
+                          : ''}
                       </option>
                     ))}
                   </datalist>
                 </Field>
+                <Field label="API operation" id="audio-operation">
+                  <select
+                    id="audio-operation"
+                    value={settings.openrouterRoute}
+                    onChange={(e) =>
+                      save({ openrouterRoute: e.target.value as AppSettings['openrouterRoute'] })
+                    }
+                  >
+                    <option value="auto">Auto · use model capabilities</option>
+                    <option value="transcription">Speech-to-text · /audio/transcriptions</option>
+                    <option value="chat">Audio chat · /chat/completions</option>
+                  </select>
+                </Field>
+                <p className="hint">
+                  Qwen ASR, Grok STT, Whisper and other speech models use Transcription. Gemini and
+                  other audio chat models use Chat. Auto selects the route from OpenRouter’s
+                  catalogue.
+                </p>
                 <div className="inline">
                   <button
                     className="primary"
@@ -434,6 +455,13 @@ export function SettingsPanel({ settings, update, onChange, onUpdate }: Props) {
                 >
                   <option value="bottom">Bottom of active display</option>
                   <option value="top">Top of active display</option>
+                  <option value="top-left">Top left</option>
+                  <option value="top-right">Top right</option>
+                  <option value="bottom-left">Bottom left</option>
+                  <option value="bottom-right">Bottom right</option>
+                  <option value="left">Left center</option>
+                  <option value="right">Right center</option>
+                  <option value="center">Center</option>
                 </select>
               </Field>
             </section>

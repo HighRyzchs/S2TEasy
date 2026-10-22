@@ -1,16 +1,17 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { WAVEFORM_BARS } from '@shared/constants'
+import type { ReactNode } from 'react'
 import {
   defaultOverlayTheme,
   hexToHsl,
   hslToHex,
+  OVERLAY_SKINS,
   OVERLAY_BEZEL_OPTIONS,
   OVERLAY_CORE_OPTIONS,
   OVERLAY_WAVE_OPTIONS,
   overlayThemeLabel,
   type OverlayTheme
 } from '@shared/overlay-theme'
-import { composeOverlayBars, previewTarget } from '@shared/waveform'
+import { useHudPreview } from './useHudPreview'
+import { OverlayAssetPicker } from './OverlayAssetPicker'
 import { OverlayHud } from './OverlayHud'
 
 export function OverlayThemeEditor({
@@ -20,46 +21,18 @@ export function OverlayThemeEditor({
   theme: OverlayTheme
   onChange: (theme: OverlayTheme) => void
 }) {
-  const [bars, setBars] = useState<number[]>(() =>
-    Array.from({ length: WAVEFORM_BARS }, () => 0.12)
-  )
-  const currentRef = useRef(bars)
-
-  useEffect(() => {
-    let frame = 0
-    let t = 0
-    const tick = () => {
-      t += 0.016
-      const next = composeOverlayBars({
-        status: 'listening',
-        target: previewTarget(t),
-        current: currentRef.current,
-        t,
-        rms: 0.07 + 0.025 * Math.sin(t * 1.15)
-      })
-      currentRef.current = next
-      setBars(next)
-      frame = requestAnimationFrame(tick)
-    }
-    frame = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frame)
-  }, [])
+  const demo = useHudPreview(theme.sensitivity)
 
   const patch = (partial: Partial<OverlayTheme>) => onChange({ ...theme, ...partial })
 
   return (
     <div className="overlay-editor">
       <p className="hint">
-        Choose a quiet pill or keep the original Studio mixer. Changes apply to your next recording.
+        Choose a look, bring your own image, and test speech volume. Changes apply to your next
+        recording.
       </p>
       <div className="picks" aria-label="HUD style">
-        {(
-          [
-            ['minimal', 'Ink'],
-            ['frost', 'Frost'],
-            ['studio', 'Studio']
-          ] as const
-        ).map(([skin, label]) => (
+        {OVERLAY_SKINS.map(({ id: skin, label }) => (
           <button
             key={skin}
             className={theme.skin === skin ? 'on' : ''}
@@ -86,22 +59,77 @@ export function OverlayThemeEditor({
         </button>
       </div>
       <p className="readout">{overlayThemeLabel(theme)}</p>
-      <div className="overlay-preview-frame">
-        <OverlayHud
-          theme={theme}
-          bars={bars}
-          canStop
-          preview
-          state={{
-            status: 'listening',
-            partial: 'Speak into any text field…',
-            message: 'Listening',
-            rms: 0.08,
-            elapsedMs: 4200,
-            bars: []
-          }}
-        />
+      <div
+        className="overlay-preview-frame"
+        style={{
+          minHeight: theme.orientation === 'vertical' ? 320 * theme.scale : 120 * theme.scale
+        }}
+      >
+        {demo.state.status !== 'hidden' && (
+          <OverlayHud
+            theme={theme}
+            bars={demo.bars}
+            canStop={['listening', 'transcribing', 'inserting'].includes(demo.state.status)}
+            preview
+            state={demo.state}
+            onStop={demo.stop}
+            onDismiss={demo.dismiss}
+          />
+        )}
+        {demo.state.status === 'hidden' && <span className="hint">Preview dismissed</span>}
       </div>
+      <div className="inline">
+        <button className="ghost" onClick={demo.start}>
+          Replay preview
+        </button>
+        <button className="ghost" onClick={() => void demo.startMic()}>
+          Use my microphone
+        </button>
+        <button className="ghost" onClick={demo.dismiss}>
+          End preview
+        </button>
+      </div>
+      <p className="hint">
+        {demo.source === 'microphone' && demo.state.status === 'listening'
+          ? 'Microphone active. Stop or End preview releases it.'
+          : 'Simulated speech. Use your microphone to see your actual volume.'}{' '}
+        Preview audio stays on this device.
+      </p>
+      <label className="tint-label">
+        Layout{' '}
+        <select
+          aria-label="HUD orientation"
+          value={theme.orientation}
+          onChange={(e) => patch({ orientation: e.target.value as OverlayTheme['orientation'] })}
+        >
+          <option value="horizontal">Horizontal</option>
+          <option value="vertical">Vertical</option>
+        </select>
+      </label>
+      <label className="tint-label">
+        Size · {Math.round(theme.scale * 100)}%
+        <input
+          aria-label="HUD size"
+          type="range"
+          min="80"
+          max="140"
+          value={Math.round(theme.scale * 100)}
+          onChange={(e) => patch({ scale: Number(e.target.value) / 100 })}
+        />
+      </label>
+      <label className="tint-label">
+        Wave sensitivity · {theme.sensitivity.toFixed(1)}×
+        <input
+          aria-label="Wave sensitivity"
+          type="range"
+          min="0.5"
+          max="3"
+          step="0.1"
+          value={theme.sensitivity}
+          onChange={(e) => patch({ sensitivity: Number(e.target.value) })}
+        />
+      </label>
+      <OverlayAssetPicker theme={theme} onChange={onChange} />
 
       {theme.skin !== 'studio' && (
         <label className="tint-label">

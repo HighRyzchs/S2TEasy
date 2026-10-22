@@ -3,34 +3,44 @@ import { MicSession } from './lib/mic'
 
 ensureApi()
 let session: MicSession | null = null
+let cancelledThrough = -1
 let commands: Promise<void> = Promise.resolve()
 
 window.s2t.onCommand((command) => {
-  // getUserMedia and AudioWorklet initialization are asynchronous. Serialize stop/start
-  // so releasing a hotkey during permission initialization cannot leave a hidden mic.
+  const sessionId = command.sessionId ?? 0
+  if (command.action === 'cancel') {
+    cancelledThrough = Math.max(cancelledThrough, sessionId)
+    const pending = session
+    session = null
+    // An unresolved permission prompt must not block cancellation or the next session.
+    commands = Promise.resolve()
+    void pending?.stop().catch(() => undefined)
+    return
+  }
   commands = commands
     .then(async () => {
-      const sessionId = command.sessionId ?? 0
+      if (sessionId <= cancelledThrough) return
+      let active = session
       try {
         if (command.action === 'start') {
-          await session?.stop()
-          session = new MicSession({
+          await active?.stop()
+          if (sessionId <= cancelledThrough) return
+          active = new MicSession({
             onLevel: (level) => window.s2t.sendLevel(level, sessionId),
             onUtterance: (wav, durationMs) => window.s2t.sendUtterance(wav, durationMs, sessionId),
             onPcm: (bytes) => window.s2t.sendPcm(bytes, sessionId)
           })
-          await session.start(command)
-        } else if (command.action === 'cancel') {
-          await session?.stop()
-          session = null
-        } else if (session) {
-          const result = await session.finish()
-          session = null
-          window.s2t.sendFinished({ ...result, sessionId })
+          session = active
+          await active.start(command)
+        } else if (active) {
+          const result = await active.finish()
+          if (session === active) session = null
+          if (sessionId > cancelledThrough) window.s2t.sendFinished({ ...result, sessionId })
         }
       } catch (error) {
-        await session?.stop()
-        session = null
+        await active?.stop()
+        if (session === active) session = null
+        if (sessionId <= cancelledThrough) return
         const message =
           error instanceof DOMException && error.name === 'NotAllowedError'
             ? 'Microphone permission denied. Allow it in Windows Settings → Privacy → Microphone.'
@@ -41,6 +51,6 @@ window.s2t.onCommand((command) => {
       }
     })
     .catch(() => {
-      /* A subsequent command must still be able to start a new session. */
+      /* Keep the command queue usable after a failed device operation. */
     })
 })
