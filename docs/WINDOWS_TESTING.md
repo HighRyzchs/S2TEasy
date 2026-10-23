@@ -1,5 +1,11 @@
 # Windows release smoke test
 
+## 1.7.1 update handoff
+
+Windows CI now runs `scripts/windows-update-smoke.mjs` only on disposable GitHub Actions runners. It installs real published 1.5.1 and the new NSIS package, verifies the original target's ProductVersion in a path containing shell-sensitive characters, and tests rejection of a zero-exit no-op installer. It exercises native helper acknowledgment and installer execution, not the user's desktop UI or the old 1.5.1 launcher's handoff.
+
+On a real desktop, test blocked/missing PowerShell, helper early exit, failed acknowledgment, installer error, mismatched target version, duplicate Restart clicks, persisted diagnostics, original data, and the direct-installer fallback. Startup failures must keep the app open; an interrupted receipt must pause automatic downloads. First recover a broken older updater by running the installer file directly. Never test a forced power interruption on valuable user data.
+
 ## 1.7.0 speech cues
 
 Follow [the cue walkthrough](CONCEPTS.md#try-emotion-and-delivery-analysis) with a short retained practice take and your own OpenRouter account. Verify emotion/delivery category controls, allowed labels, clear-only filtering and speaking-style guidance. Analyze the same words spoken neutrally, playfully and with emphasis; record inaccurate results and abstentions instead of assuming model quality.

@@ -1,4 +1,19 @@
-# Recurring findstr terminals after an update
+# Update recovery and diagnostics
+
+## App closes on Restart & install, but remains on 1.5.1
+
+This is a failed installation handoff. A verified download is not proof that Windows ran the installer or that the executable at the original location changed. Do not repeatedly press Restart & install when the same version returns.
+
+1. Quit S2Teasy using the tray icon → **Quit**. Closing its window can leave it running.
+2. Download the current **win-x64 installer** from [Releases](https://github.com/HighRyzchs/S2TEasy/releases/latest). Run that downloaded EXE itself; the in-app download/restart controls in 1.5.1 still use 1.5.1's updater.
+3. Install over the existing app without uninstalling or deleting `%APPDATA%\s2teasy`. Open from the new Start-menu shortcut and verify the version in Settings.
+4. If it is still old, compare the running executable/shortcut location with the installed location. Preserve `%APPDATA%\s2teasy\update-result.json` and, if present, `update-result.json.log`. “No receipt file” is useful evidence that the helper may not have reached its first write; it does not establish why.
+
+Version 1.7.1 adds **Open update diagnostics** in Settings → Privacy & data, plus per-attempt `updates/attempt-*/helper.log`, `apply.ps1`, a pending receipt and an acknowledgment before shutdown. The receipt records target/payload paths, versions, stage and a local attempt ID. These files contain paths/Windows usernames but no API keys or transcripts by design; inspect/redact paths before sharing. Do not upload the entire app-data folder, which contains private History and recordings.
+
+An incomplete receipt pauses automatic download on startup, keeping the error visible. A success receipt for a different running version is reported as a mismatch. For installed builds, the new helper checks the executable's ProductVersion after NSIS exits. A zero installer exit code alone cannot produce an “updated” result. The exact cause on a user's computer still requires its receipt/logs; CI success does not establish desktop behavior on that computer.
+
+## Recurring findstr terminals after an update
 
 A window showing `findstr /I "11012"` (the number varies) is the **old 1.4.0 updater's process-exit polling command**. Clipboard insertion uses Electron's clipboard API and Windows native keystrokes; it does not launch FINDSTR or CMD.
 

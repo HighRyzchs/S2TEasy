@@ -36,9 +36,28 @@ describe('persistent Windows updates', () => {
   })
   it('waits for the installed-app upgrade and checks its result before restart', () => {
     const script = buildVerifiedApplyScript({ ...options, kind: 'installed' })
-    expect(script).toContain("-ArgumentList '/S' -Wait -PassThru")
+    expect(script).toContain("@('/S', '--updated', ('/D=' + $installDirectory))")
+    expect(script).toContain('WaitForExit(180000)')
     expect(script).toContain('$installer.ExitCode')
+    expect(script).toContain('FileVersionInfo')
+    expect(script.indexOf('$installedVersion -ne $wanted')).toBeLessThan(
+      script.indexOf("Write-Receipt 'applied'")
+    )
     expect(script).not.toContain('Copy-Item -LiteralPath $target')
+  })
+  it('acknowledges verified startup and checks cancellation before modifying the app', () => {
+    const script = buildVerifiedApplyScript({
+      ...options,
+      attemptId: 'new-attempt',
+      cancelPath: 'C:\\Data\\cancelled'
+    })
+    expect(script.indexOf("Write-Receipt 'waiting'")).toBeLessThan(
+      script.indexOf('Wait-Process -Timeout 120')
+    )
+    expect(script.indexOf('Test-Path -LiteralPath $cancel')).toBeLessThan(
+      script.indexOf('Copy-Item -LiteralPath $target')
+    )
+    expect(script).toContain("attemptId = 'new-attempt'")
   })
   it('refuses unverifiable helper inputs', () => {
     expect(() => buildVerifiedApplyScript({ ...options, expectedSha256: '' })).toThrow()

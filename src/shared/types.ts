@@ -42,6 +42,7 @@ export type UpdatePhase =
   'idle' | 'checking' | 'available' | 'downloading' | 'ready' | 'applying' | 'current' | 'error'
 
 export type UpdateStatus = {
+  canOpenInstaller?: boolean
   phase: UpdatePhase
   currentVersion: string
   availableVersion: string

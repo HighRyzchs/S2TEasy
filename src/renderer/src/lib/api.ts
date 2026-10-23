@@ -40,6 +40,12 @@ memory.update = {
 
 function mockApi(): Window['s2t'] {
   return {
+    openUpdateInstaller: async () => {
+      throw new Error('Preview never opens or installs executables.')
+    },
+    openUpdateDiagnostics: async () => {
+      throw new Error('Update diagnostics are available in the desktop app.')
+    },
     analyzeSpeechCues: async () => {
       throw new Error(
         'Audio cue analysis requires the desktop app. Preview does not upload audio or make paid calls.'

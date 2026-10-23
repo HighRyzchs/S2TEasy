@@ -8,7 +8,9 @@ export function UpdatePanel({
   onAutoDownload,
   onUpdate,
   onCheck,
-  onInstall
+  onInstall,
+  onOpenInstaller,
+  onDiagnostics
 }: {
   update: UpdateStatus
   autoDownload: boolean
@@ -16,6 +18,8 @@ export function UpdatePanel({
   onUpdate: (status: UpdateStatus) => void
   onCheck: (download?: boolean) => Promise<UpdateStatus>
   onInstall: () => Promise<UpdateStatus>
+  onOpenInstaller?: () => Promise<UpdateStatus>
+  onDiagnostics?: () => Promise<void>
 }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
@@ -28,11 +32,7 @@ export function UpdatePanel({
     try {
       onUpdate(await action())
     } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : 'Could not complete the update. Try again.'
-      )
+      setError(e instanceof Error ? e.message : 'Could not complete the update. Try again.')
     } finally {
       setPending(false)
     }
@@ -42,7 +42,7 @@ export function UpdatePanel({
       <div className="update-panel-heading">
         <div>
           <span className="update-eyebrow">ALWAYS A LITTLE BETTER</span>
-          <h3>Updates, without the hassle.</h3>
+          <h3>Keep S2Teasy up to date.</h3>
           <p>
             S2Teasy {update.currentVersion} ·{' '}
             {update.packaging === 'dev'
@@ -89,11 +89,7 @@ export function UpdatePanel({
             <strong>Downloading version {update.availableVersion}</strong>
             <span>{update.percent}%</span>
           </div>
-          <progress
-            aria-label="Update download progress"
-            max={100}
-            value={update.percent}
-          />
+          <progress aria-label="Update download progress" max={100} value={update.percent} />
           <p>You can keep working while this downloads.</p>
         </div>
       )}
@@ -117,31 +113,46 @@ export function UpdatePanel({
             <strong>Your update is ready.</strong>
             <p>Version {update.availableVersion} · checksum verified</p>
           </div>
-          <button
-            className="primary"
-            disabled={pending}
-            onClick={() => void run(onInstall)}
-          >
+          <button className="primary" disabled={pending} onClick={() => void run(onInstall)}>
             Restart &amp; install
           </button>
         </div>
       )}
-      {update.message &&
-        !['available', 'ready', 'downloading'].includes(update.phase) && (
-          <p
-            className={
-              update.phase === 'error' ? 'update-error' : 'update-message'
-            }
-            role="status"
-          >
-            {update.message}
-          </p>
-        )}
+      {update.message && !['available', 'ready', 'downloading'].includes(update.phase) && (
+        <p className={update.phase === 'error' ? 'update-error' : 'update-message'} role="status">
+          {update.message}
+        </p>
+      )}
       {error && (
         <p className="update-error" role="alert">
           {error}
         </p>
       )}
+      <div className="inline">
+        {update.canOpenInstaller && onOpenInstaller && (
+          <button
+            className="ghost"
+            disabled={pending || applying}
+            onClick={() => void run(onOpenInstaller)}
+          >
+            Open downloaded installer
+          </button>
+        )}
+        {update.packaging !== 'dev' && onDiagnostics && (
+          <button
+            className="text-button"
+            disabled={pending}
+            onClick={() =>
+              void run(async () => {
+                await onDiagnostics()
+                return update
+              })
+            }
+          >
+            Open update diagnostics
+          </button>
+        )}
+      </div>
       <div className="update-panel-footer">
         <button
           className="ghost"
@@ -166,8 +177,8 @@ export function UpdatePanel({
         </label>
       </div>
       <p className="update-fine">
-        Updates come from this project’s GitHub Releases. Downloads are verified
-        before installation. A restart is always your choice.
+        Updates come from this project’s GitHub Releases. Downloads are verified before
+        installation. A restart is always your choice.
         {update.packaging === 'dev'
           ? ' Installation is available only in packaged Windows builds.'
           : ''}

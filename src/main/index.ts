@@ -339,6 +339,16 @@ async function setup(): Promise<void> {
       throw new Error('Finish your recording or recovery before restarting for an update.')
     return updater.install()
   })
+  ipcMain.handle(IPC.OPEN_UPDATE_INSTALLER, (event) => {
+    requireMain(event)
+    if (dictation.isBusy() || recoveryBusy || speechCues.isBusy())
+      throw new Error('Finish recording, recovery or cue analysis before installing.')
+    return updater.openInstaller()
+  })
+  ipcMain.handle(IPC.OPEN_UPDATE_DIAGNOSTICS, (event) => {
+    requireMain(event)
+    return updater.openDiagnostics()
+  })
 
   protocol.handle('s2t-audio', (request) => {
     const url = new URL(request.url)
@@ -536,13 +546,14 @@ async function setup(): Promise<void> {
   })
 
   if (
-    store.getSettings().sttEngine !== 'local' &&
-    !store.getSettings().apiKey &&
-    !store.getSettings().routerAudioKey
+    (store.getSettings().sttEngine !== 'local' &&
+      !store.getSettings().apiKey &&
+      !store.getSettings().routerAudioKey) ||
+    updater.getStatus().phase === 'error'
   ) {
     mainWindow.show()
   }
-  if (store.getSettings().autoUpdate) {
+  if (store.getSettings().autoUpdate && updater.getStatus().phase !== 'error') {
     setTimeout(() => void updater.check({ download: true }), 4000)
   }
 }

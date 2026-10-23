@@ -23,6 +23,17 @@ jobs:
       - run: npm run typecheck
       - run: node scripts/check-update-helper.mjs
       - run: npm run build:win
+      - name: Exercise real installed-app upgrade
+        run: node scripts/windows-update-smoke.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Release-update-diagnostics
+          path: |
+            release/update-smoke/
+            release/windows-update-smoke.json
       - name: Write artifact checksums
         shell: pwsh
         run: |

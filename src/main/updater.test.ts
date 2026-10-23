@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHash } from 'node:crypto'
 import { join } from 'node:path'
-import { mkdtempSync, rmSync, readdirSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, rmSync, readdirSync, writeFileSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 const app = vi.hoisted(() => ({
   isPackaged: true,
@@ -10,9 +10,9 @@ const app = vi.hoisted(() => ({
   getPath: () => '/tmp/s2teasy-unused-test-state',
   quit: vi.fn()
 }))
-const launcher = vi.hoisted(() => ({ spawn: vi.fn() }))
+const launcher = vi.hoisted(() => ({ spawn: vi.fn(), openPath: vi.fn().mockResolvedValue('') }))
 vi.mock('node:child_process', () => ({ spawn: launcher.spawn }))
-vi.mock('electron', () => ({ app }))
+vi.mock('electron', () => ({ app, shell: { openPath: launcher.openPath } }))
 import { UpdateLauncher } from './updater'
 const directories: string[] = []
 const bytes = Buffer.from('synthetic-windows-artifact-not-an-executable')
@@ -155,7 +155,7 @@ it('recognizes an applied receipt only for this running version, including Power
       directory,
       directory
     ).getStatus().phase
-  ).toBe('idle')
+  ).toBe('error')
 })
 it('reports a failed helper receipt without claiming the app updated', () => {
   const { directory } = setup()
@@ -177,7 +177,7 @@ it('launches one hidden helper despite repeated Restart clicks or checks during 
   vi.useFakeTimers()
   const child = Object.assign(new EventEmitter(), { unref: vi.fn() })
   launcher.spawn.mockReturnValue(child)
-  const { updater, fetchMock } = setup()
+  const { updater, fetchMock, directory } = setup()
   await updater.check({ download: true })
   expect(updater.install().phase).toBe('applying')
   updater.install()
@@ -187,10 +187,12 @@ it('launches one hidden helper despite repeated Restart clicks or checks during 
   expect(launcher.spawn).toHaveBeenCalledOnce()
   expect(fetchMock).toHaveBeenCalledTimes(2)
   const [executable, args, options] = launcher.spawn.mock.calls[0]
-  expect(executable).toBe('powershell.exe')
+  expect(executable.endsWith('powershell.exe')).toBe(true)
   expect(args).toContain('-WindowStyle')
   expect(args[args.indexOf('-WindowStyle') + 1]).toBe('Hidden')
-  expect(options).toMatchObject({ windowsHide: true, detached: true, stdio: 'ignore' })
+  expect(options).toMatchObject({ windowsHide: true, detached: true })
+  expect(options.stdio[0]).toBe('ignore')
+  expect(typeof options.stdio[1]).toBe('number')
   const script = Buffer.from(args[args.indexOf('-EncodedCommand') + 1], 'base64').toString(
     'utf16le'
   )
@@ -198,8 +200,67 @@ it('launches one hidden helper despite repeated Restart clicks or checks during 
   expect(script).toContain('Wait-Process -Timeout 120')
   expect(app.quit).not.toHaveBeenCalled()
   child.emit('spawn')
+  await vi.advanceTimersByTimeAsync(500)
+  expect(app.quit).not.toHaveBeenCalled()
+  const receiptPath = join(directory, 'update-result.json')
+  const receipt = JSON.parse(readFileSync(receiptPath, 'utf8'))
+  writeFileSync(receiptPath, '\uFEFF' + JSON.stringify({ ...receipt, status: 'waiting' }))
+  await vi.advanceTimersByTimeAsync(100)
+  expect(app.quit).not.toHaveBeenCalled()
   await vi.advanceTimersByTimeAsync(250)
   expect(app.quit).toHaveBeenCalledOnce()
+})
+
+it('keeps the app open when PowerShell exits before acknowledging and records diagnostics', async () => {
+  const child = Object.assign(new EventEmitter(), { unref: vi.fn() })
+  launcher.spawn.mockReturnValue(child)
+  const { updater, directory } = setup()
+  await updater.check({ download: true })
+  updater.install()
+  child.emit('spawn')
+  child.emit('exit', 1)
+  expect(updater.getStatus()).toMatchObject({
+    phase: 'error',
+    canOpenInstaller: true,
+    message: expect.stringMatching(/kept open/)
+  })
+  expect(app.quit).not.toHaveBeenCalled()
+  expect(JSON.parse(readFileSync(join(directory, 'update-result.json'), 'utf8')).status).toBe(
+    'failed'
+  )
+})
+it('requires a matching startup acknowledgement and cancels the attempt on timeout', async () => {
+  vi.useFakeTimers()
+  const child = Object.assign(new EventEmitter(), { unref: vi.fn() })
+  launcher.spawn.mockReturnValue(child)
+  const { updater, directory } = setup()
+  await updater.check({ download: true })
+  updater.install()
+  child.emit('spawn')
+  const path = join(directory, 'update-result.json'),
+    receipt = JSON.parse(readFileSync(path, 'utf8'))
+  writeFileSync(path, JSON.stringify({ ...receipt, attemptId: 'old-attempt', status: 'waiting' }))
+  await vi.advanceTimersByTimeAsync(10000)
+  expect(updater.getStatus()).toMatchObject({
+    phase: 'error',
+    message: expect.stringMatching(/10 seconds/)
+  })
+  expect(app.quit).not.toHaveBeenCalled()
+  const attempts = join(directory, 'updates')
+  const attempt = join(attempts, readdirSync(attempts)[0]!)
+  expect(readFileSync(join(attempt, 'cancelled'), 'utf8')).toContain('Cancelled')
+})
+it('opens only a verified installed-app payload directly and never quits the app for that action', async () => {
+  const { updater, directory } = setup()
+  await updater.check({ download: true })
+  await updater.openInstaller()
+  expect(launcher.openPath).toHaveBeenCalledWith(
+    expect.stringContaining('S2Teasy-1.4.0-win-x64.exe')
+  )
+  expect(app.quit).not.toHaveBeenCalled()
+  const payload = join(directory, readdirSync(directory)[0]!, 'S2Teasy-1.4.0-win-x64.exe')
+  writeFileSync(payload, 'tampered')
+  await expect(updater.openInstaller()).rejects.toThrow('verify')
 })
 it('keeps the app open if its helper cannot launch', async () => {
   vi.useFakeTimers()

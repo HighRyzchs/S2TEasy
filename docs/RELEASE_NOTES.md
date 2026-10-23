@@ -1,3 +1,13 @@
+## Verify the installer handoff — v1.7.1
+
+- Keep the app open until the PowerShell helper verifies the payload and acknowledges the specific attempt. Early exit, failure to launch, or a 10-second startup timeout is shown in the app instead of closing silently.
+- Save a pending receipt, helper script and stdout/stderr diagnostics before shutdown. Report incomplete or mismatched-version receipts on next launch and pause automatic downloads after a failed handoff.
+- Target the current installed directory explicitly with NSIS `/D=` and `--updated`. Wait for installer completion, check its exit code and verify the app's ProductVersion at the original path before reporting success or removing the payload.
+- Add Open downloaded installer and Open update diagnostics controls. The direct installer is rechecked before launch; no uninstall or history deletion is required.
+- Add a disposable Windows CI test that installs the published 1.5.1 NSIS package, upgrades it with the new installer in a path containing spaces/apostrophes/percent/ampersand, verifies startup acknowledgment, and rejects a zero-exit no-op installer.
+
+These changes are in the new app. A broken 1.5.1 handoff cannot replace its own updater code; quit from the tray and run the new installer file directly for the first recovery. A real-user failure still needs its local receipt/logs to establish the cause.
+
 ## Emotion and delivery, in your control — v1.7.0
 
 - Add experimental Speech cues in Settings → Voice intelligence: an independent audio-understanding model, emotion-label selection, delivery/monotone cues, pacing, laughter/sighs, optional style guidance and assessment filtering.

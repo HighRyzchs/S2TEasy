@@ -1,4 +1,6 @@
 export const IPC = {
+  OPEN_UPDATE_INSTALLER: 's2t:open-update-installer',
+  OPEN_UPDATE_DIAGNOSTICS: 's2t:open-update-diagnostics',
   ANALYZE_CUES: 's2t:analyze-cues',
   CANCEL_CUES: 's2t:cancel-cues',
   CUE_FEEDBACK: 's2t:cue-feedback',

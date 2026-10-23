@@ -1,10 +1,19 @@
-import { app } from 'electron'
-import { createWriteStream, readFileSync, rmSync, mkdtempSync } from 'node:fs'
+import { app, shell } from 'electron'
+import {
+  createWriteStream,
+  readFileSync,
+  rmSync,
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  openSync,
+  closeSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
-import { createHash } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { spawn } from 'node:child_process'
 import {
   downloadHeaders,
@@ -52,6 +61,12 @@ export class UpdateLauncher {
       } else if (receipt.status === 'failed') {
         this.status.phase = 'error'
         this.status.message = `Previous update could not be applied: ${String(receipt.message).slice(0, 300)} Your original app and local data are kept.`
+      } else if (receipt.status === 'applied' && receipt.toVersion !== app.getVersion()) {
+        this.status.phase = 'error'
+        this.status.message = `The updater reported ${receipt.toVersion}, but this executable is still ${app.getVersion()}. Open update diagnostics and check the shortcut/install location, or run the installer directly.`
+      } else if (['pending', 'waiting', 'installing'].includes(receipt.status)) {
+        this.status.phase = 'error'
+        this.status.message = `The previous update did not confirm completion (${receipt.status}). Open update diagnostics before retrying; if an installer is still running, let it finish.`
       }
     } catch {
       /* First launch or no valid update receipt. */
@@ -59,7 +74,13 @@ export class UpdateLauncher {
   }
 
   getStatus(): UpdateStatus {
-    return { ...this.status }
+    return {
+      ...this.status,
+      canOpenInstaller:
+        this.status.packaging === 'installed' &&
+        !!this.payloadPath &&
+        ['ready', 'error'].includes(this.status.phase)
+    }
   }
 
   async check(opts: { force?: boolean; download?: boolean } = {}): Promise<UpdateStatus> {
@@ -230,47 +251,138 @@ export class UpdateLauncher {
     try {
       const kind = this.status.packaging === 'installed' ? 'installed' : 'portable'
       const target = updateTargetPath(this.status.packaging, process.execPath, process.env)
+      const attemptId = randomUUID()
+      const attempts = join(this.stateDirectory, 'updates')
+      mkdirSync(attempts, { recursive: true })
+      const directory = mkdtempSync(join(attempts, 'attempt-'))
+      const receiptPath = join(this.stateDirectory, 'update-result.json')
+      const cancelPath = join(directory, 'cancelled')
       const script = buildVerifiedApplyScript({
         kind,
         currentExe: target,
         payloadPath: this.payloadPath,
         pid: process.pid,
         expectedSha256: this.asset!.digest!.slice(7),
-        receiptPath: join(this.stateDirectory, 'update-result.json'),
+        receiptPath,
+        attemptId,
+        cancelPath,
         fromVersion: this.status.currentVersion,
         toVersion: this.asset!.version
       })
-      // Claim the transition before spawning; IPC, tray clicks and status callbacks may re-enter.
-      this.set({ phase: 'applying', message: 'Closing to apply the verified update…' })
-      const child = spawn(
-        'powershell.exe',
-        [
-          '-NoLogo',
-          '-NoProfile',
-          '-NonInteractive',
-          '-WindowStyle',
-          'Hidden',
-          '-EncodedCommand',
-          Buffer.from(script, 'utf16le').toString('base64')
-        ],
-        {
-          detached: true,
-          stdio: 'ignore',
-          windowsHide: true,
-          cwd: this.temporaryRoot
-        }
+      writeFileSync(join(directory, 'apply.ps1'), '\uFEFF' + script, { mode: 0o600 })
+      writeFileSync(
+        receiptPath,
+        JSON.stringify({
+          status: 'pending',
+          attemptId,
+          fromVersion: this.status.currentVersion,
+          toVersion: this.asset!.version,
+          target,
+          payload: this.payloadPath,
+          diagnostics: directory,
+          at: new Date().toISOString()
+        }),
+        { mode: 0o600 }
       )
+      // Claim the transition before spawning; IPC, tray clicks and status callbacks may re-enter.
+      this.set({
+        phase: 'applying',
+        message: 'Waiting for the update helper to confirm it started…'
+      })
+      const log = openSync(join(directory, 'helper.log'), 'a', 0o600)
+      let child: ReturnType<typeof spawn>
+      try {
+        child = spawn(
+          process.env.SystemRoot
+            ? join(
+                process.env.SystemRoot,
+                'System32',
+                'WindowsPowerShell',
+                'v1.0',
+                'powershell.exe'
+              )
+            : 'powershell.exe',
+          [
+            '-NoLogo',
+            '-NoProfile',
+            '-NonInteractive',
+            '-WindowStyle',
+            'Hidden',
+            '-EncodedCommand',
+            Buffer.from(script, 'utf16le').toString('base64')
+          ],
+          {
+            detached: true,
+            stdio: ['ignore', log, log],
+            windowsHide: true,
+            cwd: this.temporaryRoot
+          }
+        )
+      } finally {
+        closeSync(log)
+      }
       let quitTimer: ReturnType<typeof setTimeout> | undefined
-      child.once('error', () => {
+      let poll: ReturnType<typeof setInterval> | undefined
+      let settled = false
+      const started = Date.now()
+      const fail = (message: string) => {
+        if (settled) return
+        settled = true
+        if (poll) clearInterval(poll)
         if (quitTimer) clearTimeout(quitTimer)
+        try {
+          writeFileSync(cancelPath, 'Cancelled before app shutdown.', { mode: 0o600 })
+          writeFileSync(
+            receiptPath,
+            JSON.stringify({
+              status: 'failed',
+              attemptId,
+              message,
+              diagnostics: directory,
+              fromVersion: this.status.currentVersion,
+              toVersion: this.asset!.version,
+              at: new Date().toISOString()
+            }),
+            { mode: 0o600 }
+          )
+        } catch {
+          /* Keep the app open even when diagnostic storage fails. */
+        }
         this.set({
           phase: 'error',
-          message:
-            'Could not start the update helper. The app has not been replaced; try again or install manually.'
+          message: `${message} The app was kept open. Open update diagnostics or run the downloaded installer directly.`
         })
-      })
+      }
+      child.once('error', () => fail('Could not start the update helper.'))
+      child.once('exit', (code) =>
+        fail(`The update helper exited before shutdown (code ${code ?? 'unknown'}).`)
+      )
       child.once('spawn', () => {
-        quitTimer = setTimeout(() => app.quit(), 250)
+        poll = setInterval(() => {
+          try {
+            const receipt = JSON.parse(readFileSync(receiptPath, 'utf8').replace(/^\uFEFF/, ''))
+            if (receipt.attemptId === attemptId && receipt.status === 'failed') {
+              fail(String(receipt.message).slice(0, 300))
+              return
+            }
+            if (receipt.attemptId === attemptId && receipt.status === 'waiting') {
+              if (poll) clearInterval(poll)
+              this.set({
+                phase: 'applying',
+                message: 'Update helper confirmed. Closing to install…'
+              })
+              quitTimer = setTimeout(() => {
+                settled = true
+                app.quit()
+              }, 250)
+              return
+            }
+          } catch {
+            /* A receipt can be absent or mid-write; wait for a valid matching acknowledgement. */
+          }
+          if (Date.now() - started >= 10000)
+            fail('The update helper did not acknowledge startup within 10 seconds.')
+        }, 100)
       })
       child.unref()
     } catch (error) {
@@ -280,6 +392,30 @@ export class UpdateLauncher {
       })
     }
     return this.getStatus()
+  }
+
+  async openInstaller(): Promise<UpdateStatus> {
+    if (this.status.packaging !== 'installed' || this.status.phase === 'applying')
+      return this.getStatus()
+    if (
+      !this.payloadPath ||
+      !this.asset?.digest ||
+      createHash('sha256').update(readFileSync(this.payloadPath)).digest('hex') !==
+        this.asset.digest.slice(7).toLowerCase()
+    )
+      throw new Error('Download and verify the installer before opening it.')
+    const problem = await shell.openPath(this.payloadPath)
+    if (problem) throw new Error(`Could not open the installer: ${problem}`)
+    this.set({
+      phase: 'idle',
+      message: 'Installer opened. Follow its prompts; it may ask to close S2Teasy.'
+    })
+    return this.getStatus()
+  }
+
+  async openDiagnostics(): Promise<void> {
+    const problem = await shell.openPath(this.stateDirectory)
+    if (problem) throw new Error(`Could not open update diagnostics: ${problem}`)
   }
 
   private set(patch: Partial<UpdateStatus>): void {

@@ -627,6 +627,8 @@ export function SettingsPanel({
               </p>
             </section>
             <UpdatePanel
+              onOpenInstaller={() => window.s2t.openUpdateInstaller()}
+              onDiagnostics={() => window.s2t.openUpdateDiagnostics()}
               update={update}
               autoDownload={settings.autoUpdate}
               onAutoDownload={(autoUpdate) => save({ autoUpdate })}
