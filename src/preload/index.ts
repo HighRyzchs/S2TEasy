@@ -37,6 +37,8 @@ export type S2TApi = {
   hudFocus: (focus: boolean) => Promise<void>
   /** The pointer is over a visible part of the HUD (clicks there go to the HUD, elsewhere through). */
   hudPointer: (inside: boolean) => void
+  /** Show a short scripted session on the real HUD (main window only). */
+  hudDemo: () => Promise<void>
 
   getUpdateDiagnostics: () => Promise<string>
   openUpdateInstaller: () => Promise<UpdateStatus>
@@ -109,6 +111,7 @@ const api: S2TApi = {
   hudCues: (on) => ipcRenderer.invoke(IPC.HUD_CUES, on),
   hudFocus: (focus) => ipcRenderer.invoke(IPC.HUD_FOCUS, focus),
   hudPointer: (inside) => ipcRenderer.send(IPC.HUD_POINTER, inside),
+  hudDemo: () => ipcRenderer.invoke(IPC.HUD_DEMO),
   getUpdateDiagnostics: () => ipcRenderer.invoke(IPC.GET_UPDATE_DIAGNOSTICS),
   openUpdateInstaller: () => ipcRenderer.invoke(IPC.OPEN_UPDATE_INSTALLER),
   openUpdateDiagnostics: () => ipcRenderer.invoke(IPC.OPEN_UPDATE_DIAGNOSTICS),
