@@ -4,13 +4,14 @@ import { useApp } from '../context'
 import { AppsCard, ModelsCard, OutcomesLine, RecognizedCard } from '../usage/Breakdowns'
 import { formatDelay, formatMoney, formatTalkTime, monthSpend } from '../usage/chart'
 import { Legend, SpendChart, SpendTable } from '../usage/SpendChart'
+import { MonthCard } from '../usage/MonthCard'
 import '../usage/usage.css'
 
 const RANGES = [7, 30, 90]
 const TYPING_WPM = 40
 
 export function Usage() {
-  const { history, usage, settings, run, navigate } = useApp()
+  const { history, usage, settings, run, navigate, save } = useApp()
   const [days, setDays] = useState(30)
   const [table, setTable] = useState(false)
   const data = useMemo(
@@ -127,13 +128,12 @@ export function Usage() {
       <ModelsCard models={data.models} />
       <OutcomesLine outcomes={data.outcomes} />
 
-      <section className="card month" aria-labelledby="month-h">
-        <div>
-          <h2 id="month-h">This month</h2>
-          <span className="hint">{monthName}, all requests with a reported price</span>
-        </div>
-        <strong className="mono month-value">{formatMoney(month)}</strong>
-      </section>
+      <MonthCard
+        month={month}
+        monthName={monthName}
+        limit={settings.monthlyLimitUsd}
+        onLimit={(limit) => void save({ monthlyLimitUsd: limit }).catch(() => undefined)}
+      />
 
       <p className="hint usage-foot">
         This is what this app recorded, not your provider’s invoice. Missing prices are unknown, not

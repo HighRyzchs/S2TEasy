@@ -112,6 +112,8 @@ export type AppSettings = {
   streamKeyterms: boolean
   /** After a pause, the session finishes by itself this long after the last HUD interaction. */
   finishAfterMs: number
+  /** Monthly spend limit for paid extras in US dollars; 0 means no limit. Speech is never stopped. */
+  monthlyLimitUsd: number
   hud: HudSettings
   /** Your voice suggestions the user chose not to see again (heard→meant keys). */
   dismissedSuggestions: string[]
@@ -253,6 +255,7 @@ export const defaultSettings = (): AppSettings => ({
   vocabulary: [],
   streamKeyterms: false,
   finishAfterMs: 7000,
+  monthlyLimitUsd: 0,
   hud: defaultHudSettings(),
   dismissedSuggestions: []
 })
@@ -344,6 +347,10 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
   merged.finishAfterMs = Number.isFinite(raw?.finishAfterMs)
     ? Math.min(30_000, Math.max(2000, Math.round(raw!.finishAfterMs! / 500) * 500))
     : 7000
+  merged.monthlyLimitUsd =
+    Number.isFinite(raw?.monthlyLimitUsd) && raw!.monthlyLimitUsd! > 0
+      ? Math.min(10_000, Math.round(raw!.monthlyLimitUsd! * 100) / 100)
+      : 0
   merged.hud = normalizeHudSettings(raw?.hud, raw?.overlayTheme)
   merged.dismissedSuggestions = Array.isArray(raw?.dismissedSuggestions)
     ? raw.dismissedSuggestions.filter((key): key is string => typeof key === 'string').slice(-500)
