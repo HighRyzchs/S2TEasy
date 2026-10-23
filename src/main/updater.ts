@@ -57,6 +57,15 @@ export class UpdateLauncher {
       if (receipt.status === 'applied' && receipt.toVersion === app.getVersion()) {
         this.status.phase = 'current'
         this.status.message = `Updated from ${receipt.fromVersion} to ${receipt.toVersion}.`
+      } else if (
+        ['failed', 'pending', 'waiting', 'installing'].includes(receipt.status) &&
+        typeof receipt.toVersion === 'string' &&
+        /^\d+\.\d+\.\d+$/.test(receipt.toVersion) &&
+        (receipt.toVersion === app.getVersion() ||
+          isNewerVersion(app.getVersion(), receipt.toVersion))
+      ) {
+        this.status.phase = 'current'
+        this.status.message = `Running ${app.getVersion()}. The earlier automatic attempt to ${receipt.toVersion} did not confirm completion; its diagnostic report is retained.`
       } else if (receipt.status === 'failed') {
         this.status.phase = 'error'
         this.status.message = `Previous update could not be applied: ${String(receipt.message).slice(0, 300)} Your original app and local data are kept.`

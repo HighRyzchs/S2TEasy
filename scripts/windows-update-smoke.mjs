@@ -173,6 +173,19 @@ async function main() {
   copyFileSync(installer, stagedInstaller)
   const applied = await apply(stagedInstaller, version, 'upgrade')
   if (applied.status !== 'applied') throw new Error(`Real NSIS upgrade failed: ${applied.message}`)
+  const currentBuild = JSON.parse(readFileSync('package.json', 'utf8')).version
+  if (version === currentBuild) {
+    const packagedBridge = join(installDirectory, 'resources', 'update-bridge.exe')
+    if (
+      !existsSync(packagedBridge) ||
+      createHash('sha256').update(readFileSync(packagedBridge)).digest('hex') !==
+        createHash('sha256')
+          .update(readFileSync(resolve('resources/update-bridge.exe')))
+          .digest('hex')
+    )
+      throw new Error('Installed app is missing the exact tested update bridge.')
+  }
+
   if (
     !existsSync(installer) ||
     createHash('sha256').update(readFileSync(installer)).digest('hex') !== artifactHash
@@ -199,6 +212,7 @@ async function main() {
     newVersion: version,
     realNsisUpgrade: 'passed',
     productionLaunchOptions: 'passed',
+    packagedBridge: version === currentBuild ? 'passed' : 'older installer fixture',
     startupAcknowledgement: 'passed',
     noOpInstallerRejected: 'passed',
     pathQuoting: 'passed',

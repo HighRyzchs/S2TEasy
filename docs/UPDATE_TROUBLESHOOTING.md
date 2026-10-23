@@ -4,9 +4,11 @@
 
 This failure was reproduced on a Windows runner from both Node and Electron. PowerShell launched with `detached: true`, ignored stdin and file-backed output exited 0 without executing the helper. The same script with `detached: false` acknowledged startup. Removing `-WindowStyle Hidden` alone did not fix it.
 
-Version 1.8.1 uses the non-detached, hidden launch. File-backed stdio and the startup acknowledgment remain. The native test now imports the production launcher; a separate real Electron test checks that the helper survives app.quit(), replaces a synthetic target and restarts it. The previous NSIS test ran the script with different process flags, so it did not cover this bug.
+Simply disabling detached mode acknowledged startup, but the full Electron test showed that the helper did not survive app exit. Version 1.8.1 therefore stages a small GUI bridge, which runs independently of Electron and launches a non-detached hidden PowerShell child. The bridge keeps its own log; the startup acknowledgment remains. The native test now imports the production launcher; a separate real Electron test checks that the helper survives app.quit(), replaces a synthetic target and restarts it. The previous NSIS test ran the script with different process flags, so it did not cover this bug.
 
 To get the fix, use **Open downloaded installer**, or quit from the tray and run the current **win-x64 installer** directly. Versions 1.7.2 and 1.8.0 must still execute their old launcher before replacement, so retrying their Restart button cannot install this fix. Local settings and History stay in place. A nonzero/zero exit code alone does not establish installation success; the helper still verifies the result.
+
+The bridge is built from [auditable C# source](../native/UpdateBridge.cs), bundled with both packages, and staged into the attempt folder so portable extraction cleanup cannot remove it. It uses the Windows .NET Framework already used by Windows PowerShell. It does not read credentials or change execution policy.
 
 New reports include allowlisted `launch.json` fields alongside the helper log. They report preparation/start/exit and process options without including the encoded script or environment contents. Older reports can legitimately show an empty log without this metadata.
 

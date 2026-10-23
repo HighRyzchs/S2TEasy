@@ -8,7 +8,9 @@ People want a usable result, not a collection of unrelated switches. Word correc
 
 Desktop v1.8.0 replaces the Vocabulary and Voice practice navigation destinations with **Your voice**. Output comes first, followed by a short-take recorder, a correction form, a searchable library of word rules and voice/expression takes, playback, and cue review. Existing rules and recordings stay in the same stores. The browser lab demonstrates additional sound cards and neutral-reference measurements; those are not a trained desktop noise recognizer or a personalized emotion model.
 
-![Your voice desktop workspace with visible output choices. Browser rendering of the desktop components with sample history.](desktop-your-voice-preview.png)
+![Your voice desktop studio, rendered from the desktop components with sample history.](desktop-studio-paper.png)
+
+[Night view](desktop-studio-night.png)
 
 ## Desktop studio in v1.8.1
 

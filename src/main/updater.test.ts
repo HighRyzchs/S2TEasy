@@ -291,3 +291,27 @@ it('does not queue automatic restarts or downloads when no verified update is re
   expect(launcher.spawn).not.toHaveBeenCalled()
   expect(updater.getStatus().message).toMatch(/Download and verify/)
 })
+
+it('recognizes manual recovery without claiming the earlier failed automatic attempt succeeded', () => {
+  const { directory } = setup()
+  writeFileSync(
+    join(directory, 'update-result.json'),
+    JSON.stringify({
+      status: 'failed',
+      fromVersion: '1.3.0',
+      toVersion: '1.3.1',
+      message: 'Helper exited 0'
+    })
+  )
+  const recovered = new UpdateLauncher(
+    () => '',
+    () => {},
+    directory,
+    directory
+  )
+  expect(recovered.getStatus()).toMatchObject({
+    phase: 'current',
+    message: expect.stringMatching(/Running 1.3.1.*did not confirm completion/)
+  })
+  expect(recovered.diagnostics()).toContain('Helper exited 0')
+})
