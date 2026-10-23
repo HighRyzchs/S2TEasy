@@ -52,7 +52,7 @@ export function YourVoicePanel({
   const [position, setPosition] = useState(0)
   useEffect(() => setTarget(initialTarget), [initialTarget])
   useEffect(() => {
-    if (overlay.mode === 'practice' && overlay.sessionId) {
+    if (overlay.sessionId) {
       setSelected(overlay.sessionId)
       setPosition(0)
     }
@@ -63,6 +63,12 @@ export function YourVoicePanel({
   const outputItem =
     active && overlay.partial ? { text: overlay.partial, cueAnalysis: overlay.cueAnalysis } : item
   const output = outputItem ? renderOutput(outputItem, settings.output, format) : ''
+  const cuePills = new Map(
+    (outputItem?.cueAnalysis?.cues ?? []).map((cue) => [
+      `[${cue.userLabel ?? cue.label} · ${(cue.startMs / 1000).toFixed(1)}–${(cue.endMs / 1000).toFixed(1)}s]`,
+      cue
+    ])
+  )
   const progress = useMemo(() => practiceProgress(history), [history])
   const words = settings.vocabulary.filter((row) =>
     `${row.heard} ${row.meant}`.toLowerCase().includes(query.toLowerCase())
@@ -161,7 +167,33 @@ export function YourVoicePanel({
             aria-label="Your voice output"
             aria-live="polite"
           >
-            {output || (
+            {output ? (
+              format === 'tags' ? (
+                output.split(/(\[[^\]\r\n]+\])/u).map((part, index) => {
+                  const cue = cuePills.get(part)
+                  return cue ? (
+                    <button
+                      key={index}
+                      className={`voice-native-tag ${cue.kind}`}
+                      title="Review this audio cue"
+                      onClick={() => {
+                        const id = active ? overlay.sessionId : item?.id
+                        if (id) onReview(id)
+                      }}
+                    >
+                      [{cue.userLabel ?? cue.label}]
+                      <small>
+                        {(cue.startMs / 1000).toFixed(1)}–{(cue.endMs / 1000).toFixed(1)}s
+                      </small>
+                    </button>
+                  ) : (
+                    <span key={index}>{part}</span>
+                  )
+                })
+              ) : (
+                output
+              )
+            ) : (
               <span className="voice-empty-output">
                 A name it finally gets right.
                 <br />A thought that sounds like you.
@@ -188,7 +220,10 @@ export function YourVoicePanel({
                 : 'Start with a word or phrase in the try-it corner.'}
             </span>
             {item && (
-              <button className="text-button" onClick={() => onReview(item.id)}>
+              <button
+                className="text-button"
+                onClick={() => onReview(active ? (overlay.sessionId ?? item.id) : item.id)}
+              >
                 Edit words & labels ↗
               </button>
             )}
