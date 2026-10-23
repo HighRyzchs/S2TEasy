@@ -118,7 +118,7 @@ async function main() {
     // A real parent process stays alive long enough to verify the startup acknowledgement.
     const parent = spawn(
       powershell,
-      ['-NoProfile', '-NonInteractive', '-Command', 'Start-Sleep -Seconds 8'],
+      ['-NoProfile', '-NonInteractive', '-Command', 'Start-Sleep -Seconds 120'],
       { stdio: 'ignore', windowsHide: true }
     )
     await new Promise((ready, reject) => {
@@ -137,18 +137,27 @@ async function main() {
       fromVersion: '1.5.1',
       toVersion
     })
-    const promise = execute(script, `${name}.log`)
+    const promise = execute(script, `${name}.log`).then(
+      () => undefined,
+      (error) => error
+    )
     let acknowledged = false
-    while (parent.exitCode === null && !acknowledged) {
+    const deadline = Date.now() + 10000
+    while (parent.exitCode === null && !acknowledged && Date.now() < deadline) {
       try {
         acknowledged =
           JSON.parse(readFileSync(receiptPath, 'utf8').replace(/^\uFEFF/, '')).status === 'waiting'
       } catch {}
       if (!acknowledged) await new Promise((r) => setTimeout(r, 100))
     }
-    await promise
+    // Match the real handoff: the parent exits only after acknowledgment, never on a fixed sleep.
+    parent.kill()
+    const failure = await promise
+    if (failure) throw failure
     if (!acknowledged)
-      throw new Error('The native helper did not acknowledge startup before its parent exited.')
+      throw new Error(
+        `The native helper did not acknowledge startup within 10 seconds. Output: ${readFileSync(join(diagnostics, `${name}.log`), 'utf8').slice(-4000)}; Receipt: ${readFileSync(receiptPath, 'utf8')}`
+      )
     return JSON.parse(readFileSync(receiptPath, 'utf8').replace(/^\uFEFF/, ''))
   }
   const applied = await apply(installer, version, 'upgrade')

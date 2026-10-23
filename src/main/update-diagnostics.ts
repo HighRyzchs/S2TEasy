@@ -3,7 +3,12 @@ import { join } from 'node:path'
 
 /** Reads only update-owned files, never settings/history or a path supplied by receipt contents. */
 export function updateDiagnostics(directory: string, version: string, packaging: string): string {
-  const lines = [`S2Teasy update report`, `Running version: ${version}`, `Package: ${packaging}`]
+  const lines = [
+    `S2Teasy update report`,
+    `Running version: ${version}`,
+    `Package: ${packaging}`,
+    `Executable: ${process.execPath}`
+  ]
   try {
     const path = join(directory, 'update-result.json')
     if (statSync(path).size > 64000) throw new Error('Receipt exceeds the report limit')

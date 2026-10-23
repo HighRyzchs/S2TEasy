@@ -231,7 +231,7 @@ it('keeps the app open when PowerShell exits before acknowledging and records di
 })
 it('requires a matching startup acknowledgement and cancels the attempt on timeout', async () => {
   vi.useFakeTimers()
-  const child = Object.assign(new EventEmitter(), { unref: vi.fn() })
+  const child = Object.assign(new EventEmitter(), { unref: vi.fn(), kill: vi.fn() })
   launcher.spawn.mockReturnValue(child)
   const { updater, directory } = setup()
   await updater.check({ download: true })
@@ -246,6 +246,7 @@ it('requires a matching startup acknowledgement and cancels the attempt on timeo
     message: expect.stringMatching(/10 seconds/)
   })
   expect(app.quit).not.toHaveBeenCalled()
+  expect(child.kill).toHaveBeenCalledOnce()
   const attempts = join(directory, 'updates')
   const attempt = join(attempts, readdirSync(attempts)[0]!)
   expect(readFileSync(join(attempt, 'cancelled'), 'utf8')).toContain('Cancelled')
