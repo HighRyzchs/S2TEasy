@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useApp } from '../context'
 import { MicIcon, StopIcon } from '../icons'
+import { AccentCheck } from './AccentCheck'
 import { useVocabulary } from './useVocabulary'
 import { practiceQueue, takesFor, type Take } from './voice-logic'
 
@@ -49,10 +50,13 @@ export function PracticeTab({ requested, onPick }: { requested: string; onPick: 
 
   if (queue.length === 0 && !word) {
     return (
-      <div className="empty">
-        <strong>Nothing to practice yet.</strong>
-        <p>Add a word on the Words tab, then come back to say it a few times. Each take shows what the engine heard.</p>
-      </div>
+      <>
+        <div className="empty">
+          <strong>No words to practice yet.</strong>
+          <p>Add a word on the Words tab, then come back to say it a few times. Each take shows what the engine heard.</p>
+        </div>
+        <AccentCheck />
+      </>
     )
   }
 
@@ -122,6 +126,8 @@ export function PracticeTab({ requested, onPick }: { requested: string; onPick: 
           </ul>
         )}
       </section>
+
+      <AccentCheck />
 
       <p className="hint practice-note">
         Practice collects the ways a word gets misheard and keeps your clips on this PC. It does not retrain the speech engine; it teaches S2Teasy what to fix.

@@ -4,18 +4,26 @@
 - Personal words now remember every way they get misheard, including multi-word ones ("as two teasy" → S2Teasy), with a kind (name, how I say it, keyword, phrase), an optional sounds-like note, kept clips and fix counts. Older vocabulary rules load unchanged.
 - Live typing tracks exactly what it typed. Trailing words that could still become a learned phrase wait for the next phrase, so a name is never typed half-fixed. Words learned mid-session apply to everything not yet typed.
 - Names and keywords go to OpenRouter audio chat models and local servers as recognition hints (dedicated OpenRouter ASR requests still omit them). Passing them to Deepgram through router.audio (`keyterm`) is opt-in and marked experimental, because router.audio does not document it.
+- Accent check in Practice: read six short sentences once; each word the engine turns into another word can be saved as an accent fix.
+- Opt-in context check for accent fixes: after a session that swapped such a word, a small OpenRouter text model sees each swap as two choices and puts back what you said where the fix does not fit the sentence. It can only choose between the two words.
+
+**Speech cues**
+- Cues are heard per phrase while you talk and appear on the HUD in front of the phrase; the whole session is analyzed, not only its first 30 seconds.
+- Per-app rules (Your voice → Expression): cues on in chat, off in email, for example.
+- A monthly limit on the Usage page pauses paid extras (cues, context checks) once reached; dictation itself never stops.
 
 **The HUD**
 - One HUD instead of two. The shortcut starts, pauses and resumes; a paused session finishes by itself after a delay you choose (7 seconds by default) that holds while you hover or edit; Done finishes at once.
 - Click your words to edit them while you keep talking, or drag across several to fix a phrase. A one-line pill asks whether to remember the fix as a name or as how you say it.
 - Already-typed text is replaced in place only when nothing else touched the app since S2Teasy typed it (no key or click outside the HUD, at most 400 characters back). Otherwise the fix is saved in History and the app's text is left alone.
 - Copy, a per-session speech-cue switch, a proper exit animation, and a click-through window. Seven styles: Island, Caption, Edge glow, Cyberpunk, 8-bit, Ghost text and Speech balloon, each recolorable.
+- "Show it on my screen" on the HUD page plays a short demo on the real overlay without recording anything.
 
 **The app**
 - A redesigned app: Home, Your voice (Words, Practice, Expression), History (with app icons, what changed, audio playback), Usage (a full local analytics page), HUD and Settings, in dark and light.
 - Sessions remember which program they typed into (never the window title) to show its icon.
 
-**Not yet verified on Windows:** pausing and resuming with each engine, focus handoff between the HUD and the app while editing, in-place replacement of typed text, app icons and the click-through window. These are covered by unit tests against the same logic but need the native smoke test before a stable release.
+**Not yet verified on Windows:** live cues and the context check against paid models, pausing and resuming with each engine, focus handoff between the HUD and the app while editing, in-place replacement of typed text, app icons and the click-through window. These are covered by unit tests against the same logic but need the native smoke test before a stable release.
 
 ---
 
