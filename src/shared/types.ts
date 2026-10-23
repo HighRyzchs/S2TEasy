@@ -2,6 +2,7 @@ import { normalizeOutputPreferences, type OutputPreferences } from './output'
 import type { WordTiming } from './word-timing'
 import type { UsageState } from './usage'
 import { defaultOverlayTheme, normalizeOverlayTheme, type OverlayTheme } from './overlay-theme'
+import { defaultHudSettings, normalizeHudSettings, type HudSettings } from './hud'
 import {
   normalizeVocabulary,
   type VocabularyEntry,
@@ -108,6 +109,9 @@ export type AppSettings = {
   vocabulary: VocabularyEntry[]
   /** Experimental: pass personal words to the streaming provider as Deepgram key terms. */
   streamKeyterms: boolean
+  /** After a pause, the session finishes by itself this long after the last HUD interaction. */
+  finishAfterMs: number
+  hud: HudSettings
 }
 
 /** A fix the user asked S2Teasy to remember, from the HUD, History or practice. */
@@ -159,10 +163,20 @@ export type HistoryItem = {
   hasAudio?: boolean
   /** Words changed by personal words before they were typed. */
   fixes?: VocabularyHit[]
+  /** Corrections the user made in the HUD during the session. */
+  edits?: { from: string; to: string }[]
 }
 
 export type OverlayStatus =
-  'hidden' | 'listening' | 'transcribing' | 'inserting' | 'success' | 'error' | 'arm-paste'
+  | 'hidden'
+  | 'listening'
+  | 'paused'
+  | 'transcribing'
+  | 'inserting'
+  | 'success'
+  | 'error'
+  | 'arm-paste'
+  | 'leaving'
 
 export type OverlayState = {
   cueAnalysis?: CueAnalysis
@@ -177,6 +191,13 @@ export type OverlayState = {
   sessionId?: string
   /** Live typing: the first `typedLength` characters of `partial` are already in the target app. */
   typedLength?: number
+  /** Speech cues are on for this session (the HUD switch). */
+  cues?: boolean
+  /** Paused: when the session finishes by itself (epoch ms). Absent while the HUD holds it. */
+  finishAt?: number
+  /** A short message for the HUD, such as where an edit was saved. */
+  notice?: string
+  noticeAt?: number
 }
 
 export type ModelOption = {
@@ -225,7 +246,9 @@ export const defaultSettings = (): AppSettings => ({
   keepAudioForTraining: false,
   audioRetentionDays: 7,
   vocabulary: [],
-  streamKeyterms: false
+  streamKeyterms: false,
+  finishAfterMs: 7000,
+  hud: defaultHudSettings()
 })
 
 export function clampInputGain(value: number): number {
@@ -312,6 +335,10 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
     : 7
   merged.vocabulary = normalizeVocabulary(raw?.vocabulary)
   merged.streamKeyterms = raw?.streamKeyterms === true
+  merged.finishAfterMs = Number.isFinite(raw?.finishAfterMs)
+    ? Math.min(30_000, Math.max(2000, Math.round(raw!.finishAfterMs! / 500) * 500))
+    : 7000
+  merged.hud = normalizeHudSettings(raw?.hud, raw?.overlayTheme)
   return merged
 }
 

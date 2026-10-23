@@ -1,6 +1,13 @@
 export const IPC = {
   SAVE_OUTPUT: 's2t:save-output',
   LEARN_WORD: 's2t:learn-word',
+  HUD_EDIT: 's2t:hud-edit',
+  HUD_PAUSE: 's2t:hud-pause',
+  HUD_FINISH: 's2t:hud-finish',
+  HUD_HOLD: 's2t:hud-hold',
+  HUD_CUES: 's2t:hud-cues',
+  HUD_FOCUS: 's2t:hud-focus',
+  HUD_POINTER: 's2t:hud-pointer',
   COPY_OUTPUT: 's2t:copy-output',
   GET_UPDATE_DIAGNOSTICS: 's2t:get-update-diagnostics',
   OPEN_UPDATE_INSTALLER: 's2t:open-update-installer',

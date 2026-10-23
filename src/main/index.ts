@@ -2,7 +2,7 @@ import { analyzeAutomaticCues } from './automatic-cues'
 import { normalizeOutputPreferences, renderOutput, type OutputPreferences } from '../shared/output'
 import { copyTranscript } from './inject'
 import { UsageStore } from './usage-store'
-import { app, BrowserWindow, dialog, ipcMain, session, protocol } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, screen, session, protocol } from 'electron'
 import { randomUUID } from 'node:crypto'
 import type { WordTiming } from '../shared/word-timing'
 import { audioResponse } from './audio-response'
@@ -61,6 +61,8 @@ let mainWindow: BrowserWindow | null = null
 let overlayWindow: BrowserWindow | null = null
 let recorderWindow: BrowserWindow | null = null
 let quitting = false
+// Last key press or click outside the HUD, for deciding whether typed text can be fixed in place.
+let lastExternalInputAt = 0
 let store: Store
 let dictation: DictationController
 let updater: UpdateLauncher
@@ -147,7 +149,7 @@ async function setup(): Promise<void> {
 
   mainWindow = createMainWindow()
   overlayWindow = createOverlayWindow()
-  sizeOverlay(overlayWindow, store.getSettings().overlayTheme)
+  sizeOverlay(overlayWindow, store.getSettings().hud)
   recorderWindow = createRecorderWindow()
 
   mainWindow.on('close', (event) => {
@@ -161,6 +163,8 @@ async function setup(): Promise<void> {
     journal,
     isRecovering: () => recoveryBusy,
     onUsage: (row) => sendMain(IPC.USAGE_CHANGED, usage.record(row)),
+    // S2Teasy's own keystrokes reach the hook a moment after it types; a short margin skips them.
+    targetUntouchedSince: (since) => lastExternalInputAt <= since + 250,
     onVocabularyHits: (hits) => {
       store.saveSettings({ vocabulary: recordHits(store.getSettings().vocabulary, hits) })
       broadcastSettings()
@@ -199,7 +203,7 @@ async function setup(): Promise<void> {
     },
     placeOverlay: () => {
       if (overlayWindow && !overlayWindow.isDestroyed())
-        placeOverlay(overlayWindow, store.getSettings().overlayPosition, {
+        placeOverlay(overlayWindow, store.getSettings().hud, store.getSettings().overlayPosition, {
           x: store.getSettings().overlayOffsetX,
           y: store.getSettings().overlayOffsetY
         })
@@ -227,9 +231,29 @@ async function setup(): Promise<void> {
   })
 
   hotkeys.start({
-    onStart: () => void dictation.start(),
-    onStop: () => dictation.stop(),
-    onToggle: () => dictation.toggle()
+    onStart: () => dictation.holdStart(),
+    onStop: () => dictation.holdEnd(),
+    onToggle: () => dictation.toggle(),
+    onInput: (input) => {
+      // Typing in the HUD or clicking on it is not touching the app S2Teasy types into.
+      if (!overlayWindow || overlayWindow.isDestroyed() || overlayWindow.isFocused()) return
+      if (input.kind === 'mouse') {
+        const point =
+          process.platform === 'win32'
+            ? screen.screenToDipPoint({ x: input.x, y: input.y })
+            : { x: input.x, y: input.y }
+        const bounds = overlayWindow.getBounds()
+        if (
+          overlayWindow.isVisible() &&
+          point.x >= bounds.x &&
+          point.x < bounds.x + bounds.width &&
+          point.y >= bounds.y &&
+          point.y < bounds.y + bounds.height
+        )
+          return
+      }
+      lastExternalInputAt = Date.now()
+    }
   })
   const initial = store.getSettings()
   try {
@@ -321,7 +345,7 @@ async function setup(): Promise<void> {
       throw error
     }
     applyStartup(settings)
-    if (overlayWindow) sizeOverlay(overlayWindow, settings.overlayTheme)
+    if (overlayWindow) sizeOverlay(overlayWindow, settings.hud)
     broadcastSettings()
     if (patch.speechCues || patch.apiKey !== undefined) speechCues.cancel()
     if (patch.autoUpdate === true) {
@@ -400,6 +424,38 @@ async function setup(): Promise<void> {
   ipcMain.handle(IPC.START_PRACTICE, (_event, text: string) => dictation.startPractice(text))
   ipcMain.handle(IPC.REVIEW_DICTATION, () => dictation.reviewCurrent())
   ipcMain.handle(IPC.STOP_RECORDING, () => dictation.stop())
+  ipcMain.handle(IPC.HUD_EDIT, (_event, sessionId: string, start: number, end: number, text: string) => {
+    if (typeof sessionId !== 'string' || typeof text !== 'string' || text.length > 400)
+      throw new Error('That edit could not be applied.')
+    return dictation.editText(sessionId, start, end, text)
+  })
+  ipcMain.handle(IPC.HUD_PAUSE, () => {
+    if (dictation.isPaused()) return dictation.resume()
+    dictation.pause()
+  })
+  ipcMain.handle(IPC.HUD_FINISH, () => dictation.finish())
+  ipcMain.on(IPC.HUD_HOLD, (event, held: unknown) => {
+    if (event.sender === overlayWindow?.webContents) dictation.holdFinish(held === true)
+  })
+  ipcMain.handle(IPC.HUD_CUES, (_event, on: unknown) => dictation.setSessionCues(on === true))
+  ipcMain.handle(IPC.HUD_FOCUS, (_event, focus: unknown) => {
+    if (!overlayWindow || overlayWindow.isDestroyed()) return
+    if (focus === true) {
+      overlayWindow.setFocusable(true)
+      overlayWindow.setIgnoreMouseEvents(false)
+      overlayWindow.focus()
+    } else {
+      overlayWindow.setFocusable(false)
+      overlayWindow.blur()
+      dictation.restoreTarget()
+    }
+  })
+  ipcMain.on(IPC.HUD_POINTER, (event, inside: unknown) => {
+    if (!overlayWindow || overlayWindow.isDestroyed() || event.sender !== overlayWindow.webContents) return
+    // Transparent parts of the HUD window let clicks through to the app underneath.
+    if (overlayWindow.isFocused()) return
+    overlayWindow.setIgnoreMouseEvents(inside !== true, { forward: true })
+  })
   ipcMain.handle(IPC.CANCEL_RECORDING, () => dictation.cancel())
   ipcMain.handle(IPC.COPY_HISTORY, (_event, text: string) => {
     return copyTranscript(text)
