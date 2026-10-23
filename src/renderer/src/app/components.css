@@ -1,0 +1,447 @@
+/* Shared building blocks for every screen. Screens add only layout of their own. */
+
+/* Layout */
+/* The frameless window: a draggable strip along the top, clear of the system window buttons. */
+.drag-strip {
+  position: fixed;
+  top: 0;
+  left: 232px;
+  right: 150px;
+  height: 36px;
+  -webkit-app-region: drag;
+  z-index: 1;
+}
+.shell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+}
+.page {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 44px 36px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
+  justify-content: space-between;
+}
+.page-head > div:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.page-head h1 {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.page-head p {
+  font-size: 14.5px;
+  color: var(--dim);
+  max-width: 70ch;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-start;
+}
+.columns > * {
+  min-width: 0;
+}
+.grid-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+/* Surfaces */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.card > h2,
+.card-head h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.tile {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.tile strong {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 500;
+}
+.tile small {
+  font-size: 12.5px;
+  color: var(--faint);
+}
+.empty {
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  padding: 22px;
+  color: var(--dim);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+/* Text */
+.label {
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 500;
+}
+.dim {
+  color: var(--dim);
+}
+.faint {
+  color: var(--faint);
+}
+.hint {
+  font-size: 12.5px;
+  color: var(--faint);
+}
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.kbd {
+  font-family: var(--mono);
+  font-size: 12px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  padding: 2px 7px;
+  background: var(--raised);
+  white-space: nowrap;
+}
+.tag {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--cue);
+  background: var(--cue-soft);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+.fixed-word {
+  color: var(--accent);
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+/* Controls */
+.btn {
+  font-size: 13.5px;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--raised);
+  color: var(--fg);
+  padding: 8px 14px;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.btn.small {
+  padding: 5px 11px;
+  min-height: 32px;
+  font-size: 13px;
+}
+.btn.icon {
+  padding: 0;
+  width: 36px;
+  min-height: 36px;
+}
+.btn.danger {
+  color: var(--danger);
+}
+.link {
+  background: none;
+  border: 0;
+  padding: 6px 0;
+  color: var(--accent);
+  font-size: 13.5px;
+  text-decoration: none;
+}
+.link.danger {
+  color: var(--danger);
+}
+.seg {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  flex-wrap: wrap;
+}
+.seg button {
+  border: 0;
+  background: none;
+  color: var(--dim);
+  border-radius: 7px;
+  padding: 6px 13px;
+  min-height: 32px;
+  font-size: 13.5px;
+  font-weight: 500;
+}
+.seg button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.chip {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 3px 10px;
+  color: var(--fg);
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+button.chip[aria-pressed='true'] {
+  background: var(--cue-soft);
+  border-color: var(--cue);
+  color: var(--cue);
+}
+.pill {
+  font-size: 12px;
+  border-radius: 999px;
+  padding: 3px 9px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  white-space: nowrap;
+}
+.pill.off {
+  background: var(--raised);
+  color: var(--dim);
+}
+.pill.bad {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.input,
+.select {
+  font-size: 14px;
+  background: var(--sunken);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--fg);
+  padding: 8px 12px;
+  min-height: 38px;
+  width: 100%;
+}
+.input:focus,
+.select:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  min-width: 0;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  min-height: 38px;
+  color: var(--faint);
+}
+.search input {
+  background: none;
+  border: 0;
+  outline: none;
+  color: var(--fg);
+  width: 180px;
+}
+input[type='range'],
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--accent);
+}
+input[type='checkbox'],
+input[type='radio'] {
+  width: 18px;
+  height: 18px;
+}
+
+/* A settings line: label (and hint) on the left, control on the right. */
+.line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--divider);
+  font-size: 14px;
+}
+.line:first-child {
+  border-top: 0;
+}
+.line > span:first-child {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Tabs inside a page */
+.tabs {
+  display: flex;
+  gap: 26px;
+  border-bottom: 1px solid var(--divider);
+}
+.tabs button {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 10px 2px;
+  color: var(--dim);
+  font-size: 14px;
+  font-weight: 500;
+}
+.tabs button[aria-current='page'] {
+  color: var(--fg);
+  border-bottom-color: var(--accent);
+}
+
+/* Small app icon tile (real program icon when available, else a letter) */
+.app-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: var(--raised);
+  color: var(--dim);
+  font-weight: 600;
+  overflow: hidden;
+}
+.app-icon img {
+  width: 24px;
+  height: 24px;
+}
+.app-icon.small {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  font-size: 10px;
+}
+.app-icon.small img {
+  width: 16px;
+  height: 16px;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 50;
+  background: var(--panel);
+  border: 1px solid var(--accent-line);
+  border-radius: 12px;
+  padding: 12px 14px 12px 16px;
+  box-shadow: var(--shadow);
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  max-width: 420px;
+}
+.toast button {
+  background: none;
+  border: 0;
+  color: var(--dim);
+  font-size: 18px;
+}
+
+/* Modal surface (review, tour) */
+.scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 8, 9, 0.6);
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+.sheet {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  width: min(880px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (max-width: 760px) {
+  .page {
+    padding: 22px 18px 40px;
+  }
+}
