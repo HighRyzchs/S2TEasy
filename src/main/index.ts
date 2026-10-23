@@ -13,7 +13,14 @@ import type { CueRequest, CueFeedback } from '../shared/speech-cues'
 import { join } from 'node:path'
 import { writeFileSync } from 'node:fs'
 import { SessionJournal, pcmToWav } from './session-journal'
-import { applyVocabulary } from '../shared/vocabulary'
+import {
+  applyVocabulary,
+  engineHintTerms,
+  learnFix,
+  recordHits,
+  WORD_KINDS,
+  type WordKind
+} from '../shared/vocabulary'
 import { joinUtterances } from '../shared/transcript'
 import { emptyOverlay, normalizeSettings } from '../shared/types'
 import { usageCsv } from '../shared/usage'
@@ -23,6 +30,7 @@ import type {
   AppSettings,
   AudioLevelPayload,
   HistoryItem,
+  LearnWordRequest,
   OverlayState,
   RouterProvider,
   UpdateStatus
@@ -153,6 +161,10 @@ async function setup(): Promise<void> {
     journal,
     isRecovering: () => recoveryBusy,
     onUsage: (row) => sendMain(IPC.USAGE_CHANGED, usage.record(row)),
+    onVocabularyHits: (hits) => {
+      store.saveSettings({ vocabulary: recordHits(store.getSettings().vocabulary, hits) })
+      broadcastSettings()
+    },
     onReview: (id) => {
       mainWindow?.show()
       mainWindow?.focus()
@@ -315,6 +327,31 @@ async function setup(): Promise<void> {
     if (patch.autoUpdate === true) {
       void updater.check({ force: true, download: true })
     }
+    return settings
+  })
+
+  // Allowed mid-session: the HUD teaches words while you talk. Only the vocabulary changes.
+  ipcMain.handle(IPC.LEARN_WORD, (_event, request: LearnWordRequest) => {
+    if (!request || typeof request !== 'object') throw new Error('Nothing to remember.')
+    const heard = typeof request.heard === 'string' ? request.heard.slice(0, 120) : ''
+    const meant = typeof request.meant === 'string' ? request.meant.slice(0, 120) : ''
+    const kind: WordKind = WORD_KINDS.includes(request.kind) ? request.kind : 'name'
+    const clip =
+      request.clip &&
+      typeof request.clip.sessionId === 'string' &&
+      Number.isFinite(request.clip.startMs) &&
+      Number.isFinite(request.clip.endMs) &&
+      store.getHistory().some((row) => row.id === request.clip!.sessionId && row.hasAudio)
+        ? { ...request.clip, createdAt: Date.now() }
+        : undefined
+    const vocabulary = learnFix(
+      store.getSettings().vocabulary,
+      { heard, meant, kind, clip },
+      () => randomUUID()
+    )
+    const settings = store.saveSettings({ vocabulary })
+    dictation.updateVocabulary(settings.vocabulary)
+    broadcastSettings()
     return settings
   })
 
@@ -481,7 +518,7 @@ async function setup(): Promise<void> {
                 IPC.USAGE_CHANGED,
                 usage.record({ ...row, sessionId: id, source: 'recovery' })
               ),
-            vocabulary: settings.vocabulary.filter((row) => row.enabled).map((row) => row.meant)
+            vocabulary: engineHintTerms(settings.vocabulary)
           })
         )
       }
