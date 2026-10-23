@@ -22,6 +22,8 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: node scripts/check-update-helper.mjs
+      - name: Exercise actual Electron updater handoff
+        run: node scripts/test-electron-update-handoff.mjs
       - run: npm run build:win
       - name: Exercise real installed-app upgrade
         run: node scripts/windows-update-smoke.mjs
@@ -33,7 +35,9 @@ jobs:
           name: Release-update-diagnostics
           path: |
             release/update-smoke/
+            release/electron-handoff/
             release/windows-update-smoke.json
+            release/electron-update-handoff.json
       - name: Write artifact checksums
         shell: pwsh
         run: |
@@ -56,3 +60,4 @@ jobs:
             release/latest.yml
             release/*.blockmap
             release/windows-update-smoke.json
+            release/electron-update-handoff.json

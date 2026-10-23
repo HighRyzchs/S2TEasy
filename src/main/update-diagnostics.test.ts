@@ -23,9 +23,21 @@ it('reads only update receipt fields and a bounded local helper log, not setting
     )
     const attempt = join(root, 'updates', 'attempt-test')
     mkdirSync(attempt, { recursive: true })
+    writeFileSync(
+      join(attempt, 'launch.json'),
+      JSON.stringify({
+        stage: 'exited',
+        detached: true,
+        exitCode: 0,
+        apiKey: 'hidden-launch-secret'
+      })
+    )
     writeFileSync(join(attempt, 'helper.log'), 'x'.repeat(15000) + 'tail marker')
     const report = updateDiagnostics(root, '1.5.1', 'installed')
     expect(report).toContain('status: failed')
+    expect(report).toContain('detached: true')
+    expect(report).toContain('exitCode: 0')
+    expect(report).not.toContain('hidden-launch-secret')
     expect(report).toContain('tail marker')
     expect(report).toContain('last 12 KB')
     expect(report.length).toBeLessThan(13000)

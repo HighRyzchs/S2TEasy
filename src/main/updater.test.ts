@@ -190,7 +190,7 @@ it('launches one hidden helper despite repeated Restart clicks or checks during 
   expect(executable.endsWith('powershell.exe')).toBe(true)
   expect(args).toContain('-WindowStyle')
   expect(args[args.indexOf('-WindowStyle') + 1]).toBe('Hidden')
-  expect(options).toMatchObject({ windowsHide: true, detached: true })
+  expect(options).toMatchObject({ windowsHide: true, detached: false })
   expect(options.stdio[0]).toBe('ignore')
   expect(typeof options.stdio[1]).toBe('number')
   const script = Buffer.from(args[args.indexOf('-EncodedCommand') + 1], 'base64').toString(
@@ -218,11 +218,11 @@ it('keeps the app open when PowerShell exits before acknowledging and records di
   await updater.check({ download: true })
   updater.install()
   child.emit('spawn')
-  child.emit('exit', 1)
+  child.emit('exit', 0)
   expect(updater.getStatus()).toMatchObject({
     phase: 'error',
     canOpenInstaller: true,
-    message: expect.stringMatching(/kept open/)
+    message: expect.stringMatching(/exited before shutdown \(code 0\).*kept open/)
   })
   expect(app.quit).not.toHaveBeenCalled()
   expect(JSON.parse(readFileSync(join(directory, 'update-result.json'), 'utf8')).status).toBe(

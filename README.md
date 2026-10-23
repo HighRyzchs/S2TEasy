@@ -16,7 +16,7 @@ An open source Windows dictation app with live text, recoverable sessions, and a
 
 [Project website](https://highryzchs.github.io/S2TEasy/) · [Unified Your voice prototype](https://highryzchs.github.io/S2TEasy/voice-lab/) · [Interactive HUD preview](https://highryzchs.github.io/S2TEasy/overlay-demo/) · [Desktop workflow](docs/OUTPUT_WORKSPACE.md) · [Concepts & architecture](docs/CONCEPTS.md) · [Getting started](#getting-started) · [Development](#development) · [Privacy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md)
 
-**New in v1.8.0: Your voice, one workspace.** Personal words, practice takes, cue review and output now share a page. Visible category/placement pills and **Copy words / Copy with tags** work directly on the HUD. Corrections stay in every format. Optional automatic cues analyze only the first 30 seconds after each take; off by default and separately billed. [Try it, understand the theory, and follow the code →](docs/OUTPUT_WORKSPACE.md)
+**New in v1.8.1: Your voice is the heart of the app.** It opens first, sits at the top of the sidebar, and brings the approved studio design into the desktop: output beside the recorder, soft cards, a shared library, a focused word editor, and Paper/Night views. Visible HUD tag/copy choices stay connected to real data. Also fixes the reproduced detached-PowerShell updater startup failure and adds an actual Electron handoff regression. [Workflow and source map →](docs/OUTPUT_WORKSPACE.md) · [Update recovery →](docs/UPDATE_TROUBLESHOOTING.md)
 
 ```mermaid
 flowchart LR

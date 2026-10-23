@@ -7,8 +7,6 @@ import {
   mkdtempSync,
   readFileSync,
   writeFileSync,
-  openSync,
-  closeSync,
   copyFileSync,
   existsSync
 } from 'node:fs'
@@ -40,24 +38,19 @@ async function main() {
     'v1.0',
     'powershell.exe'
   )
+  const launcherModule = join(directory, 'launcher.cjs')
+  await build({
+    entryPoints: ['src/main/update-helper-launch.ts'],
+    outfile: launcherModule,
+    bundle: true,
+    platform: 'node',
+    format: 'cjs'
+  })
+  const { launchUpdateHelper } = createRequire(import.meta.url)(launcherModule)
   async function execute(script, logName, timeout = 240000) {
-    const log = openSync(join(diagnostics, logName), 'a')
-    let child
-    try {
-      child = spawn(
-        powershell,
-        [
-          '-NoLogo',
-          '-NoProfile',
-          '-NonInteractive',
-          '-EncodedCommand',
-          Buffer.from(script, 'utf16le').toString('base64')
-        ],
-        { stdio: ['ignore', log, log], windowsHide: true }
-      )
-    } finally {
-      closeSync(log)
-    }
+    const attemptDirectory = join(diagnostics, logName.replace(/\.log$/, ''))
+    mkdirSync(attemptDirectory, { recursive: true })
+    const child = launchUpdateHelper(script, attemptDirectory, directory)
     await new Promise((resolvePromise, reject) => {
       const timer = setTimeout(
         () => reject(new Error(`${logName} exceeded its deadline; inspect ${directory}`)),
@@ -73,7 +66,7 @@ async function main() {
           ? resolvePromise()
           : reject(
               new Error(
-                `${logName} exited ${code}: ${readFileSync(join(diagnostics, logName), 'utf8')}`
+                `${logName} exited ${code}: ${readFileSync(join(attemptDirectory, 'helper.log'), 'utf8')}`
               )
             )
       })
@@ -165,7 +158,7 @@ async function main() {
     if (failure) throw failure
     if (!acknowledged)
       throw new Error(
-        `The native helper did not acknowledge startup within 10 seconds. Output: ${readFileSync(join(diagnostics, `${name}.log`), 'utf8').slice(-4000)}; Receipt: ${readFileSync(receiptPath, 'utf8')}`
+        `The native helper did not acknowledge startup within 10 seconds. Output: ${readFileSync(join(diagnostics, name, 'helper.log'), 'utf8').slice(-4000)}; Receipt: ${readFileSync(receiptPath, 'utf8')}`
       )
     return JSON.parse(readFileSync(receiptPath, 'utf8').replace(/^\uFEFF/, ''))
   }
@@ -200,6 +193,7 @@ async function main() {
     oldVersion: '1.5.1',
     newVersion: version,
     realNsisUpgrade: 'passed',
+    productionLaunchOptions: 'passed',
     startupAcknowledgement: 'passed',
     noOpInstallerRejected: 'passed',
     pathQuoting: 'passed',

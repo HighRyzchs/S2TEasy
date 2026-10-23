@@ -1,3 +1,15 @@
+## Bring the studio into the app, fix the updater launch — v1.8.1
+
+- Make **Your voice** the first sidebar destination and the default workspace. Carry the approved prototype into the actual desktop layout: generous typography, paper cards, an output studio beside the recorder, a mixed library, a focused word editor, and Paper/Night views. Keep the real microphone, History, word rules, cue review and visible HUD output choices connected.
+- Disable Finish while a take is processing and keep Cancel available. The recorder meter uses actual incoming audio levels.
+- Fix the reproduced “helper exited before shutdown (code 0), empty output” failure. Windows PowerShell exited without executing with the detached launch option; a non-detached hidden launch acknowledged startup in both Node and Electron. Keep explicit file handles, hidden windows and the startup acknowledgment.
+- Use the production launcher in the native installer smoke test. Add an Electron test that runs the actual UpdateLauncher, verifies acknowledgment before app.quit(), waits for the helper to survive Electron exit, verifies replacement bytes and sees the target restart. Tests use disposable synthetic executables.
+- Include bounded launcher metadata (stage, detached mode, helper PID, exit code/signal) in the update report. No settings, API keys or transcripts are read into the report.
+
+**Recovery from 1.7.2 or 1.8.0:** those versions contain the old detached launcher. Quit from the tray and run the new win-x64 installer directly once. Installing over the existing app keeps local settings and History. A download cannot replace the updater code before its old handoff has run. Future update handoffs use the corrected launcher; real microphone/paste/recognition behavior still needs desktop testing.
+
+---
+
 ## Your voice, at your fingertips — v1.8.0
 
 - Combine Vocabulary and Voice practice into **Your voice**: one output preview, recorder, correction form, searchable word/take library, local playback and audio-cue review. Existing settings and History migrate in place.

@@ -27,7 +27,7 @@ export function App() {
   const [settingsSection, setSettingsSection] = useState<SettingsSection>('engine')
   const [reviewId, setReviewId] = useState<string | null>(null)
   const [practiceTarget, setPracticeTarget] = useState('')
-  const [tab, setTab] = useState<Tab>('overview')
+  const [tab, setTab] = useState<Tab>('voice')
   const [settings, setSettings] = useState<AppSettings>(defaultSettings())
   const [usage, setUsage] = useState<UsageState>(emptyUsage)
   const [history, setHistory] = useState<HistoryItem[]>([])
@@ -137,7 +137,7 @@ export function App() {
   )
   const minutes = Math.round(history.reduce((n, item) => n + item.durationMs, 0) / 60000)
   return (
-    <div className="app">
+    <div className={`app ${tab === 'voice' ? 'voice-home' : ''}`}>
       <div className="drag" />
       <aside className="rail">
         <div className="brand">
@@ -151,10 +151,10 @@ export function App() {
         <nav className="nav" aria-label="Main navigation">
           {(
             [
+              ['voice', 'Your voice', '✳'],
               ['overview', 'Overview', '◫'],
               ['history', 'History', '◷'],
               ['usage', 'Usage & spend', '↗'],
-              ['voice', 'Your voice', '≋'],
               ['settings', 'Settings', '⚙']
             ] as const
           ).map(([id, label, icon]) => (
@@ -497,7 +497,7 @@ export function App() {
               await save(patch)
               setReplayTour(false)
               if (destination === 'engine') openSettings('engine')
-              else setTab('overview')
+              else setTab('voice')
             }}
           />
         )}
@@ -523,7 +523,7 @@ export function App() {
           }}
           onExample={async (index, intended) => {
             setHistory(await window.s2t.saveWordExample(reviewId, index, intended))
-            setToast('Labeled clip saved in Voice practice')
+            setToast('Labeled clip saved in Your voice')
           }}
         />
       )}

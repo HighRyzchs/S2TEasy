@@ -1,5 +1,15 @@
 # Update recovery and diagnostics
 
+## Helper exits with code 0 and an empty log (1.7.2 / 1.8.0)
+
+This failure was reproduced on a Windows runner from both Node and Electron. PowerShell launched with `detached: true`, ignored stdin and file-backed output exited 0 without executing the helper. The same script with `detached: false` acknowledged startup. Removing `-WindowStyle Hidden` alone did not fix it.
+
+Version 1.8.1 uses the non-detached, hidden launch. File-backed stdio and the startup acknowledgment remain. The native test now imports the production launcher; a separate real Electron test checks that the helper survives app.quit(), replaces a synthetic target and restarts it. The previous NSIS test ran the script with different process flags, so it did not cover this bug.
+
+To get the fix, use **Open downloaded installer**, or quit from the tray and run the current **win-x64 installer** directly. Versions 1.7.2 and 1.8.0 must still execute their old launcher before replacement, so retrying their Restart button cannot install this fix. Local settings and History stay in place. A nonzero/zero exit code alone does not establish installation success; the helper still verifies the result.
+
+New reports include allowlisted `launch.json` fields alongside the helper log. They report preparation/start/exit and process options without including the encoded script or environment contents. Older reports can legitimately show an empty log without this metadata.
+
 ## App closes on Restart & install, but remains on 1.5.1
 
 This is a failed installation handoff. A verified download is not proof that Windows ran the installer or that the executable at the original location changed. Do not repeatedly press Restart & install when the same version returns.

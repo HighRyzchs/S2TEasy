@@ -10,11 +10,15 @@ Desktop v1.8.0 replaces the Vocabulary and Voice practice navigation destination
 
 ![Your voice desktop workspace with visible output choices. Browser rendering of the desktop components with sample history.](desktop-your-voice-preview.png)
 
+## Desktop studio in v1.8.1
+
+**Your voice** is now the first sidebar item and the default destination. The desktop follows the approved prototype: a large “A little more you” heading, output and recorder side by side on wide windows, soft cards, a shared library and a focused Add/Edit word popup. Paper/Night switches are visible on the output card and save the existing appearance preference; existing users keep their selected theme. Narrow windows stack the recorder below the output. This is real desktop functionality, not the browser sample transplanted with fake model output.
+
 ## Try it
 
 1. Open **Your voice**. The output card always shows placement and category pills. Choose **Before words**, **After words**, or **Context below**; include emotion, delivery, pace, and sounds independently.
 2. **Copy words** keeps your saved vocabulary corrections. **Copy with tags** adds selected saved cues. **Copy JSON** includes model/excerpt metadata and user/model provenance. If no cues are available, tagged copy gives the words without inventing a label.
-3. Add a recurring word correction, or enter a practice phrase and consent to retaining that take. Record, finish, and select it in the same page. Playback uses local audio; **Review & correct** opens the detailed word editor.
+3. Use **Add a word** to add or edit a recurring correction in its focused popup, or enter a practice phrase and consent to retaining that take. Record, finish, and select it in the same page. Playback uses local audio; **Review & correct** opens the detailed word editor.
 4. Expand **Audio intelligence & model settings** to set the OpenRouter key and audio-understanding slug. `google/gemini-2.5-flash-lite` is a starting candidate, subject to current provider support and pricing. **Load compatible models** queries the current catalogue; it makes no inference request. The STT slug remains under **Settings → Speech engine**.
 5. Enable paid speech cues if wanted. Manual analysis lets you select an excerpt of up to 30 seconds. A separate, default-off automatic option analyzes **only the first 30 seconds after each take**, with at most one additional paid audio call. Later speech remains untagged. Recording and live typing continue normally; finishing may wait for this optional call.
 6. Review, relabel, or dismiss cues. User corrections retain their original model suggestion. All copy surfaces apply the same category/placement preferences.

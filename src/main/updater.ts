@@ -5,16 +5,14 @@ import {
   rmSync,
   mkdtempSync,
   mkdirSync,
-  writeFileSync,
-  openSync,
-  closeSync
+  writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { createHash, randomUUID } from 'node:crypto'
-import { spawn } from 'node:child_process'
+import { launchUpdateHelper } from './update-helper-launch'
 import {
   downloadHeaders,
   downloadUrl,
@@ -290,38 +288,7 @@ export class UpdateLauncher {
         phase: 'applying',
         message: 'Waiting for the update helper to confirm it started…'
       })
-      const log = openSync(join(directory, 'helper.log'), 'a', 0o600)
-      let child: ReturnType<typeof spawn>
-      try {
-        child = spawn(
-          process.env.SystemRoot
-            ? join(
-                process.env.SystemRoot,
-                'System32',
-                'WindowsPowerShell',
-                'v1.0',
-                'powershell.exe'
-              )
-            : 'powershell.exe',
-          [
-            '-NoLogo',
-            '-NoProfile',
-            '-NonInteractive',
-            '-WindowStyle',
-            'Hidden',
-            '-EncodedCommand',
-            Buffer.from(script, 'utf16le').toString('base64')
-          ],
-          {
-            detached: true,
-            stdio: ['ignore', log, log],
-            windowsHide: true,
-            cwd: this.temporaryRoot
-          }
-        )
-      } finally {
-        closeSync(log)
-      }
+      const child = launchUpdateHelper(script, directory, this.temporaryRoot)
       let quitTimer: ReturnType<typeof setTimeout> | undefined
       let poll: ReturnType<typeof setInterval> | undefined
       let settled = false

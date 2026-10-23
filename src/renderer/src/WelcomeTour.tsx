@@ -252,7 +252,7 @@ export function WelcomeTour({
                 <span>03</span>
                 <p>
                   <strong>Keep the words that matter.</strong> Review History, remember selected
-                  corrections in Vocabulary, and record labeled Voice practice takes. Those examples
+                  word corrections and record labeled practice takes in Your voice. Those examples
                   don’t automatically fine-tune a model.
                 </p>
               </div>

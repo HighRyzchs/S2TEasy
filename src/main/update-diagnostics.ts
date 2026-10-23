@@ -35,6 +35,30 @@ export function updateDiagnostics(directory: string, version: string, packaging:
       .map((entry) => ({ name: entry.name, at: statSync(join(root, entry.name)).mtimeMs }))
       .sort((a, b) => b.at - a.at)[0]
     if (!latest) throw new Error('No helper logs')
+    try {
+      const metadataPath = join(root, latest.name, 'launch.json')
+      if (statSync(metadataPath).size <= 8000) {
+        const launch = JSON.parse(readFileSync(metadataPath, 'utf8'))
+        lines.push('', `Launcher: ${latest.name}`)
+        for (const key of [
+          'stage',
+          'transport',
+          'detached',
+          'windowsHide',
+          'pid',
+          'exitCode',
+          'signal',
+          'error',
+          'commandCharacters'
+        ]) {
+          const value = launch[key]
+          if (['string', 'boolean', 'number'].includes(typeof value) || value === null)
+            lines.push(`${key}: ${String(value).slice(0, 1000)}`)
+        }
+      }
+    } catch {
+      /* Older app versions did not record launch metadata. */
+    }
     const path = join(root, latest.name, 'helper.log'),
       size = statSync(path).size
     const tail = Buffer.alloc(Math.min(size, 12000)),
