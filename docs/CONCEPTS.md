@@ -1,5 +1,7 @@
 # Why S2Teasy exists, and how it works
 
+Try the proposed unified vocabulary/practice interface in the [Your voice lab](https://highryzchs.github.io/S2TEasy/voice-lab/). Its [walkthrough and code map](VOICE_LAB.md) distinguish working browser interactions from future recognition features.
+
 [Start here](../README.md) · [Try speech cues](#try-emotion-and-delivery-analysis) · [Code map](#follow-the-code) · [Design details](PERSONAL_SPEECH_DESIGN.md) · [Privacy](PRIVACY.md)
 
 S2Teasy aims to keep a spoken thought intact: get it into the app you are using, recover it when recognition fails, and let you control its spelling and presentation. An open source dictation tool should explain both what it does and what it cannot yet do.
