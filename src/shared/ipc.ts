@@ -1,6 +1,7 @@
 export const IPC = {
   SAVE_OUTPUT: 's2t:save-output',
   LEARN_WORD: 's2t:learn-word',
+  APP_ICON: 's2t:app-icon',
   HUD_EDIT: 's2t:hud-edit',
   HUD_PAUSE: 's2t:hud-pause',
   HUD_FINISH: 's2t:hud-finish',

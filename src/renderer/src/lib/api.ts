@@ -64,6 +64,7 @@ function mockApi(): Window['s2t'] {
       }
       return memory.settings
     },
+    appIcon: async () => null,
     // Browser preview has no session to edit; the HUD showcase simulates its own.
     hudEdit: async () => 'saved',
     hudPause: async () => undefined,

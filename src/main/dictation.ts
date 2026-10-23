@@ -2,6 +2,7 @@ import type { CueAnalysis } from '../shared/speech-cues'
 import type { WordTiming } from '../shared/word-timing'
 import type { UsageRecord } from '../shared/usage'
 import { randomUUID } from 'node:crypto'
+import { appFromPath } from '../shared/apps'
 import { startError } from '../shared/engine'
 import {
   joinUtterances,
@@ -60,7 +61,7 @@ type Host = {
 
 type Dependencies = {
   injector: Pick<TextInjector, 'captureTarget' | 'paste' | 'pasteBlock'> &
-    Partial<Pick<TextInjector, 'replaceTail' | 'restoreTarget'>>
+    Partial<Pick<TextInjector, 'replaceTail' | 'restoreTarget' | 'targetApp'>>
   transcribe: (input: TranscribeInput) => Promise<string>
   createStream: () => RouterAudioClient
 }
@@ -311,7 +312,8 @@ export class DictationController {
       durationMs: 0,
       source: practice ? 'practice' : settings.insertMode,
       practiceTarget: practice?.intendedText,
-      status: 'recording'
+      status: 'recording',
+      app: practice ? undefined : appFromPath(this.dependencies.injector.targetApp?.())
     }
     try {
       this.checkpoint()
