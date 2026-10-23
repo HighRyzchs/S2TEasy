@@ -2,7 +2,16 @@
 import { build } from 'esbuild'
 import { createRequire } from 'node:module'
 import { spawn } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync, openSync, closeSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+  openSync,
+  closeSync,
+  copyFileSync,
+  existsSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
@@ -160,8 +169,17 @@ async function main() {
       )
     return JSON.parse(readFileSync(receiptPath, 'utf8').replace(/^\uFEFF/, ''))
   }
-  const applied = await apply(installer, version, 'upgrade')
+  // Successful update cleanup deletes its payload. Test a copy, preserving the publishable installer.
+  const stagedInstaller = join(directory, 'upgrade-payload.exe')
+  const artifactHash = createHash('sha256').update(readFileSync(installer)).digest('hex')
+  copyFileSync(installer, stagedInstaller)
+  const applied = await apply(stagedInstaller, version, 'upgrade')
   if (applied.status !== 'applied') throw new Error(`Real NSIS upgrade failed: ${applied.message}`)
+  if (
+    !existsSync(installer) ||
+    createHash('sha256').update(readFileSync(installer)).digest('hex') !== artifactHash
+  )
+    throw new Error('Native smoke test changed the publishable installer artifact.')
   // Stop only this fixture's app before testing a no-op installer; avoid unrelated processes.
   const stop = () =>
     execute(
@@ -185,6 +203,7 @@ async function main() {
     startupAcknowledgement: 'passed',
     noOpInstallerRejected: 'passed',
     pathQuoting: 'passed',
+    buildArtifactPreserved: 'passed',
     nativeDesktopInteraction: 'not tested'
   }
   writeFileSync('release/windows-update-smoke.json', JSON.stringify(report, null, 2))

@@ -37,12 +37,17 @@ jobs:
       - name: Write artifact checksums
         shell: pwsh
         run: |
+          $releaseVersion = (Get-Content package.json | ConvertFrom-Json).version
+          foreach ($artifact in @("release/S2Teasy-$releaseVersion-win-x64.exe", "release/S2Teasy-$releaseVersion-portable.exe")) {
+            if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) { throw "Missing required release artifact: $artifact" }
+          }
           Get-ChildItem release/*.exe | ForEach-Object {
             $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
             "$hash  $($_.Name)"
           } | Set-Content release/SHA256SUMS.txt -Encoding ascii
       - uses: softprops/action-gh-release@v2
         with:
+          fail_on_unmatched_files: true
           generate_release_notes: true
           body_path: docs/RELEASE_NOTES.md
           files: |
@@ -50,3 +55,4 @@ jobs:
             release/SHA256SUMS.txt
             release/latest.yml
             release/*.blockmap
+            release/windows-update-smoke.json

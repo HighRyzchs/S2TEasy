@@ -1,4 +1,10 @@
-## Verify the installer handoff — v1.7.1
+## Publish the verified installer intact — v1.7.2
+
+- Preserve the publishable installer by running native upgrade tests on a temporary copy. Verify the original build artifact remains unchanged after the test.
+- Refuse release publication unless both installed and portable EXEs exist, and publish the native smoke-test report alongside checksums.
+- Include the acknowledged updater handoff, .NET SHA-256 verification and in-app reports described below. The incomplete 1.7.1 release was withdrawn before an installed-app EXE was available; use 1.7.2 directly for recovery.
+
+## Verify the installer handoff — included in v1.7.2
 
 - Replace the helper's `Get-FileHash` dependency with streaming .NET SHA-256. The native Windows regression reproduced a helper environment where that PowerShell function is unavailable; verification still uses SHA-256 before and after handoff.
 - Keep the app open until the PowerShell helper verifies the payload and acknowledges the specific attempt. Early exit, failure to launch, or a 10-second startup timeout is shown in the app instead of closing silently.
