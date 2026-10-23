@@ -1,0 +1,153 @@
+@import '@fontsource-variable/outfit';
+
+/*
+ * S2Teasy app design tokens. Dark is the default; light and system follow data-appearance on <html>.
+ * Components use only these tokens. Chart series colors are validated for color-vision deficiency
+ * against the panel color in each mode; do not reuse them for anything but data.
+ */
+:root {
+  color-scheme: dark;
+  --bg: #0e1113;
+  --side: #121618;
+  --panel: #161b1e;
+  --raised: #1d2327;
+  --sunken: #0e1113;
+  --line: #273035;
+  --line-strong: #2f383d;
+  --divider: #232a2e;
+  --fg: #eef3f1;
+  --dim: #a3b1ac;
+  --faint: #87958f;
+  --accent: #a5e6ce;
+  --accent-ink: #0f2a21;
+  --accent-soft: #1c2a26;
+  --accent-line: #2c4a3f;
+  --hover: #1a2023;
+  --cue: #ffc56b;
+  --cue-soft: rgba(255, 197, 107, 0.12);
+  --danger: #ff9a8c;
+  --danger-soft: #3a1d1b;
+  --warn: #ffc56b;
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  --mono: 'Cascadia Mono', 'JetBrains Mono', Consolas, ui-monospace, monospace;
+  --sans: 'Outfit Variable', 'Segoe UI', system-ui, sans-serif;
+  --radius: 14px;
+  --radius-sm: 9px;
+  font-family: var(--sans);
+  font-synthesis: none;
+}
+
+:root[data-appearance='light'] {
+  color-scheme: light;
+  --bg: #f3f6f5;
+  --side: #ebefee;
+  --panel: #ffffff;
+  --raised: #f1f4f3;
+  --sunken: #f3f6f5;
+  --line: #dde5e2;
+  --line-strong: #cfd9d5;
+  --divider: #e6ebe9;
+  --fg: #15201d;
+  --dim: #4e5e59;
+  --faint: #5f6e69;
+  --accent: #1d7a5d;
+  --accent-ink: #ffffff;
+  --accent-soft: #e1f2eb;
+  --accent-line: #a9d8c6;
+  --hover: #edf2f0;
+  --cue: #95560a;
+  --cue-soft: rgba(205, 128, 20, 0.12);
+  --danger: #b03a2a;
+  --danger-soft: #fbe7e3;
+  --warn: #95560a;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --shadow: 0 12px 32px rgba(20, 40, 34, 0.1);
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-appearance='system'] {
+    color-scheme: light;
+    --bg: #f3f6f5;
+    --side: #ebefee;
+    --panel: #ffffff;
+    --raised: #f1f4f3;
+    --sunken: #f3f6f5;
+    --line: #dde5e2;
+    --line-strong: #cfd9d5;
+    --divider: #e6ebe9;
+    --fg: #15201d;
+    --dim: #4e5e59;
+    --faint: #5f6e69;
+    --accent: #1d7a5d;
+    --accent-ink: #ffffff;
+    --accent-soft: #e1f2eb;
+    --accent-line: #a9d8c6;
+    --hover: #edf2f0;
+    --cue: #95560a;
+    --cue-soft: rgba(205, 128, 20, 0.12);
+    --danger: #b03a2a;
+    --danger-soft: #fbe7e3;
+    --warn: #95560a;
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --series-3: #1baf7a;
+    --shadow: 0 12px 32px rgba(20, 40, 34, 0.1);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+body {
+  font-size: 14px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+a {
+  color: var(--accent);
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}

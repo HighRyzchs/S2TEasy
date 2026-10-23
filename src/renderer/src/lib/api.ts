@@ -1,4 +1,4 @@
-import type { UsageRecord } from '@shared/usage'
+import { sampleHistory, sampleUsage, sampleVocabulary } from './sample-data'
 import {
   defaultSettings,
   idleUpdate,
@@ -9,25 +9,15 @@ import {
 } from '@shared/types'
 
 const memory = {
-  settings: defaultSettings(),
-  history: [
-    {
-      id: 'demo-1',
-      text: 'Schedule a review with rosin and the design team on Thursday afternoon.',
-      model: 'openai/whisper-large-v3',
-      createdAt: Date.now() - 36 * 60_000,
-      durationMs: 4100,
-      source: 'live' as const
-    },
-    {
-      id: 'demo-2',
-      text: 'The invoice for March is already in the shared folder.',
-      model: 'openai/gpt-4o-mini-transcribe',
-      createdAt: Date.now() - 26 * 60 * 60_000,
-      durationMs: 3200,
-      source: 'final' as const
-    }
-  ],
+  // A configured, lived-in workspace so every screen can be previewed and screenshotted.
+  settings: {
+    ...defaultSettings(),
+    welcomeCompleted: true,
+    routerAudioKey: 'preview-sample-key',
+    routerProvider: 'deepgram',
+    vocabulary: sampleVocabulary
+  } as AppSettings,
+  history: sampleHistory(),
   update: idleUpdate('1.0.0', 'dev')
 }
 
@@ -111,25 +101,12 @@ function mockApi(): Window['s2t'] {
     getState: async () => ({
       settings: memory.settings,
       history: memory.history,
-      version: '1.0.0',
+      version: '1.9.0',
       update: memory.update,
       usage: {
         warning: '',
         truncated: false,
-        records: Array.from({ length: 52 }, (_, i): UsageRecord => ({
-          id: `sample-${i}`,
-          operationId: `sample-${i}`,
-          sessionId: `sample-session-${i}`,
-          createdAt: Date.now() - (i % 27) * 86400000,
-          engine: 'openrouter',
-          model: i % 3 ? 'Sample · speech model A' : 'Sample · speech model B',
-          source: 'dictation',
-          costUsd: i % 8 === 0 ? null : 0.007 + (i % 5) * 0.004,
-          durationMs: 45000 + i * 1200,
-          latencyMs: 1100,
-          attempt: 1,
-          outcome: 'success'
-        }))
+        records: sampleUsage()
       }
     }),
     saveSettings: async (patch) => {

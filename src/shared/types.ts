@@ -113,6 +113,8 @@ export type AppSettings = {
   /** After a pause, the session finishes by itself this long after the last HUD interaction. */
   finishAfterMs: number
   hud: HudSettings
+  /** Your voice suggestions the user chose not to see again (heard→meant keys). */
+  dismissedSuggestions: string[]
 }
 
 /** A fix the user asked S2Teasy to remember, from the HUD, History or practice. */
@@ -251,7 +253,8 @@ export const defaultSettings = (): AppSettings => ({
   vocabulary: [],
   streamKeyterms: false,
   finishAfterMs: 7000,
-  hud: defaultHudSettings()
+  hud: defaultHudSettings(),
+  dismissedSuggestions: []
 })
 
 export function clampInputGain(value: number): number {
@@ -342,6 +345,9 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
     ? Math.min(30_000, Math.max(2000, Math.round(raw!.finishAfterMs! / 500) * 500))
     : 7000
   merged.hud = normalizeHudSettings(raw?.hud, raw?.overlayTheme)
+  merged.dismissedSuggestions = Array.isArray(raw?.dismissedSuggestions)
+    ? raw.dismissedSuggestions.filter((key): key is string => typeof key === 'string').slice(-500)
+    : []
   return merged
 }
 

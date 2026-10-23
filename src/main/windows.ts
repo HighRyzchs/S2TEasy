@@ -24,13 +24,13 @@ export function createMainWindow(): BrowserWindow {
     minHeight: 560,
     show: false,
     autoHideMenuBar: true,
-    backgroundColor: '#101315',
+    backgroundColor: '#0e1113',
     icon: loadIcon(),
     title: 'S2Teasy',
     titleBarStyle: 'hidden',
     titleBarOverlay: {
-      color: '#101315',
-      symbolColor: '#eff3f2',
+      color: '#0e1113',
+      symbolColor: '#eef3f1',
       height: 40
     },
     webPreferences: {
