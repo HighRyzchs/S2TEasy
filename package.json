@@ -17,7 +17,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
     "icons": "node scripts/generate-icon.mjs",
-    "build:site": "node scripts/build-site.mjs"
+    "build:site": "node scripts/build-site.mjs",
+    "screenshots": "node scripts/capture-screenshots.mjs"
   },
   "optionalDependencies": {
     "koffi": "^2.11.0",
