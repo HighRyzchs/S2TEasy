@@ -116,6 +116,8 @@ export type AppSettings = {
   monthlyLimitUsd: number
   /** Speech cues on or off per program (keyed by `appKey`), overriding the global switch. */
   appCues: Record<string, boolean>
+  /** Opt-in: after a session, a small text model checks that accent swaps fit their sentence. */
+  accentContextCheck: boolean
   hud: HudSettings
   /** Your voice suggestions the user chose not to see again (heard→meant keys). */
   dismissedSuggestions: string[]
@@ -261,6 +263,7 @@ export const defaultSettings = (): AppSettings => ({
   finishAfterMs: 7000,
   monthlyLimitUsd: 0,
   appCues: {},
+  accentContextCheck: false,
   hud: defaultHudSettings(),
   dismissedSuggestions: []
 })
@@ -361,6 +364,7 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
       .filter(([key, on]) => /^[\w .+-]{1,60}$/.test(key) && typeof on === 'boolean')
       .slice(0, 200)
   )
+  merged.accentContextCheck = raw?.accentContextCheck === true
   merged.hud = normalizeHudSettings(raw?.hud, raw?.overlayTheme)
   merged.dismissedSuggestions = Array.isArray(raw?.dismissedSuggestions)
     ? raw.dismissedSuggestions.filter((key): key is string => typeof key === 'string').slice(-500)
