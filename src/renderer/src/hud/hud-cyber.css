@@ -1,0 +1,54 @@
+/* ===== Cyberpunk, after Cyberpunk 2077's interface: notched black panel, red linework, yellow tab, cyan data ===== */
+.hud[data-skin="cyber"] { --cp-y: #fcee0a; --cp-r: #ff003c; --cp-rt: #ff5c57; font-family: "Rajdhani", "Chakra Petch", var(--hud-body); font-weight: 500; background: none; border: 0; border-radius: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; --hud-fg: #e9f4f5; --hud-dim: #c9545a; --hud-line: rgba(255,0,60,.4); padding: 14px 16px 12px 18px; margin-top: 16px; filter: drop-shadow(0 0 18px rgba(255,0,60,.18)); }
+.hud[data-skin="cyber"][data-open="true"] { padding: 16px 18px 12px 20px; }
+.hud[data-skin="cyber"]::before, .hud[data-skin="cyber"]::after { content: ""; position: absolute; z-index: -1; clip-path: polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 18px 100%, 0 calc(100% - 18px)); }
+.hud[data-skin="cyber"]::before { inset: 0; background: var(--cp-r); }
+.hud[data-skin="cyber"]::after { inset: 1px; background:
+  linear-gradient(90deg, var(--cp-r) 0 3px, transparent 3px) 0 0 / 100% 100% no-repeat,
+  repeating-linear-gradient(0deg, rgba(255,0,60,.05) 0 1px, transparent 1px 4px),
+  linear-gradient(160deg, #160709, #07080c 55%); }
+.hud[data-skin="cyber"] .hud-row::before { content: "VOICE.LINK // S2T"; position: absolute; top: -15px; left: 14px; background: var(--cp-y); color: #000; font: 700 11px/1 "Rajdhani", sans-serif; letter-spacing: .14em; padding: 4px 18px 3px 8px; clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%); }
+.hud[data-skin="cyber"] .hud-row::after { content: ""; position: absolute; right: 30px; top: 5px; width: 64px; height: 5px; background: repeating-linear-gradient(90deg, var(--cp-y) 0 2px, transparent 2px 4px, var(--cp-y) 4px 5px, transparent 5px 8px); opacity: .75; }
+.hud[data-skin="cyber"] .hud-title, .hud[data-skin="cyber"] .hud-label { font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--cp-rt); font-size: 13px; }
+.hud[data-skin="cyber"] .hud-title small { color: rgba(233,244,245,.45); letter-spacing: .04em; text-transform: none; font-weight: 500; }
+.hud[data-skin="cyber"] .hud-count { color: var(--mint); font-family: var(--hud-mono); }
+.hud[data-skin="cyber"] .hud-count::before { content: "WRD "; color: rgba(233,244,245,.4); }
+.hud[data-skin="cyber"] .hud-count::after { content: ""; }
+.hud[data-skin="cyber"] .hud-roll, .hud[data-skin="cyber"] .hud-draft { font-size: 16px; letter-spacing: .02em; }
+.hud[data-skin="cyber"] .hud-btn, .hud[data-skin="cyber"] .hud-cue { font-family: inherit; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; font-size: 12px; border-radius: 0; border: 1px solid var(--cp-r); background: rgba(255,0,60,.08); color: var(--cp-rt); clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%); padding: 5px 12px; }
+.hud[data-skin="cyber"] .hud-btn:hover, .hud[data-skin="cyber"] .hud-cue:hover { background: rgba(255,0,60,.22); color: #fff; }
+.hud[data-skin="cyber"] .hud-btn.go { background: var(--cp-y); border-color: var(--cp-y); color: #000; clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%); padding: 5px 18px; }
+.hud[data-skin="cyber"] .hud-cue .sw { border-radius: 0; background: rgba(255,0,60,.3); }
+.hud[data-skin="cyber"] .hud-cue .sw::after { border-radius: 0; background: var(--cp-rt); }
+.hud[data-skin="cyber"] .hud-cue[aria-pressed="true"] .sw { background: var(--mint); }
+.hud[data-skin="cyber"] .hud-cue[aria-pressed="true"] .sw::after { background: #000; }
+.hud[data-skin="cyber"] .hud-ind { border-radius: 0; clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%); background: rgba(255,0,60,.18) !important; color: var(--cp-rt) !important; box-shadow: none !important; }
+.hud[data-skin="cyber"] .hud-wave i { border-radius: 0; width: 2px; background: var(--cp-r); }
+.hud[data-skin="cyber"][data-cue="excited"] .hud-wave i, .hud[data-skin="cyber"][data-cue="calm"] .hud-wave i { background: var(--mint); }
+.hud[data-skin="cyber"] .hud-w.edited { color: var(--mint); text-shadow: 0 0 8px color-mix(in srgb, var(--mint) 60%, transparent); text-decoration-color: var(--mint); }
+.hud[data-skin="cyber"] .hud-w.fresh, .hud[data-skin="cyber"] .hud-wd.fresh { animation: cp-slice .55s steps(1) both; }
+@keyframes cp-slice {
+  0% { clip-path: inset(0 0 60% 0); transform: translateX(-4px); text-shadow: 3px 0 var(--cp-r), -3px 0 var(--mint); }
+  20% { clip-path: inset(40% 0 0 0); transform: translateX(4px); }
+  40% { clip-path: inset(10% 0 30% 0); transform: translateX(-2px); text-shadow: -2px 0 var(--cp-r), 2px 0 var(--mint); }
+  60% { clip-path: inset(0); transform: none; text-shadow: 1px 0 var(--cp-r); }
+  100% { clip-path: inset(0); text-shadow: 0 0 8px color-mix(in srgb, var(--mint) 60%, transparent); } }
+.hud[data-skin="cyber"] .hud-tag { font-family: "Rajdhani", sans-serif; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; border-radius: 0; background: var(--cp-y); color: #000; clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 100%, 0 100%); padding: 1px 9px 1px 5px; }
+.hud[data-skin="cyber"] .hud-tag b { color: #000; }
+.hud[data-skin="cyber"] .hud-w:hover { background: rgba(0,240,255,.1); }
+.hud[data-skin="cyber"] .hud-w.sel { background: rgba(0,240,255,.22); }
+.hud[data-skin="cyber"] .hud-edit { font-family: inherit; border-radius: 0; border-color: var(--mint); background: rgba(0,240,255,.08); }
+.hud[data-skin="cyber"] .hud-toast { color: var(--mint); font-family: var(--hud-mono); font-size: 11px; }
+.hud[data-skin="cyber"] .hud-foot { color: rgba(233,244,245,.5); font-family: var(--hud-mono); font-size: 10.5px; text-transform: uppercase; }
+.hud[data-skin="cyber"] .hud-timer { border-radius: 0; height: 4px; background: rgba(252,238,10,.15); }
+.hud[data-skin="cyber"] .hud-timer i { background: var(--cp-y); }
+.hud[data-skin="cyber"] .hud-pop { border-radius: 0; background: #07080c; border: 1px solid var(--cp-r); box-shadow: 0 0 22px rgba(255,0,60,.25); padding: 4px 4px 4px 14px; font-family: inherit; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
+.hud[data-skin="cyber"] .hud-pop::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--cp-y); }
+.hud[data-skin="cyber"] .hud-pop::after { display: none; }
+.hud[data-skin="cyber"] .hud-pop .q { text-transform: uppercase; letter-spacing: .1em; font-weight: 700; color: var(--cp-rt); }
+.hud[data-skin="cyber"] .hud-pop button { border-radius: 0; font-family: inherit; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; border-color: rgba(255,0,60,.5); color: var(--hud-fg); }
+.hud[data-skin="cyber"] .hud-pop button[data-k="name"] { background: var(--cp-y); border-color: var(--cp-y); color: #000; }
+.hud[data-skin="cyber"].in { animation: cp-boot .42s steps(6) both; }
+/* Ends unclipped so the tab and the remember pill can sit outside the panel. */
+@keyframes cp-boot { 0% { opacity: 0; clip-path: inset(48% 0 48% 0); } 50% { opacity: 1; clip-path: inset(30% 0 30% 0); } 99% { clip-path: inset(0); } 100% { clip-path: none; } }
+
