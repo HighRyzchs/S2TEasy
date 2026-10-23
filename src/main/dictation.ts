@@ -3,8 +3,20 @@ import type { WordTiming } from '../shared/word-timing'
 import type { UsageRecord } from '../shared/usage'
 import { randomUUID } from 'node:crypto'
 import { startError } from '../shared/engine'
-import { joinUtterances, streamingAdvance, streamingPartial } from '../shared/transcript'
-import { applyVocabulary } from '../shared/vocabulary'
+import {
+  joinUtterances,
+  normalizeTranscript,
+  streamingAdvance,
+  streamingPartial
+} from '../shared/transcript'
+import {
+  applyVocabulary,
+  applyVocabularyDetailed,
+  engineHintTerms,
+  heldTailWords,
+  type VocabularyEntry,
+  type VocabularyHit
+} from '../shared/vocabulary'
 import {
   emptyOverlay,
   recordingCommand,
@@ -31,6 +43,8 @@ type Host = {
   isRecovering?: () => boolean
   onUsage?: (usage: UsageRecord) => void
   onReview?: (id: string) => void
+  /** Fixes made by personal words in a completed session, for per-word statistics. */
+  onVocabularyHits?: (hits: VocabularyHit[]) => void
   analyzeCompleted?: (
     item: HistoryItem,
     settings: AppSettings,
@@ -50,6 +64,10 @@ export class DictationController {
   private generation = 0
   private startedAt = 0
   private liveParts: string[] = []
+  // Live typing: what has been typed so far (corrected), and how many raw words that consumed.
+  private typedText = ''
+  private typedRawWords = 0
+  private hits: VocabularyHit[] = []
   private workChain: Promise<void> = Promise.resolve()
   private state: OverlayState = emptyOverlay()
   private hideTimer: NodeJS.Timeout | null = null
@@ -132,6 +150,9 @@ export class DictationController {
     this.settings = settings
     this.startedAt = Date.now()
     this.liveParts = []
+    this.typedText = ''
+    this.typedRawWords = 0
+    this.hits = []
     this.workChain = Promise.resolve()
     this.dependencies.injector.captureTarget()
     this.item = {
@@ -167,7 +188,8 @@ export class DictationController {
           {
             apiKey: resolveStreamingKey(settings),
             provider: settings.routerProvider,
-            language: settings.language
+            language: settings.language,
+            keyterms: settings.streamKeyterms ? engineHintTerms(settings.vocabulary, 50) : undefined
           },
           {
             onTranscript: (event) => {
@@ -312,6 +334,13 @@ export class DictationController {
         await this.onUtterance(leftoverBase64, gen, leftoverStartMs)
       await this.workChain
       if (!this.valid(gen) || !this.item || !this.settings) return
+      // Type any words held back as a possible phrase start; no more speech can complete them.
+      if (this.liveTyping()) {
+        const chunk = this.settleLive(true)
+        this.updateText()
+        if (chunk) await this.enqueue(gen, () => this.typeLive(chunk))
+        if (!this.valid(gen)) return
+      }
       if (this.item.unconfirmedText?.trim()) {
         this.fail(
           'The provider did not finalize the last words. Unconfirmed text and retained audio are kept in History for review.',
@@ -367,6 +396,13 @@ export class DictationController {
       if (this.practiceText) this.item.text = this.practiceText
       if (!this.valid(gen)) return
       this.recordStreamUsage('success')
+      const hits = this.liveTyping()
+        ? this.hits
+        : applyVocabularyDetailed(this.item.rawText ?? '', this.vocabulary()).hits
+      if (hits.length) {
+        this.item.fixes = hits.slice(0, 200)
+        this.host.onVocabularyHits?.(hits)
+      }
       this.item.status = 'complete'
       this.item.error = undefined
       if (!this.settings.keepAudioForTraining) this.host.journal.removeAudio(this.item.id)
@@ -484,7 +520,7 @@ export class DictationController {
           ].slice(-20_000)
       },
       onUsage: (usage) => this.host.onUsage?.({ ...usage, sessionId, source: 'dictation' }),
-      vocabulary: settings.vocabulary.filter((row) => row.enabled).map((row) => row.meant)
+      vocabulary: engineHintTerms(settings.vocabulary)
     })
   }
 
@@ -504,10 +540,7 @@ export class DictationController {
         ).delta
         this.checkpoint()
       }
-      this.setState({
-        ...this.state,
-        partial: applyVocabulary(streamingPartial(committed, text), this.settings!.vocabulary)
-      })
+      this.setState({ ...this.state, partial: this.displayText(streamingPartial(committed, text)) })
       return
     }
     if (this.item) {
@@ -518,38 +551,79 @@ export class DictationController {
     // Update committed text synchronously; consecutive WebSocket finals must see the latest prefix.
     if (delta) {
       this.liveParts.push(delta)
+      const chunk = this.liveTyping() ? this.settleLive(false) : ''
       this.updateText()
-      void this.enqueue(gen, async () => {
-        if (!this.reviewRequested && this.settings?.insertMode === 'live')
-          await this.dependencies.injector.pasteBlock(
-            applyVocabulary(delta, this.settings.vocabulary),
-            this.pasteAbort.signal
-          )
-      })
+      if (chunk) void this.enqueue(gen, () => this.typeLive(chunk))
     }
   }
 
   private async acceptFinal(text: string, gen: number): Promise<void> {
     if (!text.trim() || !this.valid(gen)) return
     this.liveParts.push(text)
+    // Batch engines already run inside the ordered queue: save first, then type in place.
+    const chunk = this.liveTyping() ? this.settleLive(false) : ''
     this.updateText()
-    if (!this.reviewRequested && this.settings?.insertMode === 'live')
-      await this.dependencies.injector.pasteBlock(
-        applyVocabulary(text, this.settings.vocabulary),
-        this.pasteAbort.signal
-      )
+    await this.typeLive(chunk)
+  }
+
+  private vocabulary(): VocabularyEntry[] {
+    return this.settings?.vocabulary ?? []
+  }
+
+  /** Personal words learned during a session apply to everything not yet typed. */
+  updateVocabulary(entries: VocabularyEntry[]): void {
+    if (!this.settings) return
+    this.settings.vocabulary = entries
+    if (this.busy) this.updateText()
+  }
+
+  private liveTyping(): boolean {
+    return !this.practiceText && this.settings?.insertMode === 'live'
+  }
+
+  private rawWords(raw = joinUtterances(this.liveParts)): string[] {
+    return normalizeTranscript(raw).split(' ').filter(Boolean)
+  }
+
+  /**
+   * Settle the next run of words for live typing and return it (or '' if nothing is ready).
+   * Trailing words that could still turn into a learned phrase wait for the next phrase (or the end
+   * of the session), so "as two" is never typed before "teasy". The caller saves, then types.
+   */
+  private settleLive(final: boolean): string {
+    const pending = this.rawWords().slice(this.typedRawWords)
+    if (!pending.length) return ''
+    const hold = final ? 0 : heldTailWords(pending.join(' '), this.vocabulary())
+    const take = pending.length - hold
+    if (take <= 0) return ''
+    const { text, hits } = applyVocabularyDetailed(pending.slice(0, take).join(' '), this.vocabulary())
+    this.typedRawWords += take
+    this.typedText = joinUtterances([this.typedText, text])
+    this.hits.push(...hits)
+    return text
+  }
+
+  private typeLive(text: string): Promise<void> {
+    if (!text || this.reviewRequested) return Promise.resolve()
+    return this.dependencies.injector.pasteBlock(text, this.pasteAbort.signal)
+  }
+
+  /** What the HUD shows: the typed text as typed, then everything after it with personal words applied. */
+  private displayText(raw = joinUtterances(this.liveParts)): string {
+    if (!this.liveTyping()) return applyVocabulary(raw, this.vocabulary())
+    const rest = this.rawWords(raw).slice(this.typedRawWords).join(' ')
+    return joinUtterances([this.typedText, applyVocabulary(rest, this.vocabulary())])
   }
 
   private updateText(): void {
     if (!this.item || !this.settings) return
     this.item.rawText = joinUtterances(this.liveParts)
-    this.item.text = joinUtterances(
-      this.liveParts.map((part) => applyVocabulary(part, this.settings!.vocabulary))
-    )
+    this.item.text = this.displayText(this.item.rawText)
     this.checkpoint()
     this.setState({
       ...this.state,
       partial: this.item.text,
+      typedLength: this.liveTyping() ? this.typedText.length : 0,
       message: this.recording ? 'Listening' : 'Finishing'
     })
   }

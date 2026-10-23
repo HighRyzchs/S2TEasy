@@ -2,7 +2,12 @@ import { normalizeOutputPreferences, type OutputPreferences } from './output'
 import type { WordTiming } from './word-timing'
 import type { UsageState } from './usage'
 import { defaultOverlayTheme, normalizeOverlayTheme, type OverlayTheme } from './overlay-theme'
-import { normalizeVocabulary, type VocabularyEntry } from './vocabulary'
+import {
+  normalizeVocabulary,
+  type VocabularyEntry,
+  type VocabularyHit,
+  type WordKind
+} from './vocabulary'
 import { normalizeSpeechCues, type SpeechCueSettings, type CueAnalysis } from './speech-cues'
 
 export type { OverlayTheme }
@@ -101,6 +106,17 @@ export type AppSettings = {
   keepAudioForTraining: boolean
   audioRetentionDays: number
   vocabulary: VocabularyEntry[]
+  /** Experimental: pass personal words to the streaming provider as Deepgram key terms. */
+  streamKeyterms: boolean
+}
+
+/** A fix the user asked S2Teasy to remember, from the HUD, History or practice. */
+export type LearnWordRequest = {
+  heard: string
+  meant: string
+  kind: WordKind
+  /** Keep the moment the word was said, when the session has audio and word timings. */
+  clip?: { sessionId: string; startMs: number; endMs: number }
 }
 
 export type CaptureConfig = {
@@ -141,6 +157,8 @@ export type HistoryItem = {
   status?: 'recording' | 'processing' | 'complete' | 'interrupted' | 'error' | 'cancelled'
   error?: string
   hasAudio?: boolean
+  /** Words changed by personal words before they were typed. */
+  fixes?: VocabularyHit[]
 }
 
 export type OverlayStatus =
@@ -157,6 +175,8 @@ export type OverlayState = {
   bars: number[]
   mode?: 'dictation' | 'practice'
   sessionId?: string
+  /** Live typing: the first `typedLength` characters of `partial` are already in the target app. */
+  typedLength?: number
 }
 
 export type ModelOption = {
@@ -204,7 +224,8 @@ export const defaultSettings = (): AppSettings => ({
   recoveryAudio: true,
   keepAudioForTraining: false,
   audioRetentionDays: 7,
-  vocabulary: []
+  vocabulary: [],
+  streamKeyterms: false
 })
 
 export function clampInputGain(value: number): number {
@@ -290,6 +311,7 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
     ? Math.max(1, Math.min(30, Math.round(raw!.audioRetentionDays!)))
     : 7
   merged.vocabulary = normalizeVocabulary(raw?.vocabulary)
+  merged.streamKeyterms = raw?.streamKeyterms === true
   return merged
 }
 

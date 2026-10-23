@@ -6,6 +6,7 @@ import { IPC } from '../shared/ipc'
 import type {
   AppSettings,
   AppState,
+  LearnWordRequest,
   AudioLevelPayload,
   HistoryItem,
   OverlayState,
@@ -18,6 +19,7 @@ import type { ModelOption } from '../shared/types'
 export type S2TApi = {
   saveOutput: (value: OutputPreferences) => Promise<AppSettings>
   copyOutput: (id: string, format: 'plain' | 'tags' | 'json') => Promise<boolean>
+  learnWord: (request: LearnWordRequest) => Promise<AppSettings>
 
   getUpdateDiagnostics: () => Promise<string>
   openUpdateInstaller: () => Promise<UpdateStatus>
@@ -80,6 +82,7 @@ export type S2TApi = {
 const api: S2TApi = {
   saveOutput: (value) => ipcRenderer.invoke(IPC.SAVE_OUTPUT, value),
   copyOutput: (id, format) => ipcRenderer.invoke(IPC.COPY_OUTPUT, id, format),
+  learnWord: (request) => ipcRenderer.invoke(IPC.LEARN_WORD, request),
   getUpdateDiagnostics: () => ipcRenderer.invoke(IPC.GET_UPDATE_DIAGNOSTICS),
   openUpdateInstaller: () => ipcRenderer.invoke(IPC.OPEN_UPDATE_INSTALLER),
   openUpdateDiagnostics: () => ipcRenderer.invoke(IPC.OPEN_UPDATE_DIAGNOSTICS),

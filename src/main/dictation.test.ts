@@ -491,3 +491,76 @@ it('saves successful automatic cues to History and the HUD while expiring transi
   })
   t.controller.cancel()
 })
+
+describe('personal words while typing live', () => {
+  const s2 = { id: 's2', heard: 'as two teasy', meant: 'S2Teasy', enabled: true, kind: 'name' as const }
+  const streaming = (overrides = {}) => {
+    const t = setup({ sttEngine: 'router-audio', routerAudioKey: 'stream-key', vocabulary: [s2], ...overrides })
+    let handlers!: Parameters<RouterAudioClient['connect']>[1]
+    const client = {
+      connect: vi.fn(async (_options, callbacks) => {
+        handlers = callbacks
+      }),
+      sendPcm: vi.fn(),
+      close: vi.fn(),
+      finish: vi.fn()
+    }
+    const controller = new DictationController(t.host, {
+      injector: { captureTarget: vi.fn(), paste: t.paste, pasteBlock: t.paste },
+      createStream: () => client as unknown as RouterAudioClient
+    })
+    const final = (text: string) => handlers.onTranscript({ kind: 'transcript', text, isPartial: false })
+    return { ...t, controller, final }
+  }
+  const typed = (paste: ReturnType<typeof vi.fn>) => paste.mock.calls.map((call) => call[0])
+
+  it('holds back a possible phrase start until the next phrase completes it', async () => {
+    const t = streaming()
+    await t.controller.start()
+    t.final('demo the new as two')
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(typed(t.paste)).toEqual(['demo the new'])
+    t.final('teasy overlay')
+    await vi.waitFor(() => expect(typed(t.paste)).toEqual(['demo the new', 'S2Teasy overlay']))
+    expect(t.history[0]?.text).toBe('demo the new S2Teasy overlay')
+  })
+
+  it('types held words at the end of the session and records what personal words fixed', async () => {
+    const hits = vi.fn()
+    const t = streaming()
+    ;(t.host as { onVocabularyHits?: unknown }).onVocabularyHits = hits
+    await t.controller.start()
+    const gen = t.controller.currentGeneration()
+    t.final('tested as two teasy then as two')
+    t.controller.stop()
+    await t.controller.onFinished('', '', 1000, gen)
+    expect(typed(t.paste)).toEqual(['tested S2Teasy then', 'as two'])
+    expect(t.history[0]).toMatchObject({
+      status: 'complete',
+      text: 'tested S2Teasy then as two',
+      rawText: 'tested as two teasy then as two',
+      fixes: [{ entryId: 's2', from: 'as two teasy', to: 'S2Teasy' }]
+    })
+    expect(hits).toHaveBeenCalledWith([{ entryId: 's2', from: 'as two teasy', to: 'S2Teasy' }])
+  })
+
+  it('applies a word learned mid-session to what has not been typed yet', async () => {
+    const t = streaming({ vocabulary: [] })
+    await t.controller.start()
+    t.final('talked to risks')
+    t.controller.updateVocabulary([{ id: 'r', heard: 'risks', meant: 'Ryzchs', enabled: true }])
+    t.final('and risks again')
+    await vi.waitFor(() => expect(typed(t.paste)).toEqual(['talked to risks', 'and Ryzchs again']))
+    expect(t.history[0]?.text).toBe('talked to risks and Ryzchs again')
+  })
+
+  it('sends what the user means to batch engines as hints, skipping accent swaps', async () => {
+    const t = setup({
+      vocabulary: [s2, { id: 'a', heard: 'bike', meant: 'bite', enabled: true, kind: 'accent' }]
+    })
+    await t.controller.start()
+    await t.controller.onUtterance('audio', t.controller.currentGeneration())
+    expect(t.transcribe.mock.calls[0]?.[0].vocabulary).toEqual(['S2Teasy'])
+  })
+})
