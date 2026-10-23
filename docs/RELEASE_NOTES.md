@@ -1,3 +1,9 @@
+## Unreleased — personal speech foundations
+
+- Group completed Voice practice takes by intended phrase and recognizer model. Compare original recognition, show recent outcomes and retained audio counts, and offer Practice again.
+- Exclude missing raw text and unfinished takes from match counts. Edited text and Vocabulary substitutions do not count as recognition successes. Counts describe current History, not accent quality or acoustic learning.
+- Document the proposed personal-word correction and optional speech-cue architecture, model candidate, cost example, consent boundaries and evaluation criteria. Contextual correction and cue recognition are not implemented in this development build.
+
 ## A comfortable first minute — v1.6.0
 
 - Add a three-step welcome tour with an optional real name, nickname or handle; appearance and HUD preview; an explicit recovery-audio choice; and a walkthrough of shortcuts, Copy, Review, History and Vocabulary.

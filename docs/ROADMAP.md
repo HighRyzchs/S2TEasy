@@ -30,6 +30,10 @@ These are proposed features, not capabilities shipped by the welcome-tour releas
 
 ## Pronunciation learning
 
+See [Personal words and expressive speech](PERSONAL_SPEECH_DESIGN.md) for the proposed correction/cue architecture, initial OpenRouter candidate, example costs and evaluation plan. Contextual correction and cue recognition are not shipped features.
+
+The development build now groups completed practice takes by intended phrase and model, comparing original recognition and showing retained audio examples. It does not score accent quality or establish acoustic adaptation.
+
 1. Extend the practice mode with take-level re-labeling and progress over repeated phrases, preserving recognized text separately from intended labels.
 2. Provider-specific keyterm adapters after verifying each provider's API and limits.
 3. Optional word timestamps and alignment, with user-reviewed audio/text labels; do not infer word boundaries from plain text.
@@ -38,6 +42,7 @@ These are proposed features, not capabilities shipped by the welcome-tour releas
 
 ## Longer term
 
+- Opt-in delivery cues and structured context export, beginning with measured pauses/pacing and keeping uncertain interpretations separate from spoken text.
 - Managed local model downloads with checksum verification, disk/memory estimates, and cancellation.
 - Smarter bounded recovery segmentation with silence overlap and alignment to avoid cutting words at recovery boundaries.
 - Timestamp-aware streaming final reconciliation across providers; no automatic replay of already-inserted phrases.

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { AppSettings, HistoryItem, OverlayState } from '@shared/types'
+import { practiceProgress } from '@shared/practice-progress'
 
 export function PracticePanel({
   initialTarget = '',
@@ -21,6 +22,7 @@ export function PracticePanel({
   const active = ['listening', 'transcribing', 'inserting'].includes(overlay.status)
   const otherRecording = active && overlay.mode !== 'practice'
   const takes = history.filter((row) => row.source === 'practice')
+  const progress = practiceProgress(history)
   const act = async (action: () => Promise<void>) => {
     setBusy(true)
     setError('')
@@ -129,6 +131,57 @@ export function PracticePanel({
           </p>
         )}
       </section>
+      {progress.length > 0 && (
+        <section className="practice-progress" aria-labelledby="practice-progress-title">
+          <h3 id="practice-progress-title">How recognition is going</h3>
+          <p className="micro">
+            Original recognition compared with your intended phrase, ignoring case and punctuation.
+            Each model is tracked separately. These results measure the recognizer, not your accent.
+          </p>
+          <div className="practice-takes">
+            {progress.map((row) => (
+              <article className="card" key={JSON.stringify([row.target, row.model])}>
+                <div className="card-head">
+                  <h3>{row.target}</h3>
+                  <button className="ghost" disabled={active} onClick={() => setTarget(row.target)}>
+                    Practice again
+                  </button>
+                </div>
+                <p className="micro">{row.model}</p>
+                <p>
+                  {row.scored
+                    ? `${row.matched} of ${row.scored} matched`
+                    : 'No comparable recognition yet'}
+                </p>
+                <p className="micro">
+                  {row.retained} retained audio {row.retained === 1 ? 'example' : 'examples'} ·{' '}
+                  {row.takes} completed {row.takes === 1 ? 'take' : 'takes'}
+                  {row.takes > row.scored &&
+                    ` · ${row.takes - row.scored} without comparable raw text`}
+                </p>
+                {row.recent.length > 0 && (
+                  <details>
+                    <summary>Recent results · oldest to newest</summary>
+                    <ul>
+                      {row.recent.map((result) => (
+                        <li key={result.id}>
+                          <strong>{result.matched ? 'Matched' : 'Different'}:</strong>{' '}
+                          {result.recognized}
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+              </article>
+            ))}
+          </div>
+          <p className="micro">
+            Counts cover retained History entries and change when entries are deleted. Repeating a
+            drill does not prove improvement on new speech or retrain a model. Accent marks,
+            apostrophes and hyphens still matter when comparing words.
+          </p>
+        </section>
+      )}
       <div className="section-heading">
         <h3>Your recent practice</h3>
         <button className="text-button" onClick={onHistory}>

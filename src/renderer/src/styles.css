@@ -1402,6 +1402,32 @@ input[type='range'] {
 .practice-stage .ghost {
   margin-left: 8px;
 }
+.practice-progress {
+  margin: 28px 0;
+}
+.practice-progress > .micro {
+  margin: 10px 0 16px;
+}
+.practice-progress .card-head {
+  flex-wrap: wrap;
+}
+.practice-progress .card {
+  overflow-wrap: anywhere;
+}
+.practice-progress .card > p {
+  margin: 8px 0;
+}
+.practice-progress details {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--paper-dim);
+}
+.practice-progress summary {
+  cursor: pointer;
+}
+.practice-progress li {
+  margin: 8px 0;
+}
 .practice-feedback {
   background: var(--ink);
   padding: 12px;
