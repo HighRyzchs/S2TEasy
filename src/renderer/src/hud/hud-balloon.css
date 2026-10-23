@@ -1,0 +1,39 @@
+/* ===== Speech balloon, as a comic panel ===== */
+.hud[data-skin="balloon"] { font-family: "Comic Neue", "Comic Sans MS", var(--hud-body); font-weight: 700; background: radial-gradient(rgba(0,0,0,.07) 1px, transparent 1.6px) 0 0 / 7px 7px, #fffdf3; color: #111; border: 3px solid #111; border-radius: 30px; box-shadow: 6px 6px 0 #111; backdrop-filter: none; -webkit-backdrop-filter: none; --hud-fg: #111; --hud-dim: #5a5a5a; --hud-line: rgba(0,0,0,.18); padding: 14px 16px 12px; margin-top: 14px; transition: border-radius .35s, transform .35s, width .35s; }
+.hud[data-skin="balloon"]::after { content: ""; position: absolute; left: 46px; bottom: -24px; width: 30px; height: 26px; background: #fffdf3; border-right: 3px solid #111; border-bottom: 3px solid #111; transform: skewX(-40deg); border-bottom-right-radius: 6px; z-index: 1; }
+.hud[data-skin="balloon"]::before { content: ""; position: absolute; inset: -46px -60px; z-index: -1; background: repeating-conic-gradient(from 0deg, #111 0 1.2deg, transparent 1.2deg 9deg); -webkit-mask: radial-gradient(closest-side, transparent 64%, #000 66%, transparent 98%); mask: radial-gradient(closest-side, transparent 64%, #000 66%, transparent 98%); clip-path: polygon(evenodd, 0 0, 100% 0, 100% 100%, 0 100%, 0 0, 63px 49px, 63px calc(100% - 49px), calc(100% - 63px) calc(100% - 49px), calc(100% - 63px) 49px, 63px 49px); opacity: 0; transition: opacity .25s; pointer-events: none; }
+.hud[data-skin="balloon"][data-cue="excited"] { border-radius: 14px; border-width: 4px; }
+.hud[data-skin="balloon"][data-cue="excited"]::before { opacity: .55; animation: burst 1.2s ease-in-out infinite; }
+@keyframes burst { 50% { transform: scale(1.04) rotate(2deg); } }
+.hud[data-skin="balloon"][data-cue="sighs"] { border-style: dashed; border-radius: 40px 40px 26px 26px; }
+.hud[data-skin="balloon"][data-cue="calm"] { border-radius: 44px; }
+.hud[data-skin="balloon"] .hud-row::before { position: absolute; top: -16px; left: 18px; background: #ffe14d; color: #111; border: 2.5px solid #111; font: 400 15px/1 "Bangers", "Comic Neue", sans-serif; letter-spacing: .06em; padding: 4px 10px 3px; transform: rotate(-2deg); box-shadow: 3px 3px 0 #111; z-index: 2; }
+.hud[data-skin="balloon"][data-phase="rec"] .hud-row::before { content: "Meanwhile, live…"; }
+.hud[data-skin="balloon"][data-phase="paused"] .hud-row::before { content: "Paused!"; }
+.hud[data-skin="balloon"] .hud-wave, .hud[data-skin="balloon"] .hud-ind { display: none; }
+.hud[data-skin="balloon"] .hud-title, .hud[data-skin="balloon"] .hud-label { font-family: "Bangers", sans-serif; font-weight: 400; letter-spacing: .05em; font-size: 16px; }
+.hud[data-skin="balloon"] .hud-title small { font-family: "Comic Neue", sans-serif; font-weight: 700; letter-spacing: 0; font-size: 11.5px; }
+.hud[data-skin="balloon"] .hud-count { font-family: "Bangers", sans-serif; font-size: 14px; color: #111; letter-spacing: .04em; }
+.hud[data-skin="balloon"] .hud-roll, .hud[data-skin="balloon"] .hud-draft { font-size: 17px; line-height: 1.7; }
+.hud[data-skin="balloon"] .hud-btn, .hud[data-skin="balloon"] .hud-cue { font-family: "Bangers", sans-serif; font-weight: 400; letter-spacing: .06em; font-size: 14px; border: 2.5px solid #111; background: #fff; color: #111; border-radius: 10px; box-shadow: 2px 2px 0 #111; padding: 3px 10px 2px; }
+.hud[data-skin="balloon"] .hud-btn:active { transform: translate(2px, 2px); box-shadow: none; }
+.hud[data-skin="balloon"] .hud-btn.go { background: var(--mint); color: #fff; text-shadow: 1px 1px 0 #111; }
+.hud[data-skin="balloon"] .hud-cue .sw { border: 2px solid #111; }
+.hud[data-skin="balloon"] .hud-tag { font-family: "Bangers", sans-serif; font-weight: 400; font-size: 17px; letter-spacing: .05em; text-transform: uppercase; background: none; padding: 0 2px; color: var(--mint); -webkit-text-stroke: .6px #111; text-shadow: 2px 2px 0 #111; transform: rotate(-4deg); display: inline-block; }
+.hud[data-skin="balloon"] .hud-tag[data-cue="laughs"] { color: #ffb703; transform: rotate(5deg); }
+.hud[data-skin="balloon"] .hud-tag[data-cue="sighs"] { color: #7aa2ff; }
+.hud[data-skin="balloon"] .hud-tag.sm { font-size: 14px; }
+.hud[data-skin="balloon"] .hud-tag b { -webkit-text-stroke: 0; text-shadow: none; color: #111; font-size: 12px; }
+.hud[data-skin="balloon"] .hud-w.edited { color: var(--mint); text-decoration-color: var(--mint); }
+.hud[data-skin="balloon"] .hud-w.fresh, .hud[data-skin="balloon"] .hud-wd.fresh { animation: pow .5s cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes pow { 0% { transform: scale(1.6) rotate(-6deg); } 100% { transform: none; } }
+.hud[data-skin="balloon"] .hud-w:hover { background: #fff3a8; }
+.hud[data-skin="balloon"] .hud-w.sel { background: #ffe14d; }
+.hud[data-skin="balloon"] .hud-edit { color: #111; background: #fff; border: 2px solid #111; font-family: inherit; font-weight: 700; }
+.hud[data-skin="balloon"] .hud-timer { background: rgba(0,0,0,.12); height: 4px; }
+.hud[data-skin="balloon"] .hud-pop { background: #fff; color: #111; border: 2.5px solid #111; box-shadow: 4px 4px 0 #111; font-family: "Comic Neue", sans-serif; --hud-fg: #111; --hud-dim: #444; }
+.hud[data-skin="balloon"] .hud-pop::after { border-color: #111; border-width: 2.5px; border-style: solid; border-top: 0; border-left: 0; }
+.hud[data-skin="balloon"] .hud-pop button { border: 2px solid #111; background: #fff; color: #111; font-family: "Bangers", sans-serif; letter-spacing: .05em; font-size: 13px; }
+.hud[data-skin="balloon"] .hud-pop button[data-k="name"] { background: var(--mint); color: #fff; text-shadow: 1px 1px 0 #111; }
+
+.hud[data-skin="balloon"] .hud-row { padding-top: 6px; }
