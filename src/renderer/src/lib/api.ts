@@ -18,14 +18,13 @@ const memory = {
     vocabulary: sampleVocabulary
   } as AppSettings,
   history: sampleHistory(),
-  update: idleUpdate('1.0.0', 'dev')
+  update: idleUpdate('1.9.0', 'dev')
 }
 
 memory.update = {
   ...memory.update,
-  phase: 'available',
-  availableVersion: '1.0.1',
-  message: 'Preview — version 1.0.1 would download from GitHub Releases.'
+  phase: 'current',
+  message: 'Up to date. Preview only; updates come from GitHub Releases in the desktop app.'
 }
 
 function mockApi(): Window['s2t'] {
@@ -157,7 +156,7 @@ function mockApi(): Window['s2t'] {
       memory.update = {
         ...memory.update,
         phase: 'ready',
-        availableVersion: '1.0.1',
+        availableVersion: '1.9.1',
         percent: 100,
         message: 'Preview — restart would replace the EXE in place.'
       }
