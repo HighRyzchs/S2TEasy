@@ -627,6 +627,8 @@ export function SettingsPanel({
               </p>
             </section>
             <UpdatePanel
+              onGetDiagnostics={() => window.s2t.getUpdateDiagnostics()}
+              onCopyReport={(text) => window.s2t.copyHistory(text)}
               onOpenInstaller={() => window.s2t.openUpdateInstaller()}
               onDiagnostics={() => window.s2t.openUpdateDiagnostics()}
               update={update}

@@ -28,6 +28,7 @@ import {
 import { idleUpdate, type Packaging, type UpdateStatus } from '../shared/types'
 import { buildVerifiedApplyScript, updateTargetPath } from '../shared/update-install'
 import { isNewerVersion, tagToVersion } from '../shared/version'
+import { updateDiagnostics } from './update-diagnostics'
 
 export function detectPackaging(): Packaging {
   if (!app.isPackaged) return 'dev'
@@ -348,6 +349,11 @@ export class UpdateLauncher {
         } catch {
           /* Keep the app open even when diagnostic storage fails. */
         }
+        try {
+          child.kill()
+        } catch {
+          /* Only this attempt's helper; it must not apply later after a failed handoff. */
+        }
         this.set({
           phase: 'error',
           message: `${message} The app was kept open. Open update diagnostics or run the downloaded installer directly.`
@@ -416,6 +422,10 @@ export class UpdateLauncher {
   async openDiagnostics(): Promise<void> {
     const problem = await shell.openPath(this.stateDirectory)
     if (problem) throw new Error(`Could not open update diagnostics: ${problem}`)
+  }
+
+  diagnostics(): string {
+    return updateDiagnostics(this.stateDirectory, this.status.currentVersion, this.status.packaging)
   }
 
   private set(patch: Partial<UpdateStatus>): void {

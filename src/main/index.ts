@@ -349,6 +349,10 @@ async function setup(): Promise<void> {
     requireMain(event)
     return updater.openDiagnostics()
   })
+  ipcMain.handle(IPC.GET_UPDATE_DIAGNOSTICS, (event) => {
+    requireMain(event)
+    return updater.diagnostics()
+  })
 
   protocol.handle('s2t-audio', (request) => {
     const url = new URL(request.url)

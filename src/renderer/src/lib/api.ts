@@ -40,6 +40,8 @@ memory.update = {
 
 function mockApi(): Window['s2t'] {
   return {
+    getUpdateDiagnostics: async () =>
+      'S2Teasy preview update report\nNo native update or installer was executed.',
     openUpdateInstaller: async () => {
       throw new Error('Preview never opens or installs executables.')
     },

@@ -13,6 +13,10 @@ Version 1.7.1 adds **Open update diagnostics** in Settings → Privacy & data, p
 
 An incomplete receipt pauses automatic download on startup, keeping the error visible. A success receipt for a different running version is reported as a mismatch. For installed builds, the new helper checks the executable's ProductVersion after NSIS exits. A zero installer exit code alone cannot produce an “updated” result. The exact cause on a user's computer still requires its receipt/logs; CI success does not establish desktop behavior on that computer.
 
+## View a report inside the app
+
+In 1.7.1, use **Settings → Privacy & data → View update report**, then **Copy update report**. The bounded report includes the running version, selected receipt fields and the last 12 KB of the latest helper log. It reads only update-owned files, not settings/history or paths suggested by receipt contents. Nothing is uploaded automatically. Review usernames and paths before sharing. **Open update diagnostics** remains available for inspecting the files directly.
+
 ## Recurring findstr terminals after an update
 
 A window showing `findstr /I "11012"` (the number varies) is the **old 1.4.0 updater's process-exit polling command**. Clipboard insertion uses Electron's clipboard API and Windows native keystrokes; it does not launch FINDSTR or CMD.

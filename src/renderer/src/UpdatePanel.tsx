@@ -10,7 +10,9 @@ export function UpdatePanel({
   onCheck,
   onInstall,
   onOpenInstaller,
-  onDiagnostics
+  onDiagnostics,
+  onGetDiagnostics,
+  onCopyReport
 }: {
   update: UpdateStatus
   autoDownload: boolean
@@ -20,9 +22,13 @@ export function UpdatePanel({
   onInstall: () => Promise<UpdateStatus>
   onOpenInstaller?: () => Promise<UpdateStatus>
   onDiagnostics?: () => Promise<void>
+  onGetDiagnostics?: () => Promise<string>
+  onCopyReport?: (text: string) => Promise<boolean>
 }) {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState('')
+  const [report, setReport] = useState('')
+  const [copied, setCopied] = useState(false)
   const applying = update.phase === 'applying'
   const checking = update.phase === 'checking'
   const downloading = update.phase === 'downloading'
@@ -129,6 +135,21 @@ export function UpdatePanel({
         </p>
       )}
       <div className="inline">
+        {onGetDiagnostics && update.packaging !== 'dev' && (
+          <button
+            className="ghost"
+            disabled={pending}
+            onClick={() =>
+              void run(async () => {
+                setReport(await onGetDiagnostics())
+                setCopied(false)
+                return update
+              })
+            }
+          >
+            View update report
+          </button>
+        )}
         {update.canOpenInstaller && onOpenInstaller && (
           <button
             className="ghost"
@@ -153,6 +174,40 @@ export function UpdatePanel({
           </button>
         )}
       </div>
+      {report && (
+        <details open className="update-report">
+          <summary>Local update report</summary>
+          <p className="hint">
+            No report is uploaded. Review Windows usernames and paths before sharing.
+          </p>
+          <pre
+            style={{
+              whiteSpace: 'pre-wrap',
+              overflowWrap: 'anywhere',
+              maxHeight: 260,
+              overflow: 'auto',
+              fontSize: 11,
+              margin: '12px 0'
+            }}
+          >
+            {report}
+          </pre>
+          {onCopyReport && (
+            <button
+              className="ghost"
+              onClick={() =>
+                void run(async () => {
+                  if (!(await onCopyReport(report))) throw new Error('Could not copy the report.')
+                  setCopied(true)
+                  return update
+                })
+              }
+            >
+              {copied ? 'Report copied' : 'Copy update report'}
+            </button>
+          )}
+        </details>
+      )}
       <div className="update-panel-footer">
         <button
           className="ghost"

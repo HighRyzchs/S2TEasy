@@ -15,6 +15,7 @@ import type {
 import type { ModelOption } from '../shared/types'
 
 export type S2TApi = {
+  getUpdateDiagnostics: () => Promise<string>
   openUpdateInstaller: () => Promise<UpdateStatus>
   openUpdateDiagnostics: () => Promise<void>
   analyzeSpeechCues: (id: string, range: CueRequest) => Promise<HistoryItem[]>
@@ -73,6 +74,7 @@ export type S2TApi = {
 }
 
 const api: S2TApi = {
+  getUpdateDiagnostics: () => ipcRenderer.invoke(IPC.GET_UPDATE_DIAGNOSTICS),
   openUpdateInstaller: () => ipcRenderer.invoke(IPC.OPEN_UPDATE_INSTALLER),
   openUpdateDiagnostics: () => ipcRenderer.invoke(IPC.OPEN_UPDATE_DIAGNOSTICS),
   analyzeSpeechCues: (id, range) => ipcRenderer.invoke(IPC.ANALYZE_CUES, id, range),
