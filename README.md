@@ -93,6 +93,8 @@ For recurring `findstr` terminals after an older update, see [update troubleshoo
 
 ### Test the updater
 
+If **1.5.1 closes but stays on the old version**, quit from the tray and run the [current win-x64 installer](https://github.com/HighRyzchs/S2TEasy/releases/latest) file directly for recovery. Settings/history stay in place. Version 1.7.1 adds acknowledged helper startup, installed-version verification, an in-app copyable update report and a direct-installer fallback. See [update recovery and diagnostics](docs/UPDATE_TROUBLESHOOTING.md).
+
 Development builds **1.4.1 → 1.5.0** provide a real update test. Portable 1.4.0 has a launcher-path bug: first download and open [1.4.1](https://github.com/HighRyzchs/S2TEasy/releases/tag/v1.4.1) manually, keeping that EXE at its intended location. In that app, use Settings → Privacy & data → Check for updates, download 1.5.0, and restart. Installed 1.4.0 users who see repeating FINDSTR terminals or remain on 1.4.0 should stop the legacy helpers and manually run the [current x64 installer](https://github.com/HighRyzchs/S2TEasy/releases/latest); see [recovery steps](docs/UPDATE_TROUBLESHOOTING.md). Confirm the version and your saved settings/history after restart. See [Windows testing](docs/WINDOWS_TESTING.md). Windows update execution still needs a real desktop test; Linux checks verify discovery, downloads, hashes, and helper generation.
 
 ## Development

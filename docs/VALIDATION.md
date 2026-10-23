@@ -1,5 +1,13 @@
 # Development validation
 
+## Update handoff and reports (1.7.1)
+
+- All 179 tests across 44 files passed locally, with typechecking and application build checks. Targeted helper/updater tests passed again after replacing the unavailable PowerShell hash function.
+- Native Windows testing reproduced `Get-FileHash` being unavailable inside the helper. Streaming .NET SHA-256 removes that dependency without removing integrity checks.
+- [Native regression 39934010464](https://github.com/HighRyzchs/S2TEasy/actions/runs/39934010464) passed with source `47e340a`: real published 1.5.1 installed, the corrected helper upgraded it to published 1.7.0 in a path containing spaces/apostrophes/percent/ampersand, startup acknowledgment was verified, and a zero-exit no-op installer was rejected. Release builds run the same test against their newly built installer before publication.
+- Chromium checks at 1280/390 px exercised View/Copy report, Open diagnostics and the direct-installer control with simulated native actions. They did not launch installers or claim the displayed running version changed.
+- The reported user failure had no local receipt and used Check for updates inside 1.5.1. The user's exact machine-specific cause is not established; native CI success is not proof of desktop behavior on that machine. First recovery must run the installer file directly, because the old updater code cannot change until the new app is installed.
+
 ## Emotion and delivery module (1.7.0)
 
 - All 173 tests across 43 files passed, including cue schema/filtering, original-label preservation, user/model export provenance, audio chat request shape, usage on invalid responses, cancellation, duplicate prevention, deleted-take protection, bounded excerpt reads and renderer cleanup.
