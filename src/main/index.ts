@@ -354,6 +354,21 @@ async function setup(): Promise<void> {
     return settings
   })
 
+  // Only programs already in History, so this cannot be used to probe arbitrary paths.
+  const appIcons = new Map<string, string | null>()
+  ipcMain.handle(IPC.APP_ICON, async (_event, exe: unknown) => {
+    if (typeof exe !== 'string' || !store.getHistory().some((row) => row.app?.exe === exe)) return null
+    if (!appIcons.has(exe)) {
+      try {
+        const icon = await app.getFileIcon(exe, { size: 'normal' })
+        appIcons.set(exe, icon.isEmpty() ? null : icon.toDataURL())
+      } catch {
+        appIcons.set(exe, null)
+      }
+    }
+    return appIcons.get(exe) ?? null
+  })
+
   // Allowed mid-session: the HUD teaches words while you talk. Only the vocabulary changes.
   ipcMain.handle(IPC.LEARN_WORD, (_event, request: LearnWordRequest) => {
     if (!request || typeof request !== 'object') throw new Error('Nothing to remember.')

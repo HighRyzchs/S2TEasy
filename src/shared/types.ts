@@ -3,6 +3,7 @@ import type { WordTiming } from './word-timing'
 import type { UsageState } from './usage'
 import { defaultOverlayTheme, normalizeOverlayTheme, type OverlayTheme } from './overlay-theme'
 import { defaultHudSettings, normalizeHudSettings, type HudSettings } from './hud'
+import type { AppInfo } from './apps'
 import {
   normalizeVocabulary,
   type VocabularyEntry,
@@ -165,6 +166,8 @@ export type HistoryItem = {
   fixes?: VocabularyHit[]
   /** Corrections the user made in the HUD during the session. */
   edits?: { from: string; to: string }[]
+  /** The program the session typed into (name and executable path, never the window title). */
+  app?: AppInfo
 }
 
 export type OverlayStatus =

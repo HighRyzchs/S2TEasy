@@ -6,6 +6,8 @@ type NativeBridge = {
   setForegroundWindow(hwnd: unknown): boolean
   sendCtrlV(): void
   sendBackspaces(count: number): void
+  /** Full path of the program that owns a window, or null when Windows won't say. */
+  processPath(hwnd: unknown): string | null
 }
 
 function loadNative(): NativeBridge | null {
@@ -19,6 +21,18 @@ function loadNative(): NativeBridge | null {
     const user32 = koffi.load('user32.dll')
     const GetForegroundWindow = user32.func('void* __stdcall GetForegroundWindow()')
     const SetForegroundWindow = user32.func('bool __stdcall SetForegroundWindow(void* hWnd)')
+    const kernel32 = koffi.load('kernel32.dll')
+    const GetWindowThreadProcessId = user32.func(
+      'uint32 __stdcall GetWindowThreadProcessId(void* hWnd, _Out_ uint32* pid)'
+    )
+    const OpenProcess = kernel32.func(
+      'void* __stdcall OpenProcess(uint32 access, bool inherit, uint32 pid)'
+    )
+    const QueryFullProcessImageNameW = kernel32.func(
+      'bool __stdcall QueryFullProcessImageNameW(void* process, uint32 flags, _Out_ uint16* name, _Inout_ uint32* size)'
+    )
+    const CloseHandle = kernel32.func('bool __stdcall CloseHandle(void* handle)')
+    const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
     const keybd_event = user32.func(
       'void __stdcall keybd_event(uint8 bVk, uint8 bScan, uint32 dwFlags, uintptr dwExtraInfo)'
     )
@@ -34,6 +48,21 @@ function loadNative(): NativeBridge | null {
         keybd_event(VK_V, 0, 0, 0)
         keybd_event(VK_V, 0, KEYUP, 0)
         keybd_event(VK_CONTROL, 0, KEYUP, 0)
+      },
+      processPath: (hwnd) => {
+        const pid = [0]
+        GetWindowThreadProcessId(hwnd, pid)
+        if (!pid[0]) return null
+        const process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, false, pid[0])
+        if (!process) return null
+        try {
+          const name = new Uint16Array(1024)
+          const size = [name.length]
+          if (!QueryFullProcessImageNameW(process, 0, name, size)) return null
+          return String.fromCharCode(...name.subarray(0, size[0]))
+        } finally {
+          CloseHandle(process)
+        }
       },
       sendBackspaces: (count) => {
         for (let i = 0; i < count; i++) {
@@ -65,6 +94,16 @@ export class TextInjector {
 
   captureTarget(): void {
     this.hwnd = this.bridge?.getForegroundWindow() ?? null
+  }
+
+  /** The program the session types into, for its name and icon in History. Never the window title. */
+  targetApp(): string | null {
+    if (!this.hwnd || !this.bridge) return null
+    try {
+      return this.bridge.processPath(this.hwnd)
+    } catch {
+      return null
+    }
   }
 
   async paste(text: string, signal?: AbortSignal): Promise<void> {
