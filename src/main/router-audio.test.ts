@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { buildListenUrl, closeReason, parseListenMessage } from './router-audio'
 
 describe('buildListenUrl', () => {
+  it('sends key terms only to Deepgram, as repeated keyterm parameters', () => {
+    const deepgram = new URL(
+      buildListenUrl({ apiKey: 'k', provider: 'deepgram', keyterms: ['S2Teasy', 'GG, no re'] }).url
+    )
+    expect(deepgram.searchParams.getAll('keyterm')).toEqual(['S2Teasy', 'GG, no re'])
+    const auto = new URL(buildListenUrl({ apiKey: 'k', provider: 'auto', keyterms: ['S2Teasy'] }).url)
+    expect(auto.searchParams.has('keyterm')).toBe(false)
+  })
+
   it('keeps the key out of the redacted URL', () => {
     const { url, redacted } = buildListenUrl({
       apiKey: 'secret-key-value',

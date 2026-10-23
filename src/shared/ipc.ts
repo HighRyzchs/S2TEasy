@@ -1,5 +1,6 @@
 export const IPC = {
   SAVE_OUTPUT: 's2t:save-output',
+  LEARN_WORD: 's2t:learn-word',
   COPY_OUTPUT: 's2t:copy-output',
   GET_UPDATE_DIAGNOSTICS: 's2t:get-update-diagnostics',
   OPEN_UPDATE_INSTALLER: 's2t:open-update-installer',

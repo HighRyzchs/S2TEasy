@@ -1,7 +1,7 @@
 import { normalizeVocabulary, type VocabularyEntry } from '@shared/vocabulary'
 
 export type VoiceKind = 'word' | 'phrase' | 'sound'
-export type VoiceCard = VocabularyEntry & { kind: VoiceKind; sample: boolean }
+export type VoiceCard = Omit<VocabularyEntry, 'kind'> & { kind: VoiceKind; sample: boolean }
 export type LabModels = { speech: string; cues: string }
 export type LabDraft = { cards: VoiceCard[]; models: LabModels }
 export const LAB_STORAGE = 's2teasy-voice-lab-v1'
@@ -52,7 +52,9 @@ export function readLabDraft(value: unknown): LabDraft {
   const ids = new Set<string>()
   const heardWords = new Set<string>()
   for (const candidate of candidates.slice(0, 500)) {
-    const row = normalizeVocabulary([candidate])[0]
+    // Only the plain text-rule fields; this prototype keeps its own card kinds.
+    const normalized = normalizeVocabulary([candidate])[0]
+    const row = normalized && { id: normalized.id, heard: normalized.heard, meant: normalized.meant, enabled: normalized.enabled }
     if (!row || !row.id.trim() || row.id.length > 100 || ids.has(row.id)) continue
     // Unknown kinds are dropped rather than interpreted as correction rules.
     if (!['word', 'phrase', 'sound'].includes(candidate.kind)) continue
@@ -79,7 +81,9 @@ export function validModelSlug(value: string): boolean {
   return value.length <= 160 && /^[a-zA-Z0-9._-]+\/[a-zA-Z0-9._:+-]+$/.test(value)
 }
 export function textRules(cards: VoiceCard[]): VocabularyEntry[] {
-  return cards.filter((card) => card.kind !== 'sound')
+  return cards
+    .filter((card) => card.kind !== 'sound')
+    .map(({ id, heard, meant, enabled }) => ({ id, heard, meant, enabled }))
 }
 
 export type BillingClass = 'dictation' | 'recovery' | 'cues'

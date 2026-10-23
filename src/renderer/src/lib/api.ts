@@ -52,6 +52,18 @@ function mockApi(): Window['s2t'] {
       await navigator.clipboard.writeText(renderOutput(item, memory.settings.output, format))
       return true
     },
+    learnWord: async (request) => {
+      const { learnFix } = await import('@shared/vocabulary')
+      memory.settings = {
+        ...memory.settings,
+        vocabulary: learnFix(
+          memory.settings.vocabulary,
+          { heard: request.heard, meant: request.meant, kind: request.kind },
+          () => crypto.randomUUID()
+        )
+      }
+      return memory.settings
+    },
     getUpdateDiagnostics: async () =>
       'S2Teasy preview update report\nNo native update or installer was executed.',
     openUpdateInstaller: async () => {
