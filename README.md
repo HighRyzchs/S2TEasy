@@ -8,7 +8,7 @@
 
 An open source Windows dictation app with live text, recoverable sessions, and a vocabulary you control.
 
-<img src="docs/app-preview.png" alt="S2Teasy development interface showing its dictation workspace" width="100%" />
+<img src="docs/screens/app-home-dark.png" alt="S2Teasy Home screen with recent sessions, words fixed by Your voice and this week's totals, shown with sample data" width="100%" />
 
 [![Build Windows](https://github.com/HighRyzchs/S2TEasy/actions/workflows/build-windows.yml/badge.svg)](https://github.com/HighRyzchs/S2TEasy/actions/workflows/build-windows.yml)
 [![Website](https://github.com/HighRyzchs/S2TEasy/actions/workflows/pages.yml/badge.svg)](https://github.com/HighRyzchs/S2TEasy/actions/workflows/pages.yml)
@@ -16,7 +16,7 @@ An open source Windows dictation app with live text, recoverable sessions, and a
 
 [Project website](https://highryzchs.github.io/S2TEasy/) · [Interactive HUD demo](https://highryzchs.github.io/S2TEasy/overlay-demo/) · [Desktop workflow](docs/OUTPUT_WORKSPACE.md) · [Concepts & architecture](docs/CONCEPTS.md) · [Getting started](#getting-started) · [Development](#development) · [Privacy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md)
 
-**New in v1.8.1: Your voice is the heart of the app.** It opens first, sits at the top of the sidebar, and brings the approved studio design into the desktop: output beside the recorder, soft cards, a shared library, a focused word editor, and Paper/Night views. Visible HUD tag/copy choices stay connected to real data. Also fixes the reproduced detached-PowerShell updater startup failure and adds an actual Electron handoff regression. [Workflow and source map →](docs/OUTPUT_WORKSPACE.md) · [Update recovery →](docs/UPDATE_TROUBLESHOOTING.md)
+**New in v1.9.0: your words, fixed before they land.** S2Teasy learns how you are misheard ("as two teasy" → S2Teasy) and fixes it while you talk. One HUD replaces two: the shortcut starts and pauses, you click a word to fix it, and a small pill asks whether to remember it. Seven HUD styles, and a redesigned app with Home, Your voice, History, Usage, HUD and Settings. [Release notes →](docs/RELEASE_NOTES.md) · [Update recovery →](docs/UPDATE_TROUBLESHOOTING.md)
 
 ```mermaid
 flowchart LR
@@ -34,14 +34,29 @@ flowchart LR
 
 ## What it does
 
-- **Dictation into Windows apps.** A configurable global shortcut, toggle or hold mode, and live phrase insertion or insertion on stop.
-- **Six HUD styles.** Ink, Frost, Liquid Glass, Cyberpunk, 8-bit, and the Studio mixer. Choose horizontal or vertical layout, size, accent color, waveform sensitivity, and your own local emblem/background image.
-- **Live HUD.** Provisional text, finalized phrases, microphone activity, nine placements on the display nearest your pointer, and speech-volume-reactive waveforms. Stop finishes a recording; Cancel releases the microphone and keeps saved work. Errors dismiss automatically after eight seconds and remain recoverable in History. The overlay avoids taking keyboard focus.
-- **Recoverable sessions.** Finalized text is checkpointed before insertion. Temporary local audio enables retry after connection or paste failures. History distinguishes saved, interrupted, failed, and cancelled sessions.
+- **Dictation into Windows apps.** A global shortcut starts, pauses and resumes. Words are typed live as each phrase settles, or all at once when you finish (draft first). A paused session finishes by itself after a delay you choose.
+- **Your words, learned.** Fix a word in the HUD and S2Teasy offers to remember it as a name or as the way you say it. Every way a word gets misheard is kept, including several heard words for one meant word, and applied the next time you speak. A word that might still be the start of a learned phrase waits a moment before it is typed, so names are never typed half-fixed.
+- **One HUD you can edit.** Click your words while you keep talking, or drag across several. Already-typed text is replaced in place only when nothing else touched the app since S2Teasy typed it; otherwise the fix stays in History and your text is left alone. Copy, a speech-cue switch and a click-through window.
+- **Seven HUD styles.** Island, Caption, Edge glow, Cyberpunk, 8-bit, Ghost text and Speech balloon, each recolorable and resizable, in nine screen positions. [Try them in the browser →](https://highryzchs.github.io/S2TEasy/overlay-demo/)
+- **Recoverable sessions.** Finalized text is saved before it is typed. Temporary local audio enables retry after connection or paste failures, and History plays it back.
 - **Your choice of engine.** router.audio streaming, OpenRouter audio-input models, or an already-running local speech server.
-- **Explicit vocabulary.** Add, disable, or remove whole-word and phrase corrections. Original recognition text is retained alongside corrected text.
-- **Voice practice without typing.** Give a word/phrase its intended text, consent to local audio retention for that take, record it, and compare the recognized text. Export a WAV plus a JSON label from History. No training dataset is uploaded automatically.
-- **A customizable workspace.** Dark, light, or system appearance; microphone selection and processing; searchable, editable history.
+- **Speech cues (optional).** Emotion and delivery tags such as `[excited]` or `[laughs]` written into copied or typed text, before the words, after them or as a context note. Off by default; one audio-model analysis per session when on, billed by your provider.
+- **Usage you can read.** A local analytics page: spend by purpose, time, words, fixes, words per app, how often your own words come out right, and per-model latency and failures. Nothing is sent anywhere.
+
+## Screens
+
+Sample data, real app. Regenerate these with `npm run screenshots`.
+
+| | |
+| --- | --- |
+| <img src="docs/screens/app-your-voice-dark.png" alt="Your voice: the words S2Teasy knows, how each is misheard and how often it comes out right" /> | <img src="docs/screens/app-history-dark.png" alt="History: a session with its fixed words underlined and what changed" /> |
+| **Your voice.** Words, practice and speech cues. | **History.** What you said, what was fixed, audio playback. |
+| <img src="docs/screens/app-usage-dark.png" alt="Usage: spend per day split by speech, emotion cues and recovery" /> | <img src="docs/screens/app-hud-dark.png" alt="HUD settings with a live preview and the seven styles" /> |
+| **Usage.** Local analytics, unknown prices kept visible. | **HUD.** Live preview, styles, behavior and position. |
+| <img src="docs/screens/app-home-light.png" alt="Home in the light theme" /> | <img src="docs/screens/app-settings-dark.png" alt="Settings: speech engine, microphone, shortcut, privacy and app" /> |
+| **Light theme.** Dark, light or follow Windows. | **Settings.** One page, plain explanations. |
+
+<img src="docs/screens/hud-styles.png" alt="The seven HUD styles, each paused with an editable draft" width="100%" />
 
 ## Getting started
 
@@ -77,16 +92,16 @@ History retains the newest 400 sessions. Older app-managed sessions and their au
 
 On first launch, a three-step welcome tour lets you choose an optional name/nickname, preview your appearance and HUD, and review audio recovery before learning the recording shortcut. You can save and exit at any step. Your name stays in local settings; it is not automatically added to provider prompts or Vocabulary. Existing speech settings and History are preserved.
 
-Change or clear your name, replay the tour, and restore the setup checklist in **Settings → Profile & tour**. The Overview checklist links directly to speech-engine setup and the local microphone test. A configured engine is not presented as a verified connection. The tour itself requests no microphone access and makes no paid speech calls.
+Change or clear your name and replay the tour in **Settings → App & updates**. Home shows whether your engine, microphone and typing are set up and links to each setting; a configured engine is not presented as a verified connection until you test it. The tour itself requests no microphone access and makes no paid speech calls.
 
-<img src="docs/welcome-preview.png" alt="S2Teasy welcome tour with an optional nickname field, shown using a sample profile" width="100%" />
+<img src="docs/welcome-preview.png" alt="S2Teasy welcome tour choosing a HUD style with a live preview" width="100%" />
 
 ## Review, customize, and track usage
 
-- **HUD:** Copy the current transcript or finish into the review editor. Settings → Appearance includes nine anchors, pixel offsets, horizontal/vertical layouts, fonts, colors, image assets, and five waveform styles. HUD studio exports/imports theme JSON and downloads a microphone SVG design source and guide. Export that design as PNG/WebP before uploading it.
+- **HUD:** Click your words to fix them while talking, pause to edit at leisure, copy at any time. The HUD screen sets the style, color, size, one line or full text while talking, live or draft-first typing, the finish delay, nine anchors and pixel offsets.
 - **Corrections:** History → Review & correct suggests word/phrase replacements after saving. Choose which to remember in Your voice, or start a practice take with the intended word filled in. Saving edits changes local History; copy corrections into an already-filled external app yourself.
 - **Playback:** Retained audio plays locally. Provider word timestamps enable word highlighting, seeking, and explicitly saving a labeled word clip to Voice practice. Enable the optional word-timing request for compatible STT models; untimed/older takes retain ordinary playback. This collects labeled examples and applies vocabulary rules; acoustic fine-tuning is not implemented.
-- **Usage & spend:** 7/30/90-day charts, model breakdowns, request counts, processed audio, and CSV export. Only provider-reported costs are counted. Missing costs remain unknown; this is not your provider invoice. Metrics start with this version and stay in a separate local log, without transcript text or audio.
+- **Usage:** 7/30/90-day charts split by purpose, words, fixes, words per app, recognition of your own words, model breakdowns, and CSV export. Only provider-reported costs are counted. Missing costs remain unknown; this is not your provider invoice. Metrics start with this version and stay in a separate local log, without transcript text or audio.
 - **Speech tail:** Stop captures another 600 ms by default (configurable 0–1500 ms), flushes the capture worklet, and allows short trailing speech. Cancel still releases capture immediately. Unfinalized stream text remains available for review if the provider never commits it.
 
 For recurring `findstr` terminals after an older update, see [update troubleshooting](docs/UPDATE_TROUBLESHOOTING.md).
@@ -130,9 +145,9 @@ See [Architecture](docs/ARCHITECTURE.md) and [Windows smoke test](docs/WINDOWS_T
 
 ## Pronunciation personalization
 
-The vocabulary is a deterministic, case-insensitive post-pass over **each finalized segment**. It matches whole words/phrases using Unicode boundaries, prefers longer matches, and never cascades replacements. Rules spanning separate finalized segments are not applied. Use distinctive phrases: a rule for a common word changes every matching occurrence in new dictations.
+Personal words are applied to the text as it settles. Each word keeps every heard form you taught it (including multi-word forms such as "as two teasy"), matches whole words and phrases using Unicode boundaries, prefers longer matches, and never cascades replacements. In live typing, trailing words that could still become a learned phrase wait for the next phrase or the end of the session. Use distinctive heard forms: a form that is a common word changes every matching occurrence.
 
-For OpenRouter audio chat and Local speech, enabled intended words also become prompt hints. Dedicated OpenRouter ASR requests omit optional keyterms because support differs by provider; your correction rules still apply to their output. These are preferences; model compliance is not guaranteed. Streaming provider keyword boosting is not implemented because provider contracts differ. No acoustic adaptation or automatic fine-tuning occurs.
+Names, keywords and phrases also become recognition hints for OpenRouter audio chat models and local servers. Dedicated OpenRouter ASR requests omit optional keyterms because support differs by provider. Through router.audio, Deepgram `keyterm` hints are an opt-in experimental setting, because router.audio does not document them. Hints are preferences; model compliance is not guaranteed. No acoustic adaptation or automatic fine-tuning occurs.
 
 For pronunciation examples, open **Your voice**, enter a short target phrase, consent to saving that take, and record it. No text is inserted into another application. Review the recognition in Your voice or History, correct the intended text if necessary, and export WAV + JSON. The development build groups raw recognition results by phrase and model, showing matches and retained audio examples; this measures the recognizer, not your accent. Practice takes retain their audio even when successful-take retention is globally off, because each take has its own consent. Exported labels pair the **whole take** with the intended transcript; they are not word-aligned. Text-only historical recordings cannot recover an accent. Real adaptation requires consented audio/text pairs, an engine that supports adaptation, and evaluation on held-out recordings. See the [personal speech design](docs/PERSONAL_SPEECH_DESIGN.md) and [roadmap](docs/ROADMAP.md).
 
