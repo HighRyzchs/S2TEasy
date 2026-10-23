@@ -125,7 +125,10 @@ export function YourVoicePanel({
               <h3>Make it sound like you.</h3>
             </div>
             <button className="primary" disabled={busy || !output} onClick={() => copy(format)}>
-              Copy output ↗
+              Copy output{' '}
+              <span className="voice-arrow" aria-hidden="true">
+                ↗
+              </span>
             </button>
           </div>
           <div className="voice-output-toolbar">
@@ -224,7 +227,10 @@ export function YourVoicePanel({
                 className="text-button"
                 onClick={() => onReview(active ? (overlay.sessionId ?? item.id) : item.id)}
               >
-                Edit words & labels ↗
+                Edit words & labels{' '}
+                <span className="voice-arrow" aria-hidden="true">
+                  ↗
+                </span>
               </button>
             )}
           </div>

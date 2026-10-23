@@ -763,3 +763,8 @@
   border-color: #cee2ec;
   color: #638b9e;
 }
+.voice-arrow {
+  font-family: 'Segoe UI Symbol', 'DejaVu Sans', sans-serif;
+  font-size: 12px;
+  margin-left: 5px;
+}
