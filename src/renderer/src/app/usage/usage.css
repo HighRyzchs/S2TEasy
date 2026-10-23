@@ -1,0 +1,285 @@
+.grid-tiles.usage-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+.usage-tiles .tile strong {
+  font-size: 24px;
+}
+.usage-warning {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+}
+.spend-head {
+  flex-wrap: wrap;
+  align-items: center;
+}
+.spend-title {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+.key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--fg);
+}
+.key i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Bars: gridlines are recessive, the baseline is a touch stronger. */
+.chart {
+  --plot-h: 200px;
+  display: flex;
+  gap: 10px;
+}
+.chart.small {
+  --plot-h: 150px;
+}
+.axis-y {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: var(--plot-h);
+  min-width: 48px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--faint);
+}
+.plot-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.plot {
+  position: relative;
+  height: var(--plot-h);
+  border-bottom: 1px solid var(--line-strong);
+  background:
+    linear-gradient(var(--divider), var(--divider)) 0 0 / 100% 1px no-repeat,
+    linear-gradient(var(--divider), var(--divider)) 0 50% / 100% 1px no-repeat;
+}
+.bars {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: stretch;
+}
+.bar {
+  flex: 1 1 0;
+  min-width: 3px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 2px;
+  background: none;
+  border: 0;
+  padding: 0;
+  border-radius: 4px 4px 0 0;
+}
+.bar:hover,
+.bar:focus-visible {
+  background: var(--hover);
+}
+.bar i {
+  display: block;
+  width: 100%;
+  min-height: 2px;
+  flex-shrink: 0;
+}
+.seg-top {
+  border-radius: 4px 4px 0 0;
+}
+.axis-x {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--faint);
+}
+.tooltip {
+  position: absolute;
+  top: 6px;
+  z-index: 2;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  box-shadow: var(--shadow);
+  pointer-events: none;
+}
+.tip-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.tip-total {
+  border-top: 1px solid var(--line-strong);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+.chart-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+/* Tables */
+.table-wrap {
+  max-height: 260px;
+  overflow: auto;
+}
+.table-wrap.tall {
+  max-height: none;
+}
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+.tbl th,
+.tbl td {
+  padding: 10px;
+  border-bottom: 1px solid var(--divider);
+  text-align: left;
+  font-weight: 400;
+}
+.tbl thead th {
+  font-weight: 500;
+  color: var(--faint);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  border-bottom-color: var(--line);
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+}
+.tbl .n {
+  text-align: right;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.tbl tfoot th,
+.tbl tfoot td {
+  font-weight: 600;
+  border-bottom: 0;
+}
+.wide-table {
+  min-width: 640px;
+}
+.model-name {
+  font-size: 12.5px !important;
+  overflow-wrap: anywhere;
+}
+
+/* Horizontal bars: one hue. */
+.usage-pair > .card {
+  flex: 1 1 360px;
+}
+.hbars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hbars li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hbar-name {
+  width: 96px;
+  flex-shrink: 0;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hbar-track {
+  flex: 1 1 auto;
+  height: 12px;
+  display: flex;
+  min-width: 40px;
+}
+.hbar-track i {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  background: var(--series-1);
+  border-radius: 0 4px 4px 0;
+}
+.hbar-value {
+  width: 64px;
+  text-align: right;
+  font-size: 13px;
+}
+.bars.wide {
+  gap: 8px;
+}
+.wbar {
+  flex: 1 1 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px;
+}
+.wbar-label {
+  font-size: 11px;
+  min-height: 14px;
+}
+.wbar i {
+  display: block;
+  width: 100%;
+  max-width: 28px;
+  min-height: 2px;
+  background: var(--series-1);
+}
+.wbar-label + i {
+  flex-shrink: 0;
+}
+.outcomes {
+  font-size: 13.5px;
+}
+.card.month {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+.month > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.month-value {
+  font-size: 24px;
+  font-weight: 500;
+}
+.usage-foot {
+  max-width: 80ch;
+}

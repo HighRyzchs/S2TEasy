@@ -60,10 +60,10 @@ export function SpeechCuePanel({
     <section className="speech-cue-panel" aria-labelledby="speech-cue-title">
       <div className="cue-heading">
         <div>
-          <span className="eyebrow">VOICE INTELLIGENCE · EXPERIMENTAL</span>
+          <span className="label">Emotion cues · experimental</span>
           <h3 id="speech-cue-title">How it sounded</h3>
         </div>
-        <button className="text-button" onClick={onConfigure}>
+        <button className="link" onClick={onConfigure}>
           Configure cues →
         </button>
       </div>
@@ -72,20 +72,21 @@ export function SpeechCuePanel({
         stays unchanged; choose when to share richer context.
       </p>
       {!settings.enabled ? (
-        <p className="notice">
+        <p className="cue-notice">
           Speech cues are off. Enable them in Voice intelligence to request audio analysis.
         </p>
       ) : !item.hasAudio ? (
-        <p className="notice">
+        <p className="cue-notice">
           This take has no retained audio. For a new example, use Voice practice or enable
           successful-take retention before recording. Old text cannot recover vocal emotion.
         </p>
       ) : (
         <>
           <div className="cue-range">
-            <label>
+            <label className="field">
               Excerpt start (seconds)
               <input
+                className="input"
                 type="number"
                 min="0"
                 step="0.1"
@@ -94,9 +95,10 @@ export function SpeechCuePanel({
                 onChange={(e) => setStart(e.target.value)}
               />
             </label>
-            <label>
+            <label className="field">
               Excerpt end (seconds)
               <input
+                className="input"
                 type="number"
                 min="0"
                 step="0.1"
@@ -106,7 +108,7 @@ export function SpeechCuePanel({
               />
             </label>
             <button
-              className="ghost"
+              className="btn small"
               disabled={busy || active}
               onClick={() => {
                 const s = Math.floor(position / 100) / 10
@@ -122,9 +124,9 @@ export function SpeechCuePanel({
             to OpenRouter; additional audio-model charges apply. One request, no automatic retry.
             Previous results are replaced only after a successful analysis.
           </p>
-          <div className="inline">
+          <div className="actions">
             <button
-              className="primary"
+              className="btn primary"
               disabled={busy || active || !validRange}
               onClick={() =>
                 void run(async () => {
@@ -152,7 +154,7 @@ export function SpeechCuePanel({
             </button>
             {busy && pending.current && (
               <button
-                className="ghost"
+                className="btn small"
                 onClick={() =>
                   void window.s2t.cancelSpeechCues(item.id).catch((e) => setMessage(String(e)))
                 }
@@ -165,7 +167,7 @@ export function SpeechCuePanel({
       )}
       {result && (
         <div className="cue-result">
-          <p className="micro">
+          <p className="hint mono">
             {result.model} · {(result.startMs / 1000).toFixed(1)}–{(result.endMs / 1000).toFixed(1)}
             s · audio {result.quality}
           </p>
@@ -177,7 +179,7 @@ export function SpeechCuePanel({
             intervals use volume only, not speech or emotion recognition.
           </p>
           {!result.cues.length && (
-            <p className="notice">
+            <p className="cue-notice">
               No cues matched your settings, or the model abstained. No emotion is assumed.
             </p>
           )}
@@ -187,7 +189,7 @@ export function SpeechCuePanel({
                 <strong>
                   {cue.kind} · {cue.userLabel ?? cue.label}
                 </strong>
-                <span className="micro">
+                <span className="hint mono">
                   {(cue.startMs / 1000).toFixed(1)}–{(cue.endMs / 1000).toFixed(1)}s
                 </span>
               </div>
@@ -196,9 +198,10 @@ export function SpeechCuePanel({
               </p>
               <p>{cue.evidence}</p>
               <div className="cue-edit">
-                <label>
+                <label className="field">
                   What did you mean?
                   <select
+                    className="select"
                     value={cue.userLabel ?? ''}
                     disabled={busy || active || cue.dismissed}
                     onChange={(e) => {
@@ -221,7 +224,7 @@ export function SpeechCuePanel({
                   </select>
                 </label>
                 <button
-                  className="ghost"
+                  className="btn small"
                   disabled={busy || active}
                   onClick={() =>
                     void run(async () =>
@@ -238,7 +241,7 @@ export function SpeechCuePanel({
                 </button>
               </div>
               {cue.userLabel && (
-                <p className="micro">
+                <p className="hint mono">
                   Your label is saved separately. Original model suggestion is preserved.
                 </p>
               )}
@@ -251,7 +254,7 @@ export function SpeechCuePanel({
           </p>
           <div className="cue-actions">
             <button
-              className="ghost"
+              className="btn small"
               disabled={busy}
               onClick={() =>
                 void run(async () => {
@@ -265,7 +268,7 @@ export function SpeechCuePanel({
               Copy expressive text
             </button>
             <button
-              className="ghost"
+              className="btn small"
               disabled={busy}
               onClick={() =>
                 void run(async () => {
@@ -279,7 +282,7 @@ export function SpeechCuePanel({
               Copy structured context
             </button>
             <button
-              className="text-button"
+              className="link"
               disabled={busy || active}
               onClick={() =>
                 void run(async () => onHistory(await window.s2t.clearSpeechCues(item.id)))
@@ -291,7 +294,7 @@ export function SpeechCuePanel({
         </div>
       )}
       {message && (
-        <p role="status" className="notice">
+        <p role="status" className="cue-notice">
           {message}
         </p>
       )}
