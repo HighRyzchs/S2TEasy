@@ -2,11 +2,15 @@
 
 [Open the working prototype](https://highryzchs.github.io/S2TEasy/voice-lab/).
 
+**Expression & tone** now opens first. It is the proposed audio-to-tags experience: emotion, delivery, pacing and nonverbal events inserted beside the original words. This is separate from vocabulary correction and sound shortcuts. See the [expressive-transcription design and code map](EXPRESSIVE_TRANSCRIPTION.md).
+
+Try sample tag output and phrase-level corrections, or choose **Try my voice locally** for real acoustic measurements and an optional neutral reference. Example emotions are simulated; personal-recording tags are user labeled. No automatic emotion classifier or cloud call runs in this browser. Up to eight labeled takes and a neutral reference stay in page memory only.
+
 Vocabulary and Voice Practice currently live in separate desktop tabs. This browser experiment brings them together as **Your voice**: one small library for names, words, phrases, and labeled sound examples. It is a proposed interface to try before migrating the desktop app.
 
 ## Try it in a minute
 
-1. Open a sample card or choose **Add something that’s you**.
+1. Choose **Words & sounds**. Open a sample card or choose **Add something that’s you**.
 2. Choose a word, phrase, or sound cue. For a text rule, connect the mistaken transcript to what you want written.
 3. Optionally record a short example, stop, and play it back. Save the card.
 4. Type the mistaken words in **See the difference**. Enabled word and phrase rules apply immediately. Edit or pause them on their cards.

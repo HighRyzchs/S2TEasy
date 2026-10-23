@@ -2191,3 +2191,17 @@ summary:focus-visible {
   vertical-align: -2px;
   flex-shrink: 0;
 }
+
+@media (min-width: 701px) {
+  .vl-sidebar nav button {
+    gap: 8px;
+  }
+}
+@media (max-width: 700px) {
+  .vl-sidebar nav {
+    flex-wrap: wrap;
+  }
+  .vl-sidebar nav button {
+    flex-basis: 45%;
+  }
+}

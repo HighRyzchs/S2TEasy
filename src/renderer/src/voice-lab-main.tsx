@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { applyVocabulary } from '@shared/vocabulary'
 import { VoiceLabRecorder } from './VoiceLabRecorder'
+import { ExpressionLab } from './ExpressionLab'
 import {
   defaultModels,
   LAB_STORAGE,
@@ -539,7 +540,7 @@ function VoiceLab() {
   const [initial] = useState(initialDraft)
   const [cards, setCards] = useState(initial.cards)
   const [models, setModels] = useState(initial.models)
-  const [page, setPage] = useState<'voice' | 'models' | 'usage'>('voice')
+  const [page, setPage] = useState<'expression' | 'voice' | 'models' | 'usage'>('expression')
   const [filter, setFilter] = useState<'all' | VoiceKind>('all')
   const [query, setQuery] = useState('')
   const [text, setText] = useState('Hey shiv on, let’s try s two t easy.\non my way shortcut')
@@ -548,6 +549,7 @@ function VoiceLab() {
   const [notice, setNotice] = useState('')
   const [storageError, setStorageError] = useState('')
   const [resetting, setResetting] = useState(false)
+  const [labRevision, setLabRevision] = useState(0)
   const resetDialog = useRef<HTMLDialogElement>(null)
   useEffect(() => {
     try {
@@ -588,7 +590,8 @@ function VoiceLab() {
           <nav aria-label="Prototype sections">
             {(
               [
-                { id: 'voice', icon: '✳', label: 'Your voice' },
+                { id: 'expression', icon: '〰', label: 'Expression & tone' },
+                { id: 'voice', icon: '✳', label: 'Words & sounds' },
                 { id: 'models', icon: '◈', label: 'Models & settings' },
                 { id: 'usage', icon: '▥', label: 'Usage & spend' }
               ] as const
@@ -630,7 +633,8 @@ function VoiceLab() {
               {storageError}
             </p>
           )}
-          {page === 'voice' ? (
+          <ExpressionLab key={labRevision} active={page === 'expression'} model={models.cues} />
+          {page === 'expression' ? null : page === 'voice' ? (
             <>
               <section className="vl-hero">
                 <div>
@@ -804,7 +808,7 @@ function VoiceLab() {
                   </p>
                   <div className="vl-sound-invite">
                     <span>♫</span>
-                    <strong>Have a sound of your own?</strong>
+                    <strong>A sound shortcut of your own?</strong>
                     <p>
                       A happy hum. A tiny click. Start by giving it a name and an optional
                       recording.
@@ -906,7 +910,8 @@ function VoiceLab() {
             <button
               className="vl-primary"
               onClick={() => {
-                setPage('voice')
+                setPage('expression')
+                setLabRevision((value) => value + 1)
                 setCards(sampleCards)
                 setModels(defaultModels)
                 setAudio({})
