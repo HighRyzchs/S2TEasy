@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { DictationController } from './dictation'
+import { DictationController, LEAVE_MS } from './dictation'
 import { SessionJournal } from './session-journal'
 import type { CueAnalysis } from '../shared/speech-cues'
 import { defaultSettings, type HistoryItem, type RecordingCommand } from '../shared/types'
@@ -261,7 +261,7 @@ describe('recoverable dictation sessions', () => {
     t.controller.onPcm(new Uint8Array([1, 2, 3, 4]), gen)
     t.controller.recordingError('Device disconnected', gen)
     expect(t.host.onOverlay.mock.calls.at(-1)?.[0].status).toBe('error')
-    await vi.advanceTimersByTimeAsync(8000)
+    await vi.advanceTimersByTimeAsync(8000 + LEAVE_MS)
     expect(t.host.overlay.hide).toHaveBeenCalledOnce()
     expect(t.host.onOverlay.mock.calls.at(-1)?.[0].status).toBe('hidden')
     expect(t.history[0]).toMatchObject({
@@ -310,7 +310,7 @@ describe('recoverable dictation sessions', () => {
     await vi.advanceTimersByTimeAsync(21_000)
     expect(t.controller.isBusy()).toBe(false)
     expect(t.history[0]?.error).toContain('No microphone audio received')
-    await vi.advanceTimersByTimeAsync(8000)
+    await vi.advanceTimersByTimeAsync(8000 + LEAVE_MS)
     expect(t.host.overlay.hide).toHaveBeenCalled()
   })
   it('does not reopen a disabled overlay on errors', async () => {
@@ -562,5 +562,127 @@ describe('personal words while typing live', () => {
     await t.controller.start()
     await t.controller.onUtterance('audio', t.controller.currentGeneration())
     expect(t.transcribe.mock.calls[0]?.[0].vocabulary).toEqual(['S2Teasy'])
+  })
+})
+
+describe('pause, resume and finishing on its own', () => {
+  const batch = (overrides = {}) => {
+    const t = setup(overrides)
+    const replaceTail = vi.fn().mockResolvedValue(undefined)
+    let untouched = true
+    ;(t.host as Record<string, unknown>).targetUntouchedSince = () => untouched
+    const controller = new DictationController(t.host, {
+      injector: { captureTarget: vi.fn(), paste: t.paste, pasteBlock: t.paste, replaceTail },
+      transcribe: t.transcribe
+    })
+    const state = () => t.host.onOverlay.mock.calls.at(-1)?.[0]
+    return { ...t, controller, replaceTail, state, touch: () => (untouched = false) }
+  }
+
+  it('pauses on the shortcut, keeps one session across segments and finishes after the delay', async () => {
+    vi.useFakeTimers()
+    const t = batch({ finishAfterMs: 7000 })
+    t.transcribe.mockResolvedValueOnce('first part').mockResolvedValueOnce('second part')
+    await t.controller.start()
+    const gen = t.controller.currentGeneration()
+    t.controller.onPcm(new Uint8Array([1, 2]), gen)
+    await t.controller.onUtterance('a', gen)
+    t.controller.toggle()
+    expect(t.commands.at(-1)?.action).toBe('stop')
+    await t.controller.onFinished('', '', 3000, gen)
+    expect(t.controller.isPaused()).toBe(true)
+    expect(t.state()).toMatchObject({ status: 'paused' })
+    expect(t.history[0]).toMatchObject({ status: 'recording', text: 'first part' })
+
+    t.controller.toggle()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(t.commands.at(-1)?.action).toBe('start')
+    await t.controller.onUtterance('b', gen, 500)
+    expect(t.transcribe.mock.calls[1]?.[0]).toBeDefined()
+    t.controller.toggle()
+    await t.controller.onFinished('', '', 2000, gen)
+    expect(t.history).toHaveLength(1)
+    expect(t.history[0]).toMatchObject({ text: 'first part second part', durationMs: 5000 })
+
+    await vi.advanceTimersByTimeAsync(6900)
+    expect(t.history[0]?.status).toBe('recording')
+    await vi.advanceTimersByTimeAsync(200)
+    expect(t.history[0]?.status).toBe('complete')
+    expect(t.paste.mock.calls.map((call) => call[0])).toEqual(['first part', 'second part'])
+  })
+
+  it('holds the finish timer while the HUD is in use and finishes at once on Done', async () => {
+    vi.useFakeTimers()
+    const t = batch({ finishAfterMs: 4000 })
+    await t.controller.start()
+    const gen = t.controller.currentGeneration()
+    await t.controller.onUtterance('a', gen)
+    t.controller.pause()
+    await t.controller.onFinished('', '', 1000, gen)
+    t.controller.holdFinish(true)
+    expect(t.state()?.finishAt).toBeUndefined()
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(t.controller.isPaused()).toBe(true)
+    t.controller.holdFinish(false)
+    expect(t.state()?.finishAt).toBeGreaterThan(Date.now())
+    t.controller.finish()
+    await vi.advanceTimersByTimeAsync(0)
+    expect(t.history[0]?.status).toBe('complete')
+  })
+
+  it('replaces already-typed words in place only when the app was not touched since', async () => {
+    const t = batch()
+    t.transcribe.mockResolvedValue('talked to risks today')
+    await t.controller.start()
+    const gen = t.controller.currentGeneration()
+    await t.controller.onUtterance('a', gen)
+    const id = t.history[0]!.id
+    const start = 'talked to '.length
+    const result = await t.controller.editText(id, start, start + 'risks'.length, 'Ryzchs')
+    expect(result).toBe('typed')
+    expect(t.replaceTail).toHaveBeenCalledWith(12, 'Ryzchs today ', expect.any(AbortSignal))
+    expect(t.history[0]).toMatchObject({
+      text: 'talked to Ryzchs today',
+      edits: [{ from: 'risks', to: 'Ryzchs' }]
+    })
+
+    t.touch()
+    const again = await t.controller.editText(id, 0, 'talked'.length, 'spoke')
+    expect(again).toBe('kept-in-history')
+    expect(t.replaceTail).toHaveBeenCalledTimes(1)
+    expect(t.history[0]?.text).toBe('spoke to Ryzchs today')
+    expect(t.state()?.notice).toMatch(/left alone/)
+  })
+
+  it('edits a draft without typing anything until it is inserted', async () => {
+    const t = batch({ insertMode: 'final' })
+    t.transcribe.mockResolvedValue('grab a quick bike')
+    await t.controller.start()
+    const gen = t.controller.currentGeneration()
+    await t.controller.onUtterance('a', gen)
+    const id = t.history[0]!.id
+    expect(await t.controller.editText(id, 13, 17, 'bite')).toBe('saved')
+    expect(t.paste).not.toHaveBeenCalled()
+    t.controller.stop()
+    await t.controller.onFinished('', '', 1000, gen)
+    expect(t.paste).toHaveBeenCalledWith('grab a quick bite', expect.any(AbortSignal))
+  })
+
+  it('rejects edits to a stale range or a finished session', async () => {
+    const t = batch()
+    await t.controller.start()
+    const gen = t.controller.currentGeneration()
+    await t.controller.onUtterance('a', gen)
+    const id = t.history[0]!.id
+    await expect(t.controller.editText(id, 2, 99, 'x')).rejects.toThrow(/changed/)
+    await expect(t.controller.editText('other', 0, 1, 'x')).rejects.toThrow(/no longer open/)
+  })
+
+  it('keeps the old stop behavior for practice takes', async () => {
+    const t = batch()
+    await t.controller.startPractice('Ryzchs')
+    t.controller.toggle()
+    expect(t.state()?.status).toBe('transcribing')
+    expect(t.controller.isPaused()).toBe(false)
   })
 })

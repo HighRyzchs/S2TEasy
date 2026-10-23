@@ -1,8 +1,8 @@
 import { BrowserWindow, nativeImage, screen, shell } from 'electron'
 import { join } from 'node:path'
-import { overlaySize, overlayCoordinates } from '../shared/overlay-layout'
+import { overlayCoordinates } from '../shared/overlay-layout'
 import type { OverlayPosition } from '../shared/types'
-import type { OverlayTheme } from '../shared/overlay-theme'
+import { hudWindowSize, type HudSettings } from '../shared/hud'
 import iconPath from '../../resources/icon.png?asset'
 import { attachOverlayTopmost, pinOverlayTopmost } from './overlay-topmost'
 
@@ -92,7 +92,8 @@ export function createOverlayWindow(): BrowserWindow {
   })
   window.setAlwaysOnTop(true, 'screen-saver')
   window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-  window.setIgnoreMouseEvents(false)
+  // Transparent stage: clicks pass through until the pointer is over the HUD itself.
+  window.setIgnoreMouseEvents(true, { forward: true })
   attachOverlayTopmost(window)
   if (isDev && process.env.ELECTRON_RENDERER_URL) {
     window.loadURL(`${process.env.ELECTRON_RENDERER_URL}/overlay.html`)
@@ -130,19 +131,30 @@ export function createRecorderWindow(): BrowserWindow {
 
 export function placeOverlay(
   window: BrowserWindow,
+  hud: HudSettings,
   position: OverlayPosition = 'bottom',
   offset = { x: 0, y: 0 }
 ): void {
   if (window.isDestroyed()) return
   const display = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
-  const point = overlayCoordinates(display.workArea, window.getBounds(), position, offset)
+  sizeOverlay(window, hud, display.workArea.width)
+  // Edge glow runs along the bottom edge of the screen; every other style keeps a margin.
+  const point =
+    hud.style === 'edge'
+      ? {
+          x: display.workArea.x,
+          y: display.workArea.y + display.workArea.height - window.getBounds().height
+        }
+      : overlayCoordinates(display.workArea, window.getBounds(), position, offset)
   window.setPosition(point.x, point.y)
   pinOverlayTopmost(window)
 }
 
-export function sizeOverlay(window: BrowserWindow, theme: OverlayTheme): void {
+export function sizeOverlay(window: BrowserWindow, hud: HudSettings, displayWidth?: number): void {
   if (window.isDestroyed()) return
-  const { width, height } = overlaySize(theme)
+  const width = displayWidth ?? screen.getDisplayNearestPoint(window.getBounds()).workArea.width
+  const size = hudWindowSize(hud, width)
   const bounds = window.getBounds()
-  if (bounds.width !== width || bounds.height !== height) window.setSize(width, height)
+  if (bounds.width !== size.width || bounds.height !== size.height)
+    window.setSize(size.width, size.height)
 }

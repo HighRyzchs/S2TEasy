@@ -64,6 +64,14 @@ function mockApi(): Window['s2t'] {
       }
       return memory.settings
     },
+    // Browser preview has no session to edit; the HUD showcase simulates its own.
+    hudEdit: async () => 'saved',
+    hudPause: async () => undefined,
+    hudFinish: async () => undefined,
+    hudHold: () => undefined,
+    hudCues: async () => undefined,
+    hudFocus: async () => undefined,
+    hudPointer: () => undefined,
     getUpdateDiagnostics: async () =>
       'S2Teasy preview update report\nNo native update or installer was executed.',
     openUpdateInstaller: async () => {

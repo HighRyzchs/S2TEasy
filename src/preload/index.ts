@@ -20,6 +20,21 @@ export type S2TApi = {
   saveOutput: (value: OutputPreferences) => Promise<AppSettings>
   copyOutput: (id: string, format: 'plain' | 'tags' | 'json') => Promise<boolean>
   learnWord: (request: LearnWordRequest) => Promise<AppSettings>
+  /** Replace characters [start, end) of the open session's text. */
+  hudEdit: (
+    sessionId: string,
+    start: number,
+    end: number,
+    text: string
+  ) => Promise<'typed' | 'saved' | 'kept-in-history'>
+  hudPause: () => Promise<void>
+  hudFinish: () => Promise<void>
+  hudHold: (held: boolean) => void
+  hudCues: (on: boolean) => Promise<void>
+  /** The HUD needs keyboard focus to edit; false gives focus back to the app being typed into. */
+  hudFocus: (focus: boolean) => Promise<void>
+  /** The pointer is over a visible part of the HUD (clicks there go to the HUD, elsewhere through). */
+  hudPointer: (inside: boolean) => void
 
   getUpdateDiagnostics: () => Promise<string>
   openUpdateInstaller: () => Promise<UpdateStatus>
@@ -83,6 +98,14 @@ const api: S2TApi = {
   saveOutput: (value) => ipcRenderer.invoke(IPC.SAVE_OUTPUT, value),
   copyOutput: (id, format) => ipcRenderer.invoke(IPC.COPY_OUTPUT, id, format),
   learnWord: (request) => ipcRenderer.invoke(IPC.LEARN_WORD, request),
+  hudEdit: (sessionId, start, end, text) =>
+    ipcRenderer.invoke(IPC.HUD_EDIT, sessionId, start, end, text),
+  hudPause: () => ipcRenderer.invoke(IPC.HUD_PAUSE),
+  hudFinish: () => ipcRenderer.invoke(IPC.HUD_FINISH),
+  hudHold: (held) => ipcRenderer.send(IPC.HUD_HOLD, held),
+  hudCues: (on) => ipcRenderer.invoke(IPC.HUD_CUES, on),
+  hudFocus: (focus) => ipcRenderer.invoke(IPC.HUD_FOCUS, focus),
+  hudPointer: (inside) => ipcRenderer.send(IPC.HUD_POINTER, inside),
   getUpdateDiagnostics: () => ipcRenderer.invoke(IPC.GET_UPDATE_DIAGNOSTICS),
   openUpdateInstaller: () => ipcRenderer.invoke(IPC.OPEN_UPDATE_INSTALLER),
   openUpdateDiagnostics: () => ipcRenderer.invoke(IPC.OPEN_UPDATE_DIAGNOSTICS),

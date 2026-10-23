@@ -7,7 +7,8 @@ import {
   joinUtterances,
   normalizeTranscript,
   streamingAdvance,
-  streamingPartial
+  streamingPartial,
+  withTrailingSpace
 } from '../shared/transcript'
 import {
   applyVocabulary,
@@ -45,6 +46,11 @@ type Host = {
   onReview?: (id: string) => void
   /** Fixes made by personal words in a completed session, for per-word statistics. */
   onVocabularyHits?: (hits: VocabularyHit[]) => void
+  /**
+   * True when nothing has touched the target app since `since` (no keys or clicks outside the HUD),
+   * so text S2Teasy typed is still at the caret and can be replaced in place. Without it, never.
+   */
+  targetUntouchedSince?: (since: number) => boolean
   analyzeCompleted?: (
     item: HistoryItem,
     settings: AppSettings,
@@ -53,10 +59,14 @@ type Host = {
 }
 
 type Dependencies = {
-  injector: Pick<TextInjector, 'captureTarget' | 'paste' | 'pasteBlock'>
+  injector: Pick<TextInjector, 'captureTarget' | 'paste' | 'pasteBlock'> &
+    Partial<Pick<TextInjector, 'replaceTail' | 'restoreTarget'>>
   transcribe: (input: TranscribeInput) => Promise<string>
   createStream: () => RouterAudioClient
 }
+
+/** How long the HUD's exit animation gets before its window hides. */
+export const LEAVE_MS = 420
 
 export class DictationController {
   private recording = false
@@ -64,10 +74,22 @@ export class DictationController {
   private generation = 0
   private startedAt = 0
   private liveParts: string[] = []
-  // Live typing: what has been typed so far (corrected), and how many raw words that consumed.
+  // Settled text: words that will not change any more except by the user's own edits (corrected),
+  // and how many raw words that consumed. In live mode settled words are typed as they settle.
   private typedText = ''
   private typedRawWords = 0
   private hits: VocabularyHit[] = []
+  // Live mode: exactly what S2Teasy has typed into the target app, and when it last typed.
+  private targetText = ''
+  private lastTypedAt = 0
+  // Pause/resume: a session is one or more recorded segments in the same History item.
+  private pausing = false
+  private paused = false
+  private segmentStartMs = 0
+  private finishTimer: NodeJS.Timeout | null = null
+  private finishAt = 0
+  private finishHeld = false
+  private finishRemaining = 0
   private workChain: Promise<void> = Promise.resolve()
   private state: OverlayState = emptyOverlay()
   private hideTimer: NodeJS.Timeout | null = null
@@ -107,10 +129,123 @@ export class DictationController {
     return this.generation
   }
 
+  /**
+   * The shortcut starts, pauses and resumes. A paused session finishes by itself after the finish
+   * delay (or with Done); pressing during finishing cancels it. Practice takes stop on the shortcut.
+   */
   toggle(): void {
-    if (this.recording) this.stop()
+    if (this.recording) {
+      if (this.practiceText) this.stop()
+      else this.pause()
+    } else if (this.paused) void this.resume()
     else if (this.busy) this.cancel()
+    else void this.start()
+  }
+
+  /** Hold-to-talk: pressing starts or resumes; releasing pauses. */
+  holdStart(): void {
+    if (this.paused) void this.resume()
     else if (!this.busy) void this.start()
+  }
+  holdEnd(): void {
+    if (!this.recording) return
+    if (this.practiceText) this.stop()
+    else this.pause()
+  }
+
+  isPaused(): boolean {
+    return this.paused
+  }
+
+  /** Give focus back to the app the session types into, after editing in the HUD. */
+  restoreTarget(): void {
+    this.dependencies.injector.restoreTarget?.()
+  }
+
+  pause(): void {
+    if (!this.recording || this.pausing) return
+    if (!this.captureStarted) {
+      this.cancel()
+      return
+    }
+    this.pausing = true
+    this.recording = false
+    this.clearWatchdog()
+    this.setState({ ...this.state, status: 'transcribing', message: 'Pausing', rms: 0, bars: [] })
+    this.command('stop')
+  }
+
+  async resume(): Promise<void> {
+    if (!this.paused || !this.settings || !this.item) return
+    const gen = this.generation
+    this.clearFinishTimer()
+    this.paused = false
+    this.recording = true
+    this.captureStarted = false
+    this.setState({ ...this.state, status: 'listening', message: 'Listening', finishAt: undefined })
+    try {
+      await this.beginSegment(gen)
+    } catch (error) {
+      this.fail(errorMessage(error), gen)
+    }
+  }
+
+  /** Done: finish now. While recording this stops capture first; while paused it completes. */
+  finish(): void {
+    if (this.paused) void this.completeFromPause()
+    else if (this.recording) this.stop()
+  }
+
+  /** The HUD holds the finish timer while the user hovers or edits, and releases it after. */
+  holdFinish(held: boolean): void {
+    if (!this.paused || held === this.finishHeld) return
+    this.finishHeld = held
+    if (held) {
+      this.finishRemaining = Math.max(1500, this.finishAt - Date.now())
+      this.clearFinishTimer()
+      this.setState({ ...this.state, finishAt: undefined })
+    } else this.startFinishTimer(this.finishRemaining)
+  }
+
+  /** Speech cues for this session only, from the HUD switch. */
+  setSessionCues(on: boolean): void {
+    if (!this.settings || !this.busy) return
+    this.settings.speechCues = { ...this.settings.speechCues, enabled: on, automatic: on }
+    this.setState({ ...this.state, cues: on })
+  }
+
+  /**
+   * Replace characters [start, end) of the session text with the user's correction. Everything heard
+   * so far settles first so the edit lands on stable text. In live mode the typed text is replaced in
+   * place only when nothing else has touched the target app since S2Teasy last typed there; otherwise
+   * the fix is kept in History and the app's text is left alone.
+   */
+  async editText(
+    sessionId: string,
+    start: number,
+    end: number,
+    replacement: string
+  ): Promise<'typed' | 'saved' | 'kept-in-history'> {
+    if (!this.busy || !this.item || this.item.id !== sessionId || this.practiceText || this.failed)
+      throw new Error('This session is no longer open for edits.')
+    const gen = this.generation
+    const chunk = this.settle(true)
+    const text = this.typedText
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end > text.length)
+      throw new Error('That part of the text has changed. Try the edit again.')
+    const next = normalizeTranscript(text.slice(0, start) + replacement.replace(/\s+/g, ' ') + text.slice(end))
+    const from = text.slice(start, end).trim()
+    this.typedText = next
+    if (from || replacement.trim())
+      this.item.edits = [...(this.item.edits ?? []), { from, to: replacement.trim() }].slice(-200)
+    this.updateText()
+    if (!this.liveTyping()) return 'saved'
+    if (chunk) await this.enqueue(gen, () => this.typeLive(chunk))
+    let result: 'typed' | 'kept-in-history' = 'typed'
+    await this.enqueue(gen, async () => {
+      result = await this.replaceTyped()
+    })
+    return result
   }
 
   async startPractice(intendedText: string): Promise<void> {
@@ -153,6 +288,13 @@ export class DictationController {
     this.typedText = ''
     this.typedRawWords = 0
     this.hits = []
+    this.targetText = ''
+    this.lastTypedAt = 0
+    this.pausing = false
+    this.paused = false
+    this.segmentStartMs = 0
+    this.finishHeld = false
+    this.clearFinishTimer()
     this.workChain = Promise.resolve()
     this.dependencies.injector.captureTarget()
     this.item = {
@@ -177,10 +319,21 @@ export class DictationController {
         ...emptyOverlay(),
         sessionId: this.item.id,
         status: 'listening',
-        message: settings.sttEngine === 'router-audio' ? 'Connecting' : 'Listening'
+        message: settings.sttEngine === 'router-audio' ? 'Connecting' : 'Listening',
+        cues: settings.speechCues.enabled && settings.speechCues.automatic
       })
       this.host.placeOverlay()
       if (settings.showOverlay) this.host.overlay.showInactive()
+      await this.beginSegment(gen)
+    } catch (error) {
+      this.fail(errorMessage(error), gen)
+    }
+  }
+
+  /** Connect the engine (streaming) and start capture for one recorded segment of the session. */
+  private async beginSegment(gen: number): Promise<void> {
+    const settings = this.settings!
+    {
       if (settings.sttEngine === 'router-audio') {
         const client = this.dependencies.createStream()
         this.stream = client
@@ -215,8 +368,6 @@ export class DictationController {
             gen
           )
       }, 1000)
-    } catch (error) {
-      this.fail(errorMessage(error), gen)
     }
   }
 
@@ -238,6 +389,9 @@ export class DictationController {
   }
 
   cancel(): void {
+    this.clearFinishTimer()
+    this.paused = false
+    this.pausing = false
     this.recordStreamUsage('cancelled')
     this.pasteAbort.abort()
     ++this.generation
@@ -301,8 +455,9 @@ export class DictationController {
     if (gen !== this.generation || this.settings?.sttEngine === 'router-audio')
       return Promise.resolve()
     // One ordered queue for network responses and insertion. A rejected paste never poisons future sessions.
+    const offset = this.segmentStartMs + startMs
     return this.enqueue(gen, async () => {
-      const text = await this.transcribe(wavBase64, gen, startMs)
+      const text = await this.transcribe(wavBase64, gen, offset)
       if (!this.valid(gen)) return
       await this.acceptFinal(text, gen)
     })
@@ -316,14 +471,15 @@ export class DictationController {
     leftoverStartMs = 0
   ): Promise<void> {
     if (!this.valid(gen)) return
+    const pausing = this.pausing
     this.recording = false
     try {
       if (this.item) {
-        this.item.durationMs = durationMs
-        this.item.status = 'processing'
+        this.item.durationMs = this.segmentStartMs + durationMs
+        if (!pausing) this.item.status = 'processing'
         this.checkpoint()
       }
-      this.setState({ ...this.state, status: 'transcribing', message: 'Finishing' })
+      if (!pausing) this.setState({ ...this.state, status: 'transcribing', message: 'Finishing' })
       if (this.stream) {
         const stream = this.stream
         await stream.finish()
@@ -333,99 +489,149 @@ export class DictationController {
       if (leftoverBase64 && this.settings?.sttEngine !== 'router-audio')
         await this.onUtterance(leftoverBase64, gen, leftoverStartMs)
       await this.workChain
+      this.segmentStartMs += durationMs
       if (!this.valid(gen) || !this.item || !this.settings) return
-      // Type any words held back as a possible phrase start; no more speech can complete them.
-      if (this.liveTyping()) {
-        const chunk = this.settleLive(true)
-        this.updateText()
-        if (chunk) await this.enqueue(gen, () => this.typeLive(chunk))
-        if (!this.valid(gen)) return
-      }
-      if (this.item.unconfirmedText?.trim()) {
-        this.fail(
-          'The provider did not finalize the last words. Unconfirmed text and retained audio are kept in History for review.',
-          gen
-        )
+      if (pausing) {
+        this.pausing = false
+        this.paused = true
+        this.checkpoint()
+        this.setState({ ...this.state, status: 'paused', message: 'Paused', rms: 0, bars: [] })
+        this.startFinishTimer(this.finishDelay())
         return
       }
-      if (!this.item.text.trim()) {
-        this.fail('No finalized speech received. Recover retained audio from History.', gen)
-        return
-      }
-      // Words are durable before optional audio interpretation. Its failure must not lose dictation.
-      if (
-        this.settings.speechCues.enabled &&
-        this.settings.speechCues.automatic &&
-        this.host.analyzeCompleted
-      ) {
-        this.setState({
-          ...this.state,
-          status: 'transcribing',
-          message: 'Words saved · listening for delivery',
-          rms: 0,
-          bars: []
-        })
-        try {
-          const analysis = await this.host.analyzeCompleted(
-            this.item,
-            this.settings,
-            this.requestAbort!.signal
-          )
-          if (!this.valid(gen)) return
-          this.item.cueAnalysis = analysis
-        } catch (error) {
-          if (!this.valid(gen)) return
-          this.item.cueError = `Voice cues unavailable: ${errorMessage(error)}`
-        }
-      }
-      // Persist before attempting any final insertion; focus/clipboard failures cannot erase text.
-      this.checkpoint()
-      if (!this.practiceText && !this.reviewRequested && this.settings.insertMode === 'final') {
-        try {
-          await this.dependencies.injector.paste(this.item.text, this.pasteAbort.signal)
-        } catch (error) {
-          if (!(
-            this.reviewRequested &&
-            this.pasteAbort.signal.aborted &&
-            error instanceof Error &&
-            error.name === 'AbortError'
-          ))
-            throw error
-        }
-      }
-      if (this.practiceText) this.item.text = this.practiceText
-      if (!this.valid(gen)) return
-      this.recordStreamUsage('success')
-      const hits = this.liveTyping()
-        ? this.hits
-        : applyVocabularyDetailed(this.item.rawText ?? '', this.vocabulary()).hits
-      if (hits.length) {
-        this.item.fixes = hits.slice(0, 200)
-        this.host.onVocabularyHits?.(hits)
-      }
-      this.item.status = 'complete'
-      this.item.error = undefined
-      if (!this.settings.keepAudioForTraining) this.host.journal.removeAudio(this.item.id)
-      this.checkpoint()
-      this.busy = false
-      this.clearWatchdog()
-      this.setState({
-        ...this.state,
-        status: 'success',
-        partial: this.item.text,
-        message: this.practiceText
-          ? 'Practice take saved'
-          : this.reviewRequested
-            ? 'Saved for review'
-            : 'Saved & inserted',
-        elapsedMs: durationMs,
-        rms: 0,
-        bars: []
-      })
-      this.scheduleHide(15000)
+      await this.complete(gen)
     } catch (error) {
       this.fail(errorMessage(error), gen)
     }
+  }
+
+  private async completeFromPause(): Promise<void> {
+    const gen = this.generation
+    if (!this.paused || !this.item) return
+    this.paused = false
+    this.clearFinishTimer()
+    this.item.status = 'processing'
+    this.setState({ ...this.state, status: 'transcribing', message: 'Finishing', finishAt: undefined })
+    try {
+      await this.complete(gen)
+    } catch (error) {
+      this.fail(errorMessage(error), gen)
+    }
+  }
+
+  /** Everything after the last audio is in: type held words, analyze, insert (draft mode), save. */
+  private async complete(gen: number): Promise<void> {
+    if (!this.valid(gen) || !this.item || !this.settings) return
+    // Type any words held back as a possible phrase start; no more speech can complete them.
+    if (!this.practiceText) {
+      const chunk = this.settle(true)
+      this.updateText()
+      if (chunk) await this.enqueue(gen, () => this.typeLive(chunk))
+      if (!this.valid(gen)) return
+    }
+    if (this.item.unconfirmedText?.trim()) {
+      this.fail(
+        'The provider did not finalize the last words. Unconfirmed text and retained audio are kept in History for review.',
+        gen
+      )
+      return
+    }
+    if (!this.item.text.trim()) {
+      this.fail('No finalized speech received. Recover retained audio from History.', gen)
+      return
+    }
+    // Words are durable before optional audio interpretation. Its failure must not lose dictation.
+    if (
+      this.settings.speechCues.enabled &&
+      this.settings.speechCues.automatic &&
+      this.host.analyzeCompleted
+    ) {
+      this.setState({
+        ...this.state,
+        status: 'transcribing',
+        message: 'Words saved · listening for delivery',
+        rms: 0,
+        bars: []
+      })
+      try {
+        const analysis = await this.host.analyzeCompleted(
+          this.item,
+          this.settings,
+          this.requestAbort!.signal
+        )
+        if (!this.valid(gen)) return
+        this.item.cueAnalysis = analysis
+      } catch (error) {
+        if (!this.valid(gen)) return
+        this.item.cueError = `Voice cues unavailable: ${errorMessage(error)}`
+      }
+    }
+    // Persist before attempting any final insertion; focus/clipboard failures cannot erase text.
+    this.checkpoint()
+    if (!this.practiceText && !this.reviewRequested && this.settings.insertMode === 'final') {
+      try {
+        await this.dependencies.injector.paste(this.item.text, this.pasteAbort.signal)
+      } catch (error) {
+        if (!(
+          this.reviewRequested &&
+          this.pasteAbort.signal.aborted &&
+          error instanceof Error &&
+          error.name === 'AbortError'
+        ))
+          throw error
+      }
+    }
+    if (this.practiceText) this.item.text = this.practiceText
+    if (!this.valid(gen)) return
+    this.recordStreamUsage('success')
+    const hits = this.practiceText
+      ? applyVocabularyDetailed(this.item.rawText ?? '', this.vocabulary()).hits
+      : this.hits
+    if (hits.length) {
+      this.item.fixes = hits.slice(0, 200)
+      this.host.onVocabularyHits?.(hits)
+    }
+    this.item.status = 'complete'
+    this.item.error = undefined
+    if (!this.settings.keepAudioForTraining) this.host.journal.removeAudio(this.item.id)
+    this.checkpoint()
+    this.busy = false
+    this.clearWatchdog()
+    this.setState({
+      ...this.state,
+      status: 'success',
+      partial: this.item.text,
+      message: this.practiceText
+        ? 'Practice take saved'
+        : this.reviewRequested
+          ? 'Saved for review'
+          : this.settings.insertMode === 'live'
+            ? 'Saved & typed'
+            : 'Saved & inserted',
+      elapsedMs: this.item.durationMs,
+      rms: 0,
+      bars: [],
+      finishAt: undefined
+    })
+    this.scheduleHide(2200)
+  }
+
+  private finishDelay(): number {
+    const ms = this.settings?.finishAfterMs ?? 7000
+    return Math.min(30_000, Math.max(2000, ms))
+  }
+
+  private startFinishTimer(ms: number): void {
+    this.clearFinishTimer()
+    if (this.finishHeld) return
+    this.finishAt = Date.now() + ms
+    this.finishTimer = setTimeout(() => void this.completeFromPause(), ms)
+    this.setState({ ...this.state, finishAt: this.finishAt })
+  }
+
+  private clearFinishTimer(): void {
+    if (this.finishTimer) clearTimeout(this.finishTimer)
+    this.finishTimer = null
   }
 
   async insertNow(text: string): Promise<void> {
@@ -545,13 +751,21 @@ export class DictationController {
     }
     if (this.item) {
       this.item.unconfirmedText = undefined
-      if (words?.length) this.item.words = [...(this.item.words ?? []), ...words].slice(-20_000)
+      if (words?.length)
+        this.item.words = [
+          ...(this.item.words ?? []),
+          ...words.map((word) => ({
+            ...word,
+            startMs: word.startMs + this.segmentStartMs,
+            endMs: word.endMs + this.segmentStartMs
+          }))
+        ].slice(-20_000)
     }
     const { delta } = streamingAdvance(committed, text)
     // Update committed text synchronously; consecutive WebSocket finals must see the latest prefix.
     if (delta) {
       this.liveParts.push(delta)
-      const chunk = this.liveTyping() ? this.settleLive(false) : ''
+      const chunk = this.settles() ? this.settle(false) : ''
       this.updateText()
       if (chunk) void this.enqueue(gen, () => this.typeLive(chunk))
     }
@@ -561,7 +775,7 @@ export class DictationController {
     if (!text.trim() || !this.valid(gen)) return
     this.liveParts.push(text)
     // Batch engines already run inside the ordered queue: save first, then type in place.
-    const chunk = this.liveTyping() ? this.settleLive(false) : ''
+    const chunk = this.settles() ? this.settle(false) : ''
     this.updateText()
     await this.typeLive(chunk)
   }
@@ -581,6 +795,11 @@ export class DictationController {
     return !this.practiceText && this.settings?.insertMode === 'live'
   }
 
+  /** Whether a session's text is built from settled words (every mode except practice takes). */
+  private settles(): boolean {
+    return !this.practiceText
+  }
+
   private rawWords(raw = joinUtterances(this.liveParts)): string[] {
     return normalizeTranscript(raw).split(' ').filter(Boolean)
   }
@@ -590,7 +809,7 @@ export class DictationController {
    * Trailing words that could still turn into a learned phrase wait for the next phrase (or the end
    * of the session), so "as two" is never typed before "teasy". The caller saves, then types.
    */
-  private settleLive(final: boolean): string {
+  private settle(final: boolean): string {
     const pending = this.rawWords().slice(this.typedRawWords)
     if (!pending.length) return ''
     const hold = final ? 0 : heldTailWords(pending.join(' '), this.vocabulary())
@@ -603,14 +822,44 @@ export class DictationController {
     return text
   }
 
-  private typeLive(text: string): Promise<void> {
-    if (!text || this.reviewRequested) return Promise.resolve()
-    return this.dependencies.injector.pasteBlock(text, this.pasteAbort.signal)
+  private async typeLive(text: string): Promise<void> {
+    if (!text || this.reviewRequested || !this.liveTyping()) return
+    await this.dependencies.injector.pasteBlock(text, this.pasteAbort.signal)
+    this.targetText += withTrailingSpace(text)
+    this.lastTypedAt = Date.now()
+  }
+
+  /** Bring the target app's typed text in line with the settled text, if that is still safe. */
+  private async replaceTyped(): Promise<'typed' | 'kept-in-history'> {
+    const desired = withTrailingSpace(this.typedText)
+    const old = this.targetText
+    let same = 0
+    while (same < old.length && same < desired.length && old[same] === desired[same]) same++
+    if (same === old.length && same === desired.length) return 'typed'
+    const erase = old.length - same
+    const replace = this.dependencies.injector.replaceTail
+    if (
+      !replace ||
+      erase > 400 ||
+      !this.lastTypedAt ||
+      !this.host.targetUntouchedSince?.(this.lastTypedAt)
+    ) {
+      this.notice('Fixed here and in History. The app’s text changed since, so it was left alone.')
+      return 'kept-in-history'
+    }
+    await replace.call(this.dependencies.injector, erase, desired.slice(same), this.pasteAbort.signal)
+    this.targetText = desired
+    this.lastTypedAt = Date.now()
+    return 'typed'
+  }
+
+  private notice(message: string): void {
+    this.setState({ ...this.state, notice: message, noticeAt: Date.now() })
   }
 
   /** What the HUD shows: the typed text as typed, then everything after it with personal words applied. */
   private displayText(raw = joinUtterances(this.liveParts)): string {
-    if (!this.liveTyping()) return applyVocabulary(raw, this.vocabulary())
+    if (!this.settles()) return applyVocabulary(raw, this.vocabulary())
     const rest = this.rawWords(raw).slice(this.typedRawWords).join(' ')
     return joinUtterances([this.typedText, applyVocabulary(rest, this.vocabulary())])
   }
@@ -664,6 +913,9 @@ export class DictationController {
 
   private fail(message: string, gen: number): void {
     if (gen !== this.generation || this.failed) return
+    this.clearFinishTimer()
+    this.paused = false
+    this.pausing = false
     this.recordStreamUsage('error')
     this.pasteAbort.abort()
     this.failed = true
@@ -712,9 +964,13 @@ export class DictationController {
   }
   private scheduleHide(delay = 1400): void {
     this.clearHide()
+    // The HUD plays its exit while the state says 'leaving'; the window hides once that is done.
     this.hideTimer = setTimeout(() => {
-      this.setState(emptyOverlay())
-      if (!this.host.overlay.isDestroyed()) this.host.overlay.hide()
+      this.setState({ ...this.state, status: 'leaving' })
+      this.hideTimer = setTimeout(() => {
+        this.setState(emptyOverlay())
+        if (!this.host.overlay.isDestroyed()) this.host.overlay.hide()
+      }, LEAVE_MS)
     }, delay)
   }
   private clearWatchdog(): void {

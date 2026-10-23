@@ -5,6 +5,7 @@ type NativeBridge = {
   getForegroundWindow(): unknown
   setForegroundWindow(hwnd: unknown): boolean
   sendCtrlV(): void
+  sendBackspaces(count: number): void
 }
 
 function loadNative(): NativeBridge | null {
@@ -23,6 +24,7 @@ function loadNative(): NativeBridge | null {
     )
     const VK_CONTROL = 0x11
     const VK_V = 0x56
+    const VK_BACK = 0x08
     const KEYUP = 0x0002
     return {
       getForegroundWindow: () => GetForegroundWindow(),
@@ -32,6 +34,12 @@ function loadNative(): NativeBridge | null {
         keybd_event(VK_V, 0, 0, 0)
         keybd_event(VK_V, 0, KEYUP, 0)
         keybd_event(VK_CONTROL, 0, KEYUP, 0)
+      },
+      sendBackspaces: (count) => {
+        for (let i = 0; i < count; i++) {
+          keybd_event(VK_BACK, 0, 0, 0)
+          keybd_event(VK_BACK, 0, KEYUP, 0)
+        }
       }
     }
   } catch (error) {
@@ -87,5 +95,26 @@ export class TextInjector {
 
   async pasteBlock(text: string, signal?: AbortSignal): Promise<void> {
     await this.paste(withTrailingSpace(text), signal)
+  }
+
+  /** Give focus back to the app the session started in (after editing in the HUD). */
+  restoreTarget(): boolean {
+    return !!this.hwnd && !!this.bridge?.setForegroundWindow(this.hwnd)
+  }
+
+  /**
+   * Replace the last `erase` characters S2Teasy typed with `text`. The caller has already checked
+   * that nothing else touched the target since it typed them.
+   */
+  async replaceTail(erase: number, text: string, signal?: AbortSignal): Promise<void> {
+    signal?.throwIfAborted()
+    if (!this.bridge) throw new Error('Replacing typed text requires Windows native input support.')
+    if (!this.hwnd || !this.bridge.setForegroundWindow(this.hwnd))
+      throw new Error('Could not return to the app to fix the text. The fix is saved in History.')
+    await sleep(30)
+    signal?.throwIfAborted()
+    this.bridge.sendBackspaces(erase)
+    await sleep(20 + Math.min(erase, 400))
+    if (text) await this.paste(text, signal)
   }
 }

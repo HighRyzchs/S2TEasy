@@ -6,6 +6,8 @@ type Hooks = {
   onStart: () => void
   onStop: () => void
   onToggle: () => void
+  /** Any other key press or mouse click anywhere (screen coordinates for clicks). */
+  onInput?: (input: { kind: 'key' } | { kind: 'mouse'; x: number; y: number }) => void
 }
 
 type UiohookMod = {
@@ -18,6 +20,8 @@ type UiohookMod = {
         altKey: boolean
         shiftKey: boolean
         metaKey: boolean
+        x: number
+        y: number
       }) => void
     ) => void
     start: () => void
@@ -56,6 +60,7 @@ export class HotkeyManager {
       const { uIOhook } = this.uio
       uIOhook.on('keydown', (event) => this.onKey(event, true))
       uIOhook.on('keyup', (event) => this.onKey(event, false))
+      uIOhook.on('mousedown', (event) => this.hooks?.onInput?.({ kind: 'mouse', x: event.x, y: event.y }))
       try {
         uIOhook.start()
       } catch (error) {
@@ -109,10 +114,14 @@ export class HotkeyManager {
     },
     down: boolean
   ): void {
-    if (this.mode !== 'hold' || !this.hooks) return
+    if (!this.hooks) return
     const parsed = parseHotkey(this.current)
     if (!parsed) return
     const keycode = this.lookupKey(parsed.key)
+    // The shortcut itself and bare modifiers are not typing into the target app.
+    if (down && event.keycode !== keycode && !this.isModifier(event.keycode))
+      this.hooks.onInput?.({ kind: 'key' })
+    if (this.mode !== 'hold') return
     if (keycode == null || event.keycode !== keycode) return
     const modsOk =
       Boolean(event.ctrlKey) === parsed.modifiers.includes('Control') &&
@@ -127,6 +136,14 @@ export class HotkeyManager {
       this.holdArmed = false
       this.hooks.onStop()
     }
+  }
+
+  private isModifier(keycode: number): boolean {
+    const table = this.uio?.UiohookKey
+    if (!table) return false
+    return ['Ctrl', 'CtrlRight', 'Shift', 'ShiftRight', 'Alt', 'AltRight', 'Meta', 'MetaRight'].some(
+      (name) => table[name] === keycode
+    )
   }
 
   private lookupKey(key: string): number | null {
