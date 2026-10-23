@@ -5,6 +5,7 @@
 - Personal words with learned misheard variants (including multi-word forms), kinds, clips and fix counts; phrase-aware live typing that never types half a learned phrase; engine hints for OpenRouter and local engines, opt-in Deepgram key terms through router.audio.
 - One HUD: start, pause and resume on the shortcut, a paused session finishing by itself, click-to-edit while talking, a remember pill, safe in-place replacement of typed text, copy, a per-session cue switch and seven recolorable styles.
 - The redesigned app: Home, Your voice (Words, Practice, Expression), History with app icons and playback, a local Usage analytics page, a HUD screen and a single-page Settings.
+- Live speech cues per phrase on the HUD, per-app cue rules, a monthly limit for paid extras, an opt-in context check for accent fixes, an accent check exercise, and an on-screen HUD test.
 
 ## Implemented in v1.8.0
 
@@ -27,11 +28,8 @@
 
 - **Guided diagnostics:** test the selected microphone, authentication, model slug and audio operation separately, with an actionable result for each stage. Cloud transcription test costs must be explicit; never make paid calls automatically.
 - **Speech commands and snippets:** opt-in commands for paragraphs, punctuation, and reusable text, with a literal-dictation mode to avoid surprising replacements.
-- **Per-app profiles:** choose a shortcut, formatting preference, speech-cue default and vocabulary set for writing, email, chat or coding. Sessions already record which app they typed into, so matching can stay local.
-- **Live speech cues:** tag each finished phrase while you talk (inline, ElevenLabs v3 style) instead of one analysis after the session, with on-device detection of pauses and pace and a per-session budget.
-- **Context check for accent swaps:** one bounded, edit-only request per pause that may fix words such as "bike" → "bite" where the sentence calls for it, using the swaps your practice takes found. Off by default, with cost shown.
-- **Accent check:** read a few short sentences once and list the sounds the recognizer tends to swap for you, feeding the context check.
-- **Usage limit:** a monthly spend limit that pauses paid extras (cues, context checks) while speech keeps working.
+- **Per-app profiles:** beyond the speech-cue rule shipped in v1.9.0, choose a shortcut, formatting preference and vocabulary set for writing, email, chat or coding.
+- **Cues typed inline:** live cues show on the HUD today; typing them into the app as they are heard (holding a phrase until its cue arrives) and on-device detection of pauses and pace are next.
 - **Portable preferences:** export/import vocabulary and non-secret preferences, with previews before applying changes. Keep API keys and audio out of exports by default.
 - **Accessibility pass:** keyboard navigation, screen-reader announcements, reduced motion and larger HUD controls, verified with native Windows assistive tools.
 
