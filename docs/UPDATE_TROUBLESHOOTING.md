@@ -9,15 +9,15 @@ This is a failed installation handoff. A verified download is not proof that Win
 3. Install over the existing app without uninstalling or deleting `%APPDATA%\s2teasy`. Open from the new Start-menu shortcut and verify the version in Settings.
 4. If it is still old, compare the running executable/shortcut location with the installed location. Preserve `%APPDATA%\s2teasy\update-result.json` and, if present, `update-result.json.log`. “No receipt file” is useful evidence that the helper may not have reached its first write; it does not establish why.
 
-Version 1.7.1 adds **Open update diagnostics** in Settings → Privacy & data, plus per-attempt `updates/attempt-*/helper.log`, `apply.ps1`, a pending receipt and an acknowledgment before shutdown. The receipt records target/payload paths, versions, stage and a local attempt ID. These files contain paths/Windows usernames but no API keys or transcripts by design; inspect/redact paths before sharing. Do not upload the entire app-data folder, which contains private History and recordings.
+Version 1.7.2 adds **Open update diagnostics** in Settings → Privacy & data, plus per-attempt `updates/attempt-*/helper.log`, `apply.ps1`, a pending receipt and an acknowledgment before shutdown. The receipt records target/payload paths, versions, stage and a local attempt ID. These files contain paths/Windows usernames but no API keys or transcripts by design; inspect/redact paths before sharing. Do not upload the entire app-data folder, which contains private History and recordings.
 
 An incomplete receipt pauses automatic download on startup, keeping the error visible. A success receipt for a different running version is reported as a mismatch. For installed builds, the new helper checks the executable's ProductVersion after NSIS exits. A zero installer exit code alone cannot produce an “updated” result. The exact cause on a user's computer still requires its receipt/logs; CI success does not establish desktop behavior on that computer.
 
 ## View a report inside the app
 
-Native Windows testing reproduced an unavailable `Get-FileHash` function in a helper process. The 1.7.1 helper uses .NET SHA-256 directly, avoiding that module-path dependency while retaining verification. This is a reproduced compatibility failure, not proof of the cause on every user's computer.
+Native Windows testing reproduced an unavailable `Get-FileHash` function in a helper process. The 1.7.2 helper uses .NET SHA-256 directly, avoiding that module-path dependency while retaining verification. This is a reproduced compatibility failure, not proof of the cause on every user's computer.
 
-In 1.7.1, use **Settings → Privacy & data → View update report**, then **Copy update report**. The bounded report includes the running version, selected receipt fields and the last 12 KB of the latest helper log. It reads only update-owned files, not settings/history or paths suggested by receipt contents. Nothing is uploaded automatically. Review usernames and paths before sharing. **Open update diagnostics** remains available for inspecting the files directly.
+In 1.7.2, use **Settings → Privacy & data → View update report**, then **Copy update report**. The bounded report includes the running version, selected receipt fields and the last 12 KB of the latest helper log. It reads only update-owned files, not settings/history or paths suggested by receipt contents. Nothing is uploaded automatically. Review usernames and paths before sharing. **Open update diagnostics** remains available for inspecting the files directly.
 
 ## Recurring findstr terminals after an update
 

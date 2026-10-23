@@ -1,6 +1,6 @@
 # Windows release smoke test
 
-## 1.7.1 update handoff
+## 1.7.2 update handoff
 
 Windows CI now runs `scripts/windows-update-smoke.mjs` only on disposable GitHub Actions runners. It installs real published 1.5.1 and the new NSIS package, verifies the original target's ProductVersion in a path containing shell-sensitive characters, and tests rejection of a zero-exit no-op installer. It exercises native helper acknowledgment and installer execution, not the user's desktop UI or the old 1.5.1 launcher's handoff.
 
