@@ -3,7 +3,15 @@
 import { build } from 'esbuild'
 import { createRequire } from 'node:module'
 import { spawn, spawnSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, readdirSync } from 'node:fs'
+import {
+  copyFileSync,
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  existsSync,
+  readdirSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { createHash } from 'node:crypto'
@@ -73,6 +81,10 @@ process.on('unhandledRejection',e=>{console.error(e);app.exit(1)});
 `
   )
   const electron = createRequire(import.meta.url)('electron')
+  copyFileSync(
+    resolve('resources/update-bridge.exe'),
+    join(electron, '..', 'resources', 'update-bridge.exe')
+  )
   const child = spawn(electron, [folder], { windowsHide: true, stdio: 'inherit' })
   await new Promise((done, fail) => {
     const timeout = setTimeout(() => {
@@ -104,7 +116,16 @@ process.on('unhandledRejection',e=>{console.error(e);app.exit(1)});
   while ((!existsSync(marker) || receipt().status !== 'applied') && Date.now() < deadline)
     await new Promise((r) => setTimeout(r, 100))
   if (receipt().status !== 'applied' || !existsSync(marker))
-    throw new Error('Helper did not complete after Electron exited: '+JSON.stringify(receipt())+' logs: '+readdirSync(join(diagnostics,'updates')).map(name=>readFileSync(join(diagnostics,'updates',name,'helper.log'),'utf8').slice(-3000)).join('\n'))
+    throw new Error(
+      'Helper did not complete after Electron exited: ' +
+        JSON.stringify(receipt()) +
+        ' logs: ' +
+        readdirSync(join(diagnostics, 'updates'))
+          .map((name) =>
+            readFileSync(join(diagnostics, 'updates', name, 'helper.log'), 'utf8').slice(-3000)
+          )
+          .join('\n')
+    )
   if (createHash('sha256').update(readFileSync(target)).digest('hex') !== hash)
     throw new Error('Fixture replacement hash mismatch')
   const result = {

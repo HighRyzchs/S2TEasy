@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - 'src/shared/update-install.ts'
+      - 'native/UpdateBridge.cs'
+      - 'scripts/build-update-bridge.mjs'
       - 'src/main/updater.ts'
       - 'src/main/update-helper-launch.ts'
       - 'scripts/test-electron-update-handoff.mjs'
@@ -24,6 +26,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node scripts/check-update-helper.mjs
+      - run: node scripts/build-update-bridge.mjs
       - name: Exercise actual Electron updater handoff
         run: node scripts/test-electron-update-handoff.mjs
       - name: Exercise new helper against published installers

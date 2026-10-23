@@ -2,6 +2,9 @@ appId: com.s2teasy.app
 productName: S2Teasy
 copyright: Copyright © S2Teasy
 asar: true
+extraResources:
+  - from: resources/update-bridge.exe
+    to: update-bridge.exe
 directories:
   output: release
   buildResources: resources

@@ -11,6 +11,15 @@ const app = vi.hoisted(() => ({
   quit: vi.fn()
 }))
 const launcher = vi.hoisted(() => ({ spawn: vi.fn(), openPath: vi.fn().mockResolvedValue('') }))
+vi.mock('node:fs', async () => {
+  const actual = await vi.importActual<typeof import('node:fs')>('node:fs')
+  return {
+    ...actual,
+    copyFileSync: vi.fn((_source, destination) =>
+      actual.writeFileSync(destination, 'synthetic bridge; spawning is mocked')
+    )
+  }
+})
 vi.mock('node:child_process', () => ({ spawn: launcher.spawn }))
 vi.mock('electron', () => ({ app, shell: { openPath: launcher.openPath } }))
 import { UpdateLauncher } from './updater'
@@ -187,15 +196,11 @@ it('launches one hidden helper despite repeated Restart clicks or checks during 
   expect(launcher.spawn).toHaveBeenCalledOnce()
   expect(fetchMock).toHaveBeenCalledTimes(2)
   const [executable, args, options] = launcher.spawn.mock.calls[0]
-  expect(executable.endsWith('powershell.exe')).toBe(true)
-  expect(args).toContain('-WindowStyle')
-  expect(args[args.indexOf('-WindowStyle') + 1]).toBe('Hidden')
-  expect(options).toMatchObject({ windowsHide: true, detached: false })
-  expect(options.stdio[0]).toBe('ignore')
-  expect(typeof options.stdio[1]).toBe('number')
-  const script = Buffer.from(args[args.indexOf('-EncodedCommand') + 1], 'base64').toString(
-    'utf16le'
-  )
+  expect(executable.endsWith('update-bridge.exe')).toBe(true)
+  expect(args).toHaveLength(2)
+  expect(options).toMatchObject({ windowsHide: true, detached: true })
+  expect(options.stdio).toBe('ignore')
+  const script = readFileSync(args[0], 'utf8')
   expect(script).not.toMatch(/findstr|tasklist|cmd\.exe/i)
   expect(script).toContain('Wait-Process -Timeout 120')
   expect(app.quit).not.toHaveBeenCalled()

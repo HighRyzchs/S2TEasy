@@ -50,7 +50,12 @@ async function main() {
   async function execute(script, logName, timeout = 240000) {
     const attemptDirectory = join(diagnostics, logName.replace(/\.log$/, ''))
     mkdirSync(attemptDirectory, { recursive: true })
-    const child = launchUpdateHelper(script, attemptDirectory, directory)
+    const child = launchUpdateHelper(
+      script,
+      attemptDirectory,
+      directory,
+      resolve('resources/update-bridge.exe')
+    )
     await new Promise((resolvePromise, reject) => {
       const timer = setTimeout(
         () => reject(new Error(`${logName} exceeded its deadline; inspect ${directory}`)),

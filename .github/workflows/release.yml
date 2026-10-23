@@ -22,6 +22,7 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: node scripts/check-update-helper.mjs
+      - run: node scripts/build-update-bridge.mjs
       - name: Exercise actual Electron updater handoff
         run: node scripts/test-electron-update-handoff.mjs
       - run: npm run build:win

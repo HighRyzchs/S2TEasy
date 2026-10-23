@@ -13,3 +13,5 @@ Thumbs.db
 .vscode/
 *.tsbuildinfo
 .site/
+
+/resources/update-bridge.exe
