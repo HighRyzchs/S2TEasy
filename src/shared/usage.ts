@@ -93,3 +93,28 @@ export function usageCsv(records: UsageRecord[]): string {
     )
   ].join('\r\n')
 }
+
+/** What this calendar month cost so far: rows with a reported price only. */
+export function monthSpend(records: UsageRecord[], now = Date.now()): number {
+  const d = new Date(now)
+  const from = new Date(d.getFullYear(), d.getMonth(), 1).getTime()
+  let sum = 0
+  for (const row of records) {
+    if (row.createdAt < from || row.createdAt > now) continue
+    if (typeof row.costUsd === 'number' && Number.isFinite(row.costUsd) && row.costUsd >= 0) {
+      sum += row.costUsd
+    }
+  }
+  return sum
+}
+
+/**
+ * With a monthly limit set, paid extras (speech cues, context checks) stop once this month's
+ * recorded spend reaches it. Speech itself always continues.
+ */
+export function extrasPaused(records: UsageRecord[], limitUsd: number, now = Date.now()): boolean {
+  return limitUsd > 0 && monthSpend(records, now) >= limitUsd
+}
+
+export const LIMIT_REACHED =
+  'Your monthly limit for extras is reached, so speech cues are paused until next month. Change it in Usage.'

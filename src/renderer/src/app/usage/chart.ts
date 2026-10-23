@@ -38,18 +38,7 @@ export function formatDelay(ms: number | null): string {
 }
 
 /** Reported spend since the first of the month containing `now`; unpriced requests count as 0. */
-export function monthSpend(records: UsageRecord[], now = Date.now()): number {
-  const d = new Date(now)
-  const from = new Date(d.getFullYear(), d.getMonth(), 1).getTime()
-  let sum = 0
-  for (const row of records) {
-    if (row.createdAt < from || row.createdAt > now) continue
-    if (typeof row.costUsd === 'number' && Number.isFinite(row.costUsd) && row.costUsd >= 0) {
-      sum += row.costUsd
-    }
-  }
-  return sum
-}
+export { monthSpend } from '@shared/usage'
 
 export const SOURCE_LABEL: Record<UsageRecord['source'], string> = {
   dictation: 'Live speech',
