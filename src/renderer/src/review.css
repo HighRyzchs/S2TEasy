@@ -4,14 +4,13 @@
   overflow: auto;
   padding: 32px;
   border: 1px solid var(--line);
-  border-radius: 24px;
-  color: var(--paper);
-  background: var(--ink-2);
-  box-shadow: 0 28px 120px #0009;
+  border-radius: 18px;
+  color: var(--fg);
+  background: var(--panel);
+  box-shadow: var(--shadow);
 }
 .review-dialog::backdrop {
-  background: #07100ec9;
-  backdrop-filter: blur(9px);
+  background: rgba(5, 8, 9, 0.6);
 }
 .review-head {
   display: flex;
@@ -20,18 +19,19 @@
   margin-bottom: 24px;
 }
 .review-head h2 {
-  font-size: 30px;
-  margin: 8px 0;
-  letter-spacing: -1px;
+  font-size: 24px;
+  font-weight: 600;
+  margin: 6px 0;
+  letter-spacing: -0.01em;
 }
 .review-head p {
-  color: var(--paper-dim);
+  color: var(--dim);
   margin: 0;
 }
 .review-audio {
   padding: 20px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius);
   margin-bottom: 24px;
 }
 .review-audio audio {
@@ -53,13 +53,14 @@
   background: transparent;
   color: inherit;
   border-radius: 7px;
+  font-size: 14px;
 }
 .timed-words .speaking {
-  background: #b2e9cf;
-  color: #102219;
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 .timed-words .selected {
-  border-color: #b2e9cf;
+  border-color: var(--accent);
 }
 .word-label {
   margin-top: 16px;
@@ -73,7 +74,6 @@
   font-weight: 500;
 }
 .review-dialog textarea {
-  width: 100%;
   resize: vertical;
   min-height: 140px;
   line-height: 1.8;
@@ -94,8 +94,8 @@
   padding-top: 24px;
 }
 .remember-section h3 {
-  margin: 8px 0;
-  font-size: 23px;
+  margin: 6px 0;
+  font-size: 18px;
 }
 .remember-card {
   padding: 16px;
@@ -108,7 +108,7 @@
   font-size: 18px;
 }
 .heard {
-  color: var(--paper-dim);
+  color: var(--dim);
   text-decoration: line-through;
 }
 @media (max-width: 620px) {
@@ -122,8 +122,34 @@
 }
 
 .review-head > button {
-  width: 36px;
-  height: 36px;
   flex: none;
   align-self: flex-start;
+}
+
+.review-dialog h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+.review-block {
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.review-notice {
+  background: var(--raised);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin: 0 0 16px;
+  color: var(--dim);
+}
+.review-bad {
+  color: var(--danger);
+}
+.remember-section .hint {
+  margin: 4px 0;
+}
+.remember-card .actions {
+  align-items: center;
 }

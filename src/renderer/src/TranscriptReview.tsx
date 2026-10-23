@@ -76,15 +76,15 @@ export function TranscriptReview({
     >
       <div className="review-head">
         <div>
-          <span className="eyebrow">YOUR WORDS, YOUR MEANING</span>
-          <h2 id="review-title">Make it sound like you.</h2>
-          <p>Listen, correct, and choose what to remember.</p>
+          <span className="label">Review and edit</span>
+          <h2 id="review-title">Fix this session</h2>
+          <p>Listen back, correct the text, and choose what to remember.</p>
         </div>
-        <button className="ghost" aria-label="Close transcript review" onClick={onClose}>
+        <button className="btn icon" aria-label="Close transcript review" onClick={onClose}>
           ×
         </button>
       </div>
-      <section className="block">
+      <section className="review-block">
         <h3>Copy your way</h3>
         <OutputChoices
           value={settings.output}
@@ -97,13 +97,13 @@ export function TranscriptReview({
         />
       </section>
       {active && (
-        <p className="notice" role="status">
+        <p className="review-notice" role="status">
           Finishing this recording. You can read along; saving unlocks when it finishes.
         </p>
       )}
       {item.hasAudio && !active && (
         <section className="review-audio">
-          <span className="eyebrow">LISTEN BACK · LOCAL AUDIO</span>
+          <span className="label">Listen back · audio on this PC</span>
           <audio
             ref={audio}
             controls
@@ -147,16 +147,17 @@ export function TranscriptReview({
           )}
           {selected !== null && (
             <div className="word-label">
-              <label>
+              <label className="field">
                 Intended spelling
                 <input
+                  className="input"
                   value={intended}
                   maxLength={200}
                   onChange={(e) => setIntended(e.target.value)}
                 />
               </label>
               <button
-                className="ghost"
+                className="btn"
                 disabled={active || busy || !intended.trim()}
                 onClick={() =>
                   void run(async () => {
@@ -175,11 +176,12 @@ export function TranscriptReview({
           )}
         </section>
       )}
-      <label className="review-label" htmlFor="review-text">
+      <label className="review-label field" htmlFor="review-text">
         Corrected transcript
       </label>
       <textarea
         id="review-text"
+        className="input"
         rows={7}
         value={text}
         disabled={active}
@@ -189,11 +191,11 @@ export function TranscriptReview({
         }}
       />
       {item.unconfirmedText && (
-        <div className="notice">
+        <div className="review-notice">
           <strong>Unconfirmed final words</strong>
           <p>{item.unconfirmedText}</p>
           <button
-            className="ghost"
+            className="btn"
             disabled={active}
             onClick={() => {
               setText((v) => `${v.trim()} ${item.unconfirmedText}`.trim())
@@ -208,9 +210,9 @@ export function TranscriptReview({
         <p className="hint">
           Saves to local History. Already inserted text in another app must be updated there.
         </p>
-        <div className="inline">
+        <div className="actions">
           <button
-            className="ghost"
+            className="btn"
             disabled={!text.trim()}
             onClick={() =>
               void run(async () => {
@@ -221,7 +223,7 @@ export function TranscriptReview({
             Copy text
           </button>
           <button
-            className="primary"
+            className="btn primary"
             disabled={active || busy || !dirty}
             onClick={() =>
               void run(async () => {
@@ -238,7 +240,7 @@ export function TranscriptReview({
       </div>
       {!!suggestions.length && (
         <section className="remember-section">
-          <span className="eyebrow">A LITTLE MORE YOU, NEXT TIME</span>
+          <span className="label">For next time</span>
           <h3>Remember these corrections?</h3>
           <p className="hint">
             Vocabulary replacements apply to future transcripts. Voice practice keeps examples you
@@ -251,9 +253,9 @@ export function TranscriptReview({
                 <span aria-hidden="true"> → </span>
                 <strong>{meant}</strong>
               </div>
-              <div className="inline">
+              <div className="actions">
                 <button
-                  className="ghost"
+                  className="btn"
                   disabled={busy || remembered.includes(heard)}
                   onClick={() =>
                     void run(async () => {
@@ -262,10 +264,10 @@ export function TranscriptReview({
                     })
                   }
                 >
-                  {remembered.includes(heard) ? 'Remembered ✓' : 'Remember in Vocabulary'}
+                  {remembered.includes(heard) ? 'Remembered ✓' : 'Remember in Your voice'}
                 </button>
-                <button className="text-button" onClick={() => onPractice(meant)}>
-                  Practise this →
+                <button className="link" onClick={() => onPractice(meant)}>
+                  Practice this
                 </button>
               </div>
             </div>
@@ -283,7 +285,7 @@ export function TranscriptReview({
         onConfigure={onConfigureCues}
       />
       {error && (
-        <p role="alert" className="status-bad">
+        <p role="alert" className="review-bad">
           {error}
         </p>
       )}
