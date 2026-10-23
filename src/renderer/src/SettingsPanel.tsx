@@ -1,3 +1,4 @@
+import { ProfileSettings } from './ProfileSettings'
 import { useEffect, useRef, useState } from 'react'
 import { LANGUAGES } from '@shared/constants'
 import { eventToAccelerator, formatHotkey } from '@shared/hotkey'
@@ -11,7 +12,12 @@ import { OverlayThemeEditor } from './OverlayThemeEditor'
 import { MicPreview } from './lib/mic'
 import { UpdatePanel } from './UpdatePanel'
 
+export type SettingsSection = 'engine' | 'dictation' | 'appearance' | 'privacy' | 'profile'
+
 type Props = {
+  initialSection?: SettingsSection
+  onProfileSave: (name: string) => Promise<void>
+  onReplayTour: () => void
   settings: AppSettings
   update: UpdateStatus
   onChange: (patch: Partial<AppSettings>) => Promise<void>
@@ -20,7 +26,15 @@ type Props = {
   onToast: (text: string) => void
 }
 
-export function SettingsPanel({ settings, update, onChange, onUpdate }: Props) {
+export function SettingsPanel({
+  settings,
+  update,
+  onChange,
+  onUpdate,
+  initialSection = 'engine',
+  onProfileSave,
+  onReplayTour
+}: Props) {
   const [apiKey, setApiKey] = useState(settings.apiKey)
   const [routerKey, setRouterKey] = useState(settings.routerAudioKey)
   const [model, setModel] = useState(settings.model)
@@ -31,7 +45,7 @@ export function SettingsPanel({ settings, update, onChange, onUpdate }: Props) {
   const [testing, setTesting] = useState(false)
   const [capturing, setCapturing] = useState(false)
   const [mics, setMics] = useState<MediaDeviceInfo[]>([])
-  const [section, setSection] = useState('engine')
+  const [section, setSection] = useState<string>(initialSection)
   useEffect(() => {
     setApiKey(settings.apiKey)
     setRouterKey(settings.routerAudioKey)
@@ -52,7 +66,7 @@ export function SettingsPanel({ settings, update, onChange, onUpdate }: Props) {
       .catch(() => undefined)
   }, [])
   const save = (patch: Partial<AppSettings>) => {
-    void onChange(patch)
+    void onChange(patch).catch(() => undefined)
   }
   const test = async () => {
     setTesting(true)
@@ -86,7 +100,8 @@ export function SettingsPanel({ settings, update, onChange, onUpdate }: Props) {
           ['engine', 'Speech engine'],
           ['dictation', 'Dictation'],
           ['appearance', 'Appearance'],
-          ['privacy', 'Privacy & data']
+          ['privacy', 'Privacy & data'],
+          ['profile', 'Profile & tour']
         ].map(([id, label]) => (
           <button
             key={id}
@@ -559,6 +574,14 @@ export function SettingsPanel({ settings, update, onChange, onUpdate }: Props) {
               />
             </section>
           </>
+        )}
+        {section === 'profile' && (
+          <ProfileSettings
+            displayName={settings.displayName}
+            onSave={onProfileSave}
+            onReplay={onReplayTour}
+            onRestoreChecklist={() => onChange({ setupChecklistDismissed: false })}
+          />
         )}
         {section === 'privacy' && (
           <>

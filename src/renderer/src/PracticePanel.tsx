@@ -55,7 +55,11 @@ export function PracticePanel({
             id="practice-target"
             disabled={active}
             maxLength={200}
-            placeholder="Roshan is joining the call."
+            placeholder={
+              settings.displayName
+                ? `${settings.displayName} is joining the call.`
+                : 'A name, word, or short phrase you use often.'
+            }
             value={target}
             onChange={(e) => setTarget(e.target.value)}
           />

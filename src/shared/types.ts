@@ -59,6 +59,9 @@ export type AppState = {
 }
 
 export type AppSettings = {
+  displayName: string
+  welcomeCompleted: boolean
+  setupChecklistDismissed: boolean
   apiKey: string
   model: string
   requestWordTimings: boolean
@@ -154,6 +157,9 @@ export type ModelOption = {
 }
 
 export const defaultSettings = (): AppSettings => ({
+  displayName: '',
+  welcomeCompleted: false,
+  setupChecklistDismissed: false,
   apiKey: '',
   model: 'google/gemini-2.5-flash',
   requestWordTimings: false,
@@ -199,8 +205,24 @@ export function isRouterProvider(value: unknown): value is RouterProvider {
   return typeof value === 'string' && (ROUTER_PROVIDERS as readonly string[]).includes(value)
 }
 
+export function normalizeDisplayName(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  return Array.from(
+    value
+      .normalize('NFC')
+      .replace(/\s+/gu, ' ')
+      .replace(/[\p{Cc}\u200B\u200E\u200F\u202A-\u202E\u2060\u2066-\u2069\uFEFF]/gu, '')
+      .trim()
+  )
+    .slice(0, 60)
+    .join('')
+}
+
 export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSettings {
   const merged: AppSettings = { ...defaultSettings(), ...(raw ?? {}) }
+  merged.displayName = normalizeDisplayName(raw?.displayName)
+  merged.welcomeCompleted = raw?.welcomeCompleted === true
+  merged.setupChecklistDismissed = raw?.setupChecklistDismissed === true
   merged.sttEngine =
     raw?.sttEngine === 'local'
       ? 'local'

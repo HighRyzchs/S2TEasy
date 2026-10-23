@@ -62,3 +62,11 @@ The reported `findstr /I "11012"` command matches the old 1.4.0 updater source a
 The 1.5.1 hotfix makes applying exclusive across Restart, check/download and tray actions, adds explicit hidden PowerShell launch, and requires verified downloads before restart. Three new regression tests exercise duplicate handoff, launch failure, and premature restart. All 146 tests pass; typechecking and production app/site builds pass. The running helper on the user's PC cannot be terminated by a cloud code change; UPDATE_TROUBLESHOOTING.md gives narrowly scoped manual cleanup steps. Actual terminal visibility and native update execution remain Windows desktop checks.
 
 The applying-state browser check also passed: Check and automatic-download controls are disabled, the Restart button is absent, and no page errors occurred. The development harness initially used incorrect Vite import paths and was corrected before this check passed.
+
+## Welcome tour and personal profile (1.6.0)
+
+All 153 tests across 37 files passed, along with typechecking and production application/site builds.
+
+Profile migration/normalization tests cover optional Unicode nicknames, hidden direction/control characters, bounded length, privacy of recorder configuration, and preserving existing History/engine/audio settings. Component tests cover neutral onboarding, explicit engine-setup routing, failed-save retry, and an unsaved exit. The test runner now uses the same automatic JSX runtime as the app so React component tests can execute correctly.
+
+Browser checks exercised nickname entry/renaming, appearance and HUD selection, recovery choice, completion/replay, direct setup links, hiding/restoring the checklist, anonymous Escape dismissal, a 60-character nickname, and 390/820/1440-pixel layouts. No microphone permission requests, external network requests or JavaScript errors occurred during the tour. Narrow navigation/settings wrapping was corrected after a mobile overflow check. Screenshots show sample profile data. Native Windows focus, screen-reader behavior, hardware microphone and actual update execution remain separate manual checks.

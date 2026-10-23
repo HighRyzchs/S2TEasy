@@ -642,6 +642,7 @@ p {
 }
 .settings-tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
   border-bottom: 1px solid var(--line);
   margin-bottom: 24px;
@@ -1467,4 +1468,12 @@ input[type='range'] {
 .position-picker .on {
   background: #b2e9cf;
   color: #102219;
+}
+
+@media (max-width: 580px) {
+  .nav {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 4px;
+  }
 }

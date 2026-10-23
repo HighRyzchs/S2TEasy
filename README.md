@@ -61,6 +61,14 @@ Successful-take retention for pronunciation examples is **off by default**. Turn
 
 History retains the newest 400 sessions. Older app-managed sessions and their audio are removed. Deleting a session deletes its app-managed retained audio. Exports are separate files you manage yourself. Audio and transcripts are not encrypted by the app; use OS disk encryption if needed. API keys require OS credential encryption; insecure plaintext fallback is refused. See [Privacy](docs/PRIVACY.md).
 
+## A comfortable first minute
+
+On first launch, a three-step welcome tour lets you choose an optional name/nickname, preview your appearance and HUD, and review audio recovery before learning the recording shortcut. You can save and exit at any step. Your name stays in local settings; it is not automatically added to provider prompts or Vocabulary. Existing speech settings and History are preserved.
+
+Change or clear your name, replay the tour, and restore the setup checklist in **Settings → Profile & tour**. The Overview checklist links directly to speech-engine setup and the local microphone test. A configured engine is not presented as a verified connection. The tour itself requests no microphone access and makes no paid speech calls.
+
+<img src="docs/welcome-preview.png" alt="S2Teasy welcome tour with an optional nickname field, shown using a sample profile" width="100%" />
+
 ## Review, customize, and track usage
 
 - **HUD:** Copy the current transcript or finish into the review editor. Settings → Appearance includes nine anchors, pixel offsets, horizontal/vertical layouts, fonts, colors, image assets, and five waveform styles. HUD studio exports/imports theme JSON and downloads a microphone SVG design source and guide. Export that design as PNG/WebP before uploading it.

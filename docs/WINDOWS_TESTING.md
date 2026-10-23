@@ -36,3 +36,11 @@ Linux unit/browser tests do not substitute for these checks.
 - Rapidly click Restart and trigger the tray update action. Only one hidden PowerShell helper should launch. The Settings and tray update actions must be disabled while applying; the new helper must never run FINDSTR/TASKLIST or a CMD polling loop.
 - Make helper launch fail in a disposable environment. Confirm the app remains open and reports the error. Restart before download verification must not queue a future automatic installation.
 - If reproducing the old 1.4.0 loop in a disposable VM, quit the app and stop only the matching legacy helper process tree using UPDATE_TROUBLESHOOTING.md. Do not treat installing a newer version as proof that an old orphaned helper was terminated.
+
+## 1.6.0 welcome and profile
+
+- Upgrade an existing profile and confirm History, credentials, engine, recovery and training settings remain intact. The optional tour appears until completed; complete it, restart, and verify it does not repeat automatically.
+- Enter a nickname or skip the name. Try Unicode, an emoji, long text, and a cleared name. Verify the workspace greeting and placeholders reflect the saved choice; no name is automatically added to Vocabulary or provider requests.
+- Replay the tour from Profile & tour, change the look/recovery toggle, save and exit at each step, and use Escape. In a disposable profile with failed writes, verify retry preserves input and Continue without saving exits for the current session.
+- Use the Overview checklist links to reach Speech engine and Dictation settings. Hide and restore the checklist. A local volume test must release the microphone when stopped or when leaving Settings; the welcome tour itself must not request microphone permission.
+- Check dialog focus trapping, Tab/Shift+Tab, heading focus after each step, reduced motion, light/dark/system appearances, Windows scaling, and small windows.

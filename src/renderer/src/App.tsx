@@ -13,7 +13,9 @@ import {
   type UpdateStatus
 } from '@shared/types'
 import { HistoryPanel } from './HistoryPanel'
-import { SettingsPanel } from './SettingsPanel'
+import { SettingsPanel, type SettingsSection } from './SettingsPanel'
+import { WelcomeTour } from './WelcomeTour'
+import { startError } from '@shared/engine'
 import { VocabularyPanel } from './VocabularyPanel'
 import { PracticePanel } from './PracticePanel'
 
@@ -21,6 +23,9 @@ const preview = import.meta.env.VITE_BROWSER_PREVIEW === '1'
 type Tab = 'overview' | 'history' | 'vocabulary' | 'practice' | 'settings' | 'usage'
 
 export function App() {
+  const [tourDismissed, setTourDismissed] = useState(false)
+  const [replayTour, setReplayTour] = useState(false)
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>('engine')
   const [reviewId, setReviewId] = useState<string | null>(null)
   const [practiceTarget, setPracticeTarget] = useState('')
   const [tab, setTab] = useState<Tab>('overview')
@@ -75,6 +80,17 @@ export function App() {
   useEffect(() => {
     document.documentElement.dataset.appearance = settings.appearance
   }, [settings.appearance])
+  const openSettings = (section: SettingsSection) => {
+    setSettingsSection(section)
+    setTab('settings')
+  }
+  const showTour = () => {
+    if (active) {
+      setToast('Finish the current recording before opening the tour.')
+      return
+    }
+    setReplayTour(true)
+  }
   const grouped = useMemo(() => groupHistory(history), [history])
   const save = async (patch: Partial<AppSettings>) => {
     try {
@@ -184,7 +200,7 @@ export function App() {
       <div className="workspace">
         <header className="workspace-bar">
           <span>
-            Personal workspace{' '}
+            {settings.displayName ? `${settings.displayName}’s workspace` : 'Personal workspace'}{' '}
             <span className="breadcrumb">/ {tab[0].toUpperCase() + tab.slice(1)}</span>
           </span>
           <span className={active ? 'connection active' : 'connection'}>
@@ -203,7 +219,11 @@ export function App() {
             <>
               <div className="panel-head">
                 <div>
-                  <span className="eyebrow">Less typing. More thinking.</span>
+                  <span className="eyebrow">
+                    {settings.displayName
+                      ? `Welcome back, ${settings.displayName}.`
+                      : 'Less typing. More thinking.'}
+                  </span>
                   <h2>Good ideas move fast.</h2>
                   <p>Give your thoughts somewhere to land.</p>
                 </div>
@@ -262,6 +282,60 @@ export function App() {
                   <span className="voice-caption">SPEAK FREELY.</span>
                 </div>
               </section>
+              {!settings.setupChecklistDismissed && (
+                <section className="setup-card" aria-label="Getting started">
+                  <div className="setup-card-head">
+                    <div>
+                      <span className="eyebrow">A FEW SMALL STEPS</span>
+                      <h3>Find your flow.</h3>
+                    </div>
+                    <button
+                      className="text-button"
+                      onClick={() => void safeSave({ setupChecklistDismissed: true })}
+                    >
+                      Hide checklist
+                    </button>
+                  </div>
+                  <p>
+                    Set up your engine, check your microphone, and try a thought in a text field.
+                  </p>
+                  <div className="setup-actions">
+                    <button onClick={() => openSettings('engine')}>
+                      <span>{startError(settings) ? '01 / SET UP' : '✓ / CONFIGURED'}</span>
+                      <strong>Choose a speech engine →</strong>
+                      <small>
+                        Bring a provider key or configure a local server. Configuration isn’t a
+                        connection test.
+                      </small>
+                    </button>
+                    <button onClick={() => openSettings('dictation')}>
+                      <span>02 / CHECK YOUR INPUT</span>
+                      <strong>Test your microphone →</strong>
+                      <small>
+                        Watch the local volume meter and set your shortcut. No audio is uploaded by
+                        the meter.
+                      </small>
+                    </button>
+                    <button onClick={showTour}>
+                      <span>
+                        {history.some(
+                          (row) =>
+                            row.source !== 'practice' &&
+                            row.status === 'complete' &&
+                            row.text.trim()
+                        )
+                          ? '✓ / FIRST WORDS SAVED'
+                          : '03 / YOUR FIRST WORDS'}
+                      </span>
+                      <strong>Take the quick tour →</strong>
+                      <small>
+                        Focus a text field, use your shortcut, and explore Copy, Review, and
+                        History.
+                      </small>
+                    </button>
+                  </div>
+                </section>
+              )}
               <div className="stats-grid">
                 <Stat
                   value={wordCount.toLocaleString()}
@@ -380,6 +454,7 @@ export function App() {
           )}
           {tab === 'vocabulary' && (
             <VocabularyPanel
+              displayName={settings.displayName}
               entries={settings.vocabulary}
               onChange={async (vocabulary) => save({ vocabulary })}
             />
@@ -396,9 +471,13 @@ export function App() {
           )}
           {tab === 'settings' && (
             <SettingsPanel
+              key={settingsSection}
+              initialSection={settingsSection}
+              onProfileSave={(displayName) => save({ displayName })}
+              onReplayTour={showTour}
               settings={settings}
               update={update}
-              onChange={safeSave}
+              onChange={save}
               onUpdate={setUpdate}
               ready={ready}
               onToast={setToast}
@@ -406,6 +485,25 @@ export function App() {
           )}
         </main>
       </div>
+      {ready &&
+        !active &&
+        !reviewId &&
+        (replayTour || (!settings.welcomeCompleted && !tourDismissed)) && (
+          <WelcomeTour
+            onDismiss={() => {
+              setReplayTour(false)
+              setTourDismissed(true)
+              setToast('Preferences were not saved. You can replay the tour from Settings.')
+            }}
+            settings={settings}
+            onFinish={async (patch, destination) => {
+              await save(patch)
+              setReplayTour(false)
+              if (destination === 'engine') openSettings('engine')
+              else setTab('overview')
+            }}
+          />
+        )}
       {reviewId && history.find((row) => row.id === reviewId) && (
         <TranscriptReview
           key={reviewId}

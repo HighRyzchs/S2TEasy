@@ -2,9 +2,11 @@ import { useState } from 'react'
 import type { VocabularyEntry } from '@shared/vocabulary'
 
 export function VocabularyPanel({
+  displayName = '',
   entries,
   onChange
 }: {
+  displayName?: string
   entries: VocabularyEntry[]
   onChange: (entries: VocabularyEntry[]) => Promise<void>
 }) {
@@ -78,7 +80,7 @@ export function VocabularyPanel({
                 id="heard"
                 required
                 maxLength={120}
-                placeholder="rosin"
+                placeholder="The phrase it gets wrong"
                 value={heard}
                 onChange={(e) => setHeard(e.target.value)}
               />
@@ -90,7 +92,7 @@ export function VocabularyPanel({
                 id="meant"
                 required
                 maxLength={120}
-                placeholder="Roshan"
+                placeholder={displayName || 'Your preferred spelling'}
                 value={meant}
                 onChange={(e) => setMeant(e.target.value)}
               />

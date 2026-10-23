@@ -8,6 +8,18 @@
 - Theme controls, HUD customization and placement, non-activating overlay behavior.
 - Explicit vocabulary rules, transcript corrections, dedicated no-insertion voice practice, opt-in whole-take audio/text export.
 - Contribution docs, privacy documentation, project website, test/build workflows.
+- Optional personal profile, replayable welcome tour, and contextual setup checklist.
+- Local spend charts and CSV export; transcript review with explicit Vocabulary suggestions and genuine provider-timed word clips.
+
+## Next product improvements
+
+- **Guided diagnostics:** test the selected microphone, authentication, model slug and audio operation separately, with an actionable result for each stage. Cloud transcription test costs must be explicit; never make paid calls automatically.
+- **Speech commands and snippets:** opt-in commands for paragraphs, punctuation, and reusable text, with a literal-dictation mode to avoid surprising replacements.
+- **Per-app profiles:** choose a shortcut, formatting preference and vocabulary set for writing, email or coding; keep app matching local.
+- **Portable preferences:** export/import vocabulary and non-secret preferences, with previews before applying changes. Keep API keys and audio out of exports by default.
+- **Accessibility pass:** keyboard navigation, screen-reader announcements, reduced motion and larger HUD controls, verified with native Windows assistive tools.
+
+These are proposed features, not capabilities shipped by the welcome-tour release.
 
 ## Release validation
 
