@@ -104,6 +104,18 @@ export function SessionDetail({ item }: { item: HistoryItem }) {
         </div>
       </div>
 
+      {item.hasAudio && !working && (
+        // Served from this PC by the app's own audio protocol; nothing is uploaded.
+        <audio
+          key={item.id}
+          className="detail-audio"
+          controls
+          preload="metadata"
+          src={`s2t-audio://session/${encodeURIComponent(item.id)}`}
+          aria-label="Play this session's audio"
+        />
+      )}
+
       <div className="detail-text">
         {hasText ? (
           <p>
