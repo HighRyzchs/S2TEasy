@@ -43,45 +43,43 @@ export function UpdatePanel({
       setPending(false)
     }
   }
+  const kind =
+    update.packaging === 'dev'
+      ? 'development mode'
+      : update.packaging === 'portable'
+        ? 'portable app'
+        : 'installed app'
+  const busy = pending || checking || downloading || applying
   return (
-    <section className="block update-panel" aria-label="App updates">
-      <div className="update-panel-heading">
-        <div>
-          <span className="update-eyebrow">ALWAYS A LITTLE BETTER</span>
-          <h3>Keep S2Teasy up to date.</h3>
-          <p>
-            S2Teasy {update.currentVersion} ·{' '}
-            {update.packaging === 'dev'
-              ? 'development mode'
-              : update.packaging === 'portable'
-                ? 'portable app'
-                : 'installed app'}
-          </p>
-        </div>
-        <span className="update-version">v{update.currentVersion}</span>
+    <section className="update-panel" aria-label="App updates">
+      <div className="line update-row">
+        <span>
+          <span>Version {update.currentVersion}</span>
+          <span className="hint">
+            {kind}
+            {update.phase === 'current' ? ' · up to date' : ''}
+          </span>
+        </span>
+        <span className="update-buttons">
+          <button
+            type="button"
+            className="btn"
+            disabled={busy}
+            onClick={() => void run(() => onCheck())}
+          >
+            {checking ? 'Checking…' : 'Check now'}
+          </button>
+        </span>
       </div>
       {update.phase === 'available' && (
-        <div className="update-available">
-          <span className="update-spark" aria-hidden="true">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M7 17 17 7M7 7h10v10" />
-            </svg>
-          </span>
+        <div className="update-callout">
           <div>
             <strong>Version {update.availableVersion} is available.</strong>
-            <p>Download it now. Restart when you’re ready.</p>
+            <p className="hint">Download it now. Restart when you’re ready.</p>
           </div>
           <button
-            className="primary"
+            type="button"
+            className="btn primary"
             disabled={pending || update.packaging === 'dev'}
             onClick={() => void run(() => onCheck(true))}
           >
@@ -90,36 +88,27 @@ export function UpdatePanel({
         </div>
       )}
       {downloading && (
-        <div className="update-download">
-          <div>
+        <div className="update-callout update-download">
+          <div className="update-download-head">
             <strong>Downloading version {update.availableVersion}</strong>
-            <span>{update.percent}%</span>
+            <span className="mono">{update.percent}%</span>
           </div>
           <progress aria-label="Update download progress" max={100} value={update.percent} />
-          <p>You can keep working while this downloads.</p>
+          <p className="hint">You can keep working while this downloads.</p>
         </div>
       )}
       {update.phase === 'ready' && (
-        <div className="update-available">
-          <span className="update-spark" aria-hidden="true">
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="m5 12 4 4L19 6" />
-            </svg>
-          </span>
+        <div className="update-callout">
           <div>
             <strong>Your update is ready.</strong>
-            <p>Version {update.availableVersion} · checksum verified</p>
+            <p className="hint">Version {update.availableVersion} · checksum verified</p>
           </div>
-          <button className="primary" disabled={pending} onClick={() => void run(onInstall)}>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={pending}
+            onClick={() => void run(onInstall)}
+          >
             Restart &amp; install
           </button>
         </div>
@@ -134,10 +123,25 @@ export function UpdatePanel({
           {error}
         </p>
       )}
-      <div className="inline">
+      <label className="line update-auto">
+        <span>
+          <span>Download updates automatically</span>
+          <span className="hint">A restart is always your choice.</span>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          aria-label="Download updates automatically"
+          checked={autoDownload}
+          disabled={pending || applying}
+          onChange={(e) => onAutoDownload(e.target.checked)}
+        />
+      </label>
+      <div className="update-buttons update-tools">
         {onGetDiagnostics && update.packaging !== 'dev' && (
           <button
-            className="ghost"
+            type="button"
+            className="btn small"
             disabled={pending}
             onClick={() =>
               void run(async () => {
@@ -152,7 +156,8 @@ export function UpdatePanel({
         )}
         {update.canOpenInstaller && onOpenInstaller && (
           <button
-            className="ghost"
+            type="button"
+            className="btn small"
             disabled={pending || applying}
             onClick={() => void run(onOpenInstaller)}
           >
@@ -161,7 +166,8 @@ export function UpdatePanel({
         )}
         {update.packaging !== 'dev' && onDiagnostics && (
           <button
-            className="text-button"
+            type="button"
+            className="link"
             disabled={pending}
             onClick={() =>
               void run(async () => {
@@ -180,21 +186,11 @@ export function UpdatePanel({
           <p className="hint">
             No report is uploaded. Review Windows usernames and paths before sharing.
           </p>
-          <pre
-            style={{
-              whiteSpace: 'pre-wrap',
-              overflowWrap: 'anywhere',
-              maxHeight: 260,
-              overflow: 'auto',
-              fontSize: 11,
-              margin: '12px 0'
-            }}
-          >
-            {report}
-          </pre>
+          <pre className="mono">{report}</pre>
           {onCopyReport && (
             <button
-              className="ghost"
+              type="button"
+              className="btn small"
               onClick={() =>
                 void run(async () => {
                   if (!(await onCopyReport(report))) throw new Error('Could not copy the report.')
@@ -208,32 +204,9 @@ export function UpdatePanel({
           )}
         </details>
       )}
-      <div className="update-panel-footer">
-        <button
-          className="ghost"
-          disabled={pending || checking || downloading || applying}
-          onClick={() => void run(() => onCheck())}
-        >
-          {checking ? 'Checking…' : 'Check for updates'}
-        </button>
-        <label>
-          Download automatically
-          <button
-            type="button"
-            role="switch"
-            aria-label="Download updates automatically"
-            aria-checked={autoDownload}
-            className={autoDownload ? 'update-switch enabled' : 'update-switch'}
-            disabled={pending || applying}
-            onClick={() => onAutoDownload(!autoDownload)}
-          >
-            <i />
-          </button>
-        </label>
-      </div>
-      <p className="update-fine">
+      <p className="hint">
         Updates come from this project’s GitHub Releases. Downloads are verified before
-        installation. A restart is always your choice.
+        installation.
         {update.packaging === 'dev'
           ? ' Installation is available only in packaged Windows builds.'
           : ''}
