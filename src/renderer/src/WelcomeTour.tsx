@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { formatHotkey } from '@shared/hotkey'
 import { startError } from '@shared/engine'
 import { normalizeDisplayName, type AppSettings } from '@shared/types'
-import { OVERLAY_SKINS } from '@shared/overlay-theme'
-import { OverlayHud } from './OverlayHud'
-import { useHudPreview } from './useHudPreview'
+import { HUD_STYLES, hudAccent, type HudStyle } from '@shared/hud'
+import { Logo } from './app/icons'
+import { LiveHud } from './app/hud-screen/LiveHud'
 import './welcome.css'
 
 export type WelcomeDestination = 'overview' | 'engine'
@@ -20,7 +20,7 @@ export function WelcomeTour({
   const [step, setStep] = useState(0)
   const [name, setName] = useState(settings.displayName)
   const [appearance, setAppearance] = useState(settings.appearance)
-  const [theme, setTheme] = useState(settings.overlayTheme)
+  const [hud, setHud] = useState(settings.hud)
   const [recovery, setRecovery] = useState(settings.recoveryAudio)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -28,6 +28,18 @@ export function WelcomeTour({
   const dialog = useRef<HTMLDialogElement>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const engineReady = !startError(settings)
+  // The page behind the tour follows the appearance choice live; leaving restores what is saved.
+  const saved = useRef(settings.appearance)
+  saved.current = settings.appearance
+  useEffect(() => {
+    document.documentElement.dataset.appearance = appearance
+  }, [appearance])
+  useEffect(
+    () => () => {
+      document.documentElement.dataset.appearance = saved.current
+    },
+    []
+  )
   useEffect(() => {
     dialog.current?.showModal()
     return () => dialog.current?.close()
@@ -45,7 +57,7 @@ export function WelcomeTour({
         {
           displayName: normalizeDisplayName(name),
           appearance,
-          overlayTheme: theme,
+          hud,
           recoveryAudio: recovery,
           welcomeCompleted: true
         },
@@ -60,7 +72,6 @@ export function WelcomeTour({
   }
   return (
     <dialog
-      data-appearance={appearance}
       ref={dialog}
       className="welcome-dialog"
       aria-labelledby="welcome-title"
@@ -71,16 +82,7 @@ export function WelcomeTour({
     >
       <aside className="welcome-aside">
         <div className="welcome-brand">
-          <span aria-hidden="true">
-            <svg viewBox="0 0 40 40" fill="none">
-              <path
-                d="M10 19v3m5-9v15m5-19v22m5-17v12m5-7v3"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-            </svg>
-          </span>{' '}
+          <Logo size={32} />
           S2Teasy
         </div>
         <div className="welcome-art" aria-hidden="true">
@@ -113,8 +115,8 @@ export function WelcomeTour({
       </aside>
       <div className="welcome-main">
         <div className="welcome-top">
-          <span className="eyebrow">WELCOME · {step + 1} OF 3</span>
-          <button className="text-button" disabled={busy} onClick={() => void finish('overview')}>
+          <span className="label">Welcome · {step + 1} of 3</span>
+          <button type="button" className="link" disabled={busy} onClick={() => void finish('overview')}>
             Save & exit
           </button>
         </div>
@@ -134,6 +136,7 @@ export function WelcomeTour({
               What should we call you? <span>Optional</span>
             </label>
             <input
+              className="input"
               id="welcome-name"
               autoFocus
               autoComplete="off"
@@ -162,32 +165,40 @@ export function WelcomeTour({
         {step === 1 && (
           <div className="welcome-step">
             <p className="welcome-lead">A comfortable workspace. A small window for your voice.</p>
-            <div className="seg" aria-label="Workspace appearance">
+            <div className="seg" role="group" aria-label="Workspace appearance">
               {(['dark', 'light', 'system'] as const).map((value) => (
                 <button
                   key={value}
+                  type="button"
                   aria-pressed={appearance === value}
-                  className={appearance === value ? 'active' : ''}
                   onClick={() => setAppearance(value)}
                 >
                   {value[0].toUpperCase() + value.slice(1)}
                 </button>
               ))}
             </div>
-            <div className="welcome-skins" aria-label="Recording overlay style">
-              {OVERLAY_SKINS.map(({ id, label }) => (
+            <div className="welcome-skins" role="group" aria-label="HUD style">
+              {HUD_STYLES.map(({ id, label }) => (
                 <button
                   key={id}
-                  aria-pressed={theme.skin === id}
-                  className={theme.skin === id ? 'selected' : ''}
-                  onClick={() => setTheme({ ...theme, skin: id })}
+                  type="button"
+                  aria-pressed={hud.style === id}
+                  onClick={() => setHud({ ...hud, style: id as HudStyle, accent: hudAccent(id) })}
                 >
-                  <i data-skin={id} />
+                  <i style={{ background: id === hud.style ? hud.accent : hudAccent(id) }} />
                   {label}
                 </button>
               ))}
             </div>
-            <WelcomeHud theme={theme} />
+            <div className="welcome-hud">
+              <span className="welcome-preview-label">Simulated preview · no microphone</span>
+              <LiveHud
+                className="welcome-stage"
+                hud={{ ...hud, scale: Math.min(hud.scale, 0.9) }}
+                position="bottom"
+                state="talking"
+              />
+            </div>
             <label className="welcome-recovery">
               <input
                 type="checkbox"
@@ -222,11 +233,11 @@ export function WelcomeTour({
             </p>
             <div className="welcome-shortcut">
               <span>Your recording shortcut</span>
-              <kbd>{formatHotkey(settings.hotkey)}</kbd>
+              <kbd className="kbd">{formatHotkey(settings.hotkey)}</kbd>
               <p>
                 {settings.hotkeyMode === 'hold'
-                  ? 'Hold to speak. Release to finish.'
-                  : 'Press to speak. Press again to finish.'}
+                  ? 'Hold to speak. Release to pause; a paused session finishes by itself.'
+                  : 'Press to start, and press again to pause. A paused session finishes by itself after a few seconds.'}
               </p>
             </div>
             <div className="welcome-lessons">
@@ -243,9 +254,9 @@ export function WelcomeTour({
               <div>
                 <span>02</span>
                 <p>
-                  <strong>Your HUD is a little toolbox.</strong> Copy saves the available text to
-                  your clipboard. Review finishes into an editor. Cancel stops capture immediately
-                  and keeps saved work.
+                  <strong>Your HUD shows what it heard.</strong> Click a word to fix it, Pause to
+                  stop and edit, Copy to keep the text, Done to finish now. Leave a paused session
+                  alone and it finishes by itself.
                 </p>
               </div>
               <div>
@@ -266,24 +277,25 @@ export function WelcomeTour({
         )}
         {error && (
           <div>
-            <p className="status-bad" role="alert">
+            <p className="welcome-error" role="alert">
               {error}
             </p>
             {onDismiss && (
-              <button className="text-button" disabled={busy} onClick={onDismiss}>
+              <button type="button" className="link" disabled={busy} onClick={onDismiss}>
                 Continue without saving
               </button>
             )}
           </div>
         )}
         <footer className="welcome-footer">
-          <button className="ghost" disabled={busy || step === 0} onClick={() => setStep(step - 1)}>
+          <button type="button" className="btn" disabled={busy || step === 0} onClick={() => setStep(step - 1)}>
             Back
           </button>
           <div>
             {step === 2 && (
               <button
-                className="text-button"
+                type="button"
+                className="link"
                 disabled={busy}
                 onClick={() => void finish(engineReady ? 'engine' : 'overview')}
               >
@@ -291,7 +303,8 @@ export function WelcomeTour({
               </button>
             )}
             <button
-              className="primary"
+              type="button"
+              className="btn primary"
               disabled={busy}
               onClick={() =>
                 step < 2 ? setStep(step + 1) : void finish(engineReady ? 'overview' : 'engine')
@@ -309,26 +322,5 @@ export function WelcomeTour({
         </footer>
       </div>
     </dialog>
-  )
-}
-
-function WelcomeHud({ theme }: { theme: AppSettings['overlayTheme'] }) {
-  const demo = useHudPreview()
-  return (
-    <div
-      className="welcome-hud"
-      style={{ minHeight: theme.orientation === 'vertical' ? 260 : 125 }}
-    >
-      <span className="welcome-preview-label">SIMULATED PREVIEW · NO MICROPHONE</span>
-      <div aria-hidden="true" ref={(node) => node?.setAttribute('inert', '')}>
-        <OverlayHud
-          state={demo.state}
-          bars={demo.bars}
-          theme={{ ...theme, scale: 0.8 }}
-          canStop
-          preview
-        />
-      </div>
-    </div>
   )
 }

@@ -1,6 +1,6 @@
 # Expressive transcription: the words and how they were said
 
-[Try the unified Your voice workspace](https://highryzchs.github.io/S2TEasy/voice-lab/) · [Prototype walkthrough](VOICE_LAB.md) · [Existing speech-cue architecture](CONCEPTS.md)
+[Try the interactive HUD demo](https://highryzchs.github.io/S2TEasy/overlay-demo/) · [Existing speech-cue architecture](CONCEPTS.md)
 
 The target is **audio → words plus delivery tags**. For example:
 
