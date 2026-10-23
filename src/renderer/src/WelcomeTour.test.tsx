@@ -3,10 +3,9 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { defaultSettings } from '@shared/types'
 import { WelcomeTour } from './WelcomeTour'
-vi.mock('./useHudPreview', () => ({
-  useHudPreview: () => ({ state: { status: 'listening', partial: 'Preview' }, bars: [] })
+vi.mock('./app/hud-screen/LiveHud', () => ({
+  LiveHud: ({ hud }: { hud: { style: string } }) => <div data-testid="hud">Simulated {hud.style} HUD</div>
 }))
-vi.mock('./OverlayHud', () => ({ OverlayHud: () => <div>Simulated HUD</div> }))
 let host: HTMLDivElement, root: Root
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
@@ -41,7 +40,7 @@ it('allows a neutral welcome and routes unconfigured users to speech setup with 
       displayName: '',
       welcomeCompleted: true,
       appearance: 'dark',
-      overlayTheme: defaultSettings().overlayTheme,
+      hud: defaultSettings().hud,
       recoveryAudio: true
     },
     'engine'
@@ -90,4 +89,32 @@ it('provides an explicit unsaved exit if local storage fails', async () => {
   await act(async () => button('Continue without saving').click())
   expect(onDismiss).toHaveBeenCalledOnce()
   expect(onFinish).toHaveBeenCalledOnce()
+})
+
+it('saves the chosen HUD style with its own accent color', async () => {
+  const onFinish = vi.fn().mockResolvedValue(undefined)
+  await act(async () =>
+    root.render(<WelcomeTour settings={defaultSettings()} onFinish={onFinish} />)
+  )
+  await act(async () => button('Continue →').click())
+  expect(host.textContent).toContain('Simulated island HUD')
+  expect(host.querySelectorAll('[aria-label="HUD style"] button')).toHaveLength(7)
+  await act(async () => button('Cyberpunk').click())
+  expect(host.textContent).toContain('Simulated cyber HUD')
+  await act(async () => button('Save & exit').click())
+  expect(onFinish).toHaveBeenCalledWith(
+    expect.objectContaining({ hud: expect.objectContaining({ style: 'cyber', accent: '#00f0ff' }) }),
+    'overview'
+  )
+  expect(onFinish.mock.calls[0][0]).not.toHaveProperty('overlayTheme')
+})
+
+it('explains that the shortcut pauses and a paused session finishes by itself', async () => {
+  await act(async () =>
+    root.render(<WelcomeTour settings={defaultSettings()} onFinish={vi.fn()} />)
+  )
+  await act(async () => button('Continue →').click())
+  await act(async () => button('Continue →').click())
+  expect(host.textContent).toContain('press again to pause')
+  expect(host.textContent).toContain('finishes by itself')
 })

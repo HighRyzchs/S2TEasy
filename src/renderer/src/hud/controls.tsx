@@ -8,7 +8,15 @@ import type { Fix } from './types'
 const WAVE_BARS = 12
 
 /** The waveform. It reads the latest bars every frame and sets heights directly, so the HUD itself does not re-render at 60 fps. */
-export function Wave({ barsRef, pixel }: { barsRef: MutableRefObject<number[]>; pixel: boolean }) {
+export function Wave({
+  barsRef,
+  pixel,
+  still = false
+}: {
+  barsRef: MutableRefObject<number[]>
+  pixel: boolean
+  still?: boolean
+}) {
   const ref = useRef<HTMLSpanElement>(null)
   useEffect(() => {
     let frame = 0
@@ -19,11 +27,11 @@ export function Wave({ barsRef, pixel }: { barsRef: MutableRefObject<number[]>; 
         if (pixel) height = Math.max(4, Math.round(height / 4) * 4)
         ;(node as HTMLElement).style.height = `${height.toFixed(1)}px`
       })
-      frame = requestAnimationFrame(tick)
+      if (!still) frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [barsRef, pixel])
+  }, [barsRef, pixel, still])
   return (
     <span className="hud-wave" ref={ref} aria-hidden>
       {Array.from({ length: WAVE_BARS }, (_, index) => (

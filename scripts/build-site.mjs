@@ -11,6 +11,3 @@ renameSync(
   resolve('.site/overlay-demo/overlay-showcase.html'),
   resolve('.site/overlay-demo/index.html')
 )
-
-await build({ configFile: resolve('vite.voice-lab.config.ts') })
-renameSync(resolve('.site/voice-lab/voice-lab.html'), resolve('.site/voice-lab/index.html'))

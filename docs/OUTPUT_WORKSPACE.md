@@ -1,6 +1,6 @@
 # Your voice: one workspace, explicit output
 
-[Download the desktop app](https://github.com/HighRyzchs/S2TEasy/releases/latest) · [Try the browser design lab](https://highryzchs.github.io/S2TEasy/voice-lab/) · [Architecture](CONCEPTS.md) · [Expression theory](EXPRESSIVE_TRANSCRIPTION.md)
+[Download the desktop app](https://github.com/HighRyzchs/S2TEasy/releases/latest) · [Try the interactive HUD demo](https://highryzchs.github.io/S2TEasy/overlay-demo/) · [Architecture](CONCEPTS.md) · [Expression theory](EXPRESSIVE_TRANSCRIPTION.md)
 
 ## The problem
 
@@ -74,7 +74,6 @@ Words are checkpointed before enrichment. Cue errors are stored separately as `c
 | Manual excerpts and feedback                                 | [speech-cue-service.ts](../src/main/speech-cue-service.ts), [SpeechCuePanel.tsx](../src/renderer/src/SpeechCuePanel.tsx) | Service/model/component tests                                |
 | Audio model capability, policy and billing                   | [speech-cue-model.ts](../src/main/speech-cue-model.ts)                                                                   | Mock provider contract tests                                 |
 | Sender-checked presentation and authoritative copy IPC       | [index.ts](../src/main/index.ts), [preload](../src/preload/index.ts)                                                     | Typecheck and integration/browser checks                     |
-| Browser design lab                                           | [VoiceWorkspace.tsx](../src/renderer/src/VoiceWorkspace.tsx)                                                             | Local sample interactions; no paid calls                     |
 
 ## Remaining work
 

@@ -10,7 +10,6 @@ on:
       - 'package*.json'
       - 'scripts/build-site.mjs'
       - 'vite.showcase.config.ts'
-      - 'vite.voice-lab.config.ts'
   workflow_dispatch:
 permissions:
   contents: read
