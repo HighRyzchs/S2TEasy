@@ -35,7 +35,8 @@ import type {
   RouterProvider,
   UpdateStatus
 } from '../shared/types'
-import { DictationController } from './dictation'
+import { DictationController, LEAVE_MS } from './dictation'
+import { demoFrames } from './hud-demo'
 import { HotkeyManager } from './hotkeys'
 import { fetchTranscriptionModels, testApiKey } from './openrouter'
 import { testRouterAudioKey } from './router-audio'
@@ -102,6 +103,36 @@ function broadcastHistory(): void {
 function overlayChanged(state: OverlayState): void {
   overlayState = state
   sendBoth(IPC.OVERLAY_CHANGED, state)
+}
+
+// "Show it on my screen": a scripted HUD session on the real overlay. A real session ends it.
+let demoTimers: NodeJS.Timeout[] = []
+
+function stopHudDemo(hide: boolean): void {
+  if (!demoTimers.length) return
+  for (const timer of demoTimers) clearTimeout(timer)
+  demoTimers = []
+  if (!hide) return
+  overlayChanged(emptyOverlay())
+  if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.hide()
+}
+
+function showHudDemo(): void {
+  if (dictation.isBusy()) throw new Error('Finish dictating first, then try the HUD on your screen.')
+  if (!overlayWindow || overlayWindow.isDestroyed()) throw new Error('The HUD window is not available.')
+  stopHudDemo(false)
+  const settings = store.getSettings()
+  sizeOverlay(overlayWindow, settings.hud)
+  placeOverlay(overlayWindow, settings.hud, settings.overlayPosition, {
+    x: settings.overlayOffsetX,
+    y: settings.overlayOffsetY
+  })
+  const frames = demoFrames(Date.now(), settings.hud.showCues)
+  overlayChanged(frames[0].state)
+  overlayWindow.showInactive()
+  for (const frame of frames.slice(1)) demoTimers.push(setTimeout(() => overlayChanged(frame.state), frame.at))
+  const last = frames[frames.length - 1].at
+  demoTimers.push(setTimeout(() => stopHudDemo(true), last + LEAVE_MS))
 }
 
 function broadcastUpdate(status: UpdateStatus): void {
@@ -182,7 +213,10 @@ async function setup(): Promise<void> {
         )
       ),
     getSettings: () => store.getSettings(),
-    onOverlay: overlayChanged,
+    onOverlay: (state) => {
+      stopHudDemo(false)
+      overlayChanged(state)
+    },
     onHistoryItem: (item: HistoryItem) => {
       const previous = store.getHistory()
       store.addHistory(item)
@@ -460,7 +494,14 @@ async function setup(): Promise<void> {
     if (dictation.isPaused()) return dictation.resume()
     dictation.pause()
   })
-  ipcMain.handle(IPC.HUD_FINISH, () => dictation.finish())
+  ipcMain.handle(IPC.HUD_FINISH, () => {
+    if (demoTimers.length) stopHudDemo(true)
+    else dictation.finish()
+  })
+  ipcMain.handle(IPC.HUD_DEMO, (event) => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Not allowed.')
+    showHudDemo()
+  })
   ipcMain.on(IPC.HUD_HOLD, (event, held: unknown) => {
     if (event.sender === overlayWindow?.webContents) dictation.holdFinish(held === true)
   })

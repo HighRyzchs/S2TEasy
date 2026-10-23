@@ -62,6 +62,9 @@ function mockApi(): Window['s2t'] {
     hudCues: async () => undefined,
     hudFocus: async () => undefined,
     hudPointer: () => undefined,
+    hudDemo: async () => {
+      throw new Error('The desktop app shows the HUD on your screen. This preview shows it above.')
+    },
     getUpdateDiagnostics: async () =>
       'S2Teasy preview update report\nNo native update or installer was executed.',
     openUpdateInstaller: async () => {
