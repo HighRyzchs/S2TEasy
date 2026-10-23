@@ -10,6 +10,7 @@ import { wordExample } from './word-example'
 import { SpeechCueService } from './speech-cue-service'
 import { analyzeCueAudio, fetchCueModels } from './speech-cue-model'
 import { observeAudio } from './audio-observations'
+import { checkAccentSwaps } from './accent-check-model'
 import type { CueRequest, CueFeedback } from '../shared/speech-cues'
 import { join } from 'node:path'
 import { writeFileSync } from 'node:fs'
@@ -205,6 +206,19 @@ async function setup(): Promise<void> {
       mainWindow?.show()
       mainWindow?.focus()
       sendMain(IPC.OPEN_REVIEW, id)
+    },
+    checkAccents: async (item, text, slots, settings, signal) => {
+      if (extrasPaused(usage.snapshot().records, settings.monthlyLimitUsd))
+        throw new Error(LIMIT_REACHED)
+      if (!settings.apiKey.trim()) throw new Error('Save an OpenRouter key to use the context check.')
+      return checkAccentSwaps({
+        apiKey: settings.apiKey,
+        text,
+        slots,
+        signal,
+        onUsage: (row) =>
+          sendMain(IPC.USAGE_CHANGED, usage.record({ ...row, sessionId: item.id, source: 'context-check' }))
+      })
     },
     analyzeCueWindow: async (item, settings, range, signal) => {
       if (extrasPaused(usage.snapshot().records, settings.monthlyLimitUsd))

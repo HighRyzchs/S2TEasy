@@ -16,7 +16,7 @@ export type UsageMeasurement = {
 }
 export type UsageRecord = UsageMeasurement & {
   sessionId: string
-  source: 'dictation' | 'recovery' | 'speech-cues'
+  source: 'dictation' | 'recovery' | 'speech-cues' | 'context-check'
 }
 export type UsageState = { records: UsageRecord[]; warning: string; truncated: boolean }
 export const emptyUsage = (): UsageState => ({ records: [], warning: '', truncated: false })
