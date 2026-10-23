@@ -1,5 +1,6 @@
 ## Verify the installer handoff — v1.7.1
 
+- Replace the helper's `Get-FileHash` dependency with streaming .NET SHA-256. The native Windows regression reproduced a helper environment where that PowerShell function is unavailable; verification still uses SHA-256 before and after handoff.
 - Keep the app open until the PowerShell helper verifies the payload and acknowledges the specific attempt. Early exit, failure to launch, or a 10-second startup timeout is shown in the app instead of closing silently.
 - Save a pending receipt, helper script and stdout/stderr diagnostics before shutdown. Report incomplete or mismatched-version receipts on next launch and pause automatic downloads after a failed handoff.
 - Target the current installed directory explicitly with NSIS `/D=` and `--updated`. Wait for installer completion, check its exit code and verify the app's ProductVersion at the original path before reporting success or removing the payload.

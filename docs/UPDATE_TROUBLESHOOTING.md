@@ -15,6 +15,8 @@ An incomplete receipt pauses automatic download on startup, keeping the error vi
 
 ## View a report inside the app
 
+Native Windows testing reproduced an unavailable `Get-FileHash` function in a helper process. The 1.7.1 helper uses .NET SHA-256 directly, avoiding that module-path dependency while retaining verification. This is a reproduced compatibility failure, not proof of the cause on every user's computer.
+
 In 1.7.1, use **Settings → Privacy & data → View update report**, then **Copy update report**. The bounded report includes the running version, selected receipt fields and the last 12 KB of the latest helper log. It reads only update-owned files, not settings/history or paths suggested by receipt contents. Nothing is uploaded automatically. Review usernames and paths before sharing. **Open update diagnostics** remains available for inspecting the files directly.
 
 ## Recurring findstr terminals after an update

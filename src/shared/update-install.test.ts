@@ -25,7 +25,7 @@ describe('persistent Windows updates', () => {
   it('quotes literal paths and verifies again before copying, retaining a rollback copy', () => {
     const script = buildVerifiedApplyScript(options)
     expect(script).toContain("'C:\\My apps\\Pat''s 100% & notes\\S2Teasy.exe'")
-    expect(script.indexOf('Get-FileHash -LiteralPath $payload')).toBeLessThan(
+    expect(script.indexOf('Get-Sha256 $payload')).toBeLessThan(
       script.indexOf('Copy-Item -LiteralPath $target')
     )
     expect(script).toContain("$backup = $target + '.previous'")
@@ -33,6 +33,8 @@ describe('persistent Windows updates', () => {
     expect(script).toContain('Wait-Process -Timeout 120')
     expect(script).toContain("Write-Receipt 'applied'")
     expect(script).toContain("Write-Receipt 'failed'")
+    expect(script).not.toContain('Get-FileHash')
+    expect(script).toContain('[System.Security.Cryptography.SHA256]::Create()')
   })
   it('waits for the installed-app upgrade and checks its result before restart', () => {
     const script = buildVerifiedApplyScript({ ...options, kind: 'installed' })

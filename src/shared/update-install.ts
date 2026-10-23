@@ -38,6 +38,7 @@ export function buildVerifiedApplyScript(opts: {
     throw new Error('Invalid update verification parameters.')
   return `
 $ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
 $target = ${literal(opts.currentExe)}
 $payload = ${literal(opts.payloadPath)}
 $receipt = ${literal(opts.receiptPath)}
@@ -45,17 +46,23 @@ $expected = ${literal(opts.expectedSha256.toLowerCase())}
 $wanted = ${literal(opts.toVersion)}
 $cancel = ${literal(opts.cancelPath ?? '')}
 $backup = $target + '.previous'
+function Get-Sha256([string]$path) {
+  $stream = [System.IO.File]::OpenRead($path)
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try { [System.BitConverter]::ToString($sha.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() }
+  finally { $stream.Dispose(); $sha.Dispose() }
+}
 function Write-Receipt([string]$state, [string]$message) {
   @{ status = $state; attemptId = ${literal(opts.attemptId ?? '')}; fromVersion = ${literal(opts.fromVersion)}; toVersion = $wanted; target = $target; payload = $payload; at = [DateTime]::UtcNow.ToString('o'); message = $message } | ConvertTo-Json | Set-Content -LiteralPath $receipt -Encoding UTF8
   Write-Output ($state + ': ' + $message)
 }
 try {
-  if ((Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Update checksum changed before installation.' }
+  if ((Get-Sha256 $payload) -ne $expected) { throw 'Update checksum changed before installation.' }
   Write-Receipt 'waiting' 'Helper started and verified the payload; waiting for the app to exit.'
   $parent = Get-Process -Id ${opts.pid} -ErrorAction SilentlyContinue
   if ($parent) { $parent | Wait-Process -Timeout 120 }
   if ($cancel -and (Test-Path -LiteralPath $cancel)) { throw 'Update handoff was cancelled before installation.' }
-  if ((Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Update checksum changed before installation.' }
+  if ((Get-Sha256 $payload) -ne $expected) { throw 'Update checksum changed before installation.' }
   Write-Receipt 'installing' 'Applying the verified payload.'
   ${
     opts.kind === 'portable'
@@ -68,7 +75,7 @@ try {
       catch { Start-Sleep -Milliseconds 250 }
     }
     if (-not $copied) { throw 'Portable EXE is still locked or not writable.' }
-    if ((Get-FileHash -LiteralPath $target -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Installed copy failed checksum verification.' }
+    if ((Get-Sha256 $target) -ne $expected) { throw 'Installed copy failed checksum verification.' }
   } catch {
     Copy-Item -LiteralPath $backup -Destination $target -Force
     throw
