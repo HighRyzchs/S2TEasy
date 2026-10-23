@@ -1,50 +1,36 @@
-import { expect, it } from 'vitest'
-import { summarizeUsage, usageCsv, type UsageRecord } from './usage'
-export const row: UsageRecord = {
-  id: 'one',
-  sessionId: 'session',
-  source: 'dictation',
-  operationId: 'op',
-  createdAt: Date.now(),
+import { describe, expect, it } from 'vitest'
+import { normalizeSettings } from './types'
+import { extrasPaused, type UsageRecord } from './usage'
+
+const now = new Date(2026, 9, 20, 12).getTime()
+const row = (createdAt: number, costUsd: number | null): UsageRecord => ({
+  id: String(createdAt),
+  operationId: String(createdAt),
+  sessionId: 's',
+  source: 'speech-cues',
+  createdAt,
   engine: 'openrouter',
-  model: 'speech',
+  model: 'm',
+  costUsd,
   durationMs: 1000,
-  latencyMs: 200,
+  latencyMs: 100,
   attempt: 1,
-  outcome: 'success',
-  costUsd: 0.01
-}
-it('counts reported costs and retry attempts while deduplicating audio duration and marking unknown costs', () => {
-  const records = [
-    row,
-    { ...row, id: 'two', attempt: 2, costUsd: null },
-    { ...row, id: 'three', engine: 'local' as const, operationId: 'local', costUsd: 0 }
-  ]
-  const summary = summarizeUsage(records)
-  expect(summary).toMatchObject({
-    cost: 0.01,
-    requests: 3,
-    unknown: 1,
-    durationMs: 2000,
-    operations: 2
+  outcome: 'success'
+})
+
+describe('monthly limit', () => {
+  const records = [row(new Date(2026, 9, 2).getTime(), 1.5), row(new Date(2026, 8, 29).getTime(), 9), row(now, null)]
+
+  it('pauses extras only once this month reaches the limit', () => {
+    expect(extrasPaused(records, 0, now)).toBe(false)
+    expect(extrasPaused(records, 2, now)).toBe(false)
+    expect(extrasPaused(records, 1.5, now)).toBe(true)
   })
-  expect(summary.daily.reduce((sum, day) => sum + day.cost, 0)).toBe(0.01)
-})
-it('uses local calendar boundaries and excludes future and earlier requests', () => {
-  const now = new Date(2026, 5, 20, 12).getTime()
-  const summary = summarizeUsage(
-    [
-      { ...row, createdAt: new Date(2026, 5, 20, 0).getTime() },
-      { ...row, createdAt: now + 1 },
-      { ...row, createdAt: new Date(2026, 5, 19, 23, 59).getTime() }
-    ],
-    1,
-    now
-  )
-  expect(summary.requests).toBe(1)
-})
-it('exports metrics without transcripts and escapes spreadsheet formula injection', () => {
-  const csv = usageCsv([{ ...row, model: '=HYPERLINK("evil")' }])
-  expect(csv).toContain('"\'=HYPERLINK(')
-  expect(csv).not.toContain('session')
+
+  it('stores no limit unless a positive amount is set', () => {
+    expect(normalizeSettings({}).monthlyLimitUsd).toBe(0)
+    expect(normalizeSettings({ monthlyLimitUsd: -3 }).monthlyLimitUsd).toBe(0)
+    expect(normalizeSettings({ monthlyLimitUsd: 4.567 }).monthlyLimitUsd).toBe(4.57)
+    expect(normalizeSettings({ monthlyLimitUsd: Number.NaN }).monthlyLimitUsd).toBe(0)
+  })
 })

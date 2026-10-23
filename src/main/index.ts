@@ -23,7 +23,7 @@ import {
 } from '../shared/vocabulary'
 import { joinUtterances } from '../shared/transcript'
 import { emptyOverlay, normalizeSettings } from '../shared/types'
-import { usageCsv } from '../shared/usage'
+import { extrasPaused, LIMIT_REACHED, usageCsv } from '../shared/usage'
 import { transcribeAudio } from './openrouter'
 import { IPC } from '../shared/ipc'
 import type {
@@ -205,13 +205,16 @@ async function setup(): Promise<void> {
       mainWindow?.focus()
       sendMain(IPC.OPEN_REVIEW, id)
     },
-    analyzeCompleted: (item, settings, signal) =>
-      analyzeAutomaticCues(journal.readPcm(item.id), settings, signal, (row) =>
+    analyzeCompleted: async (item, settings, signal) => {
+      if (extrasPaused(usage.snapshot().records, settings.monthlyLimitUsd))
+        throw new Error(LIMIT_REACHED)
+      return analyzeAutomaticCues(journal.readPcm(item.id), settings, signal, (row) =>
         sendMain(
           IPC.USAGE_CHANGED,
           usage.record({ ...row, sessionId: item.id, source: 'speech-cues' })
         )
-      ),
+      )
+    },
     getSettings: () => store.getSettings(),
     onOverlay: (state) => {
       stopHudDemo(false)
@@ -315,6 +318,8 @@ async function setup(): Promise<void> {
   }
   ipcMain.handle(IPC.ANALYZE_CUES, (event, id: string, range: CueRequest) => {
     requireMain(event)
+    if (extrasPaused(usage.snapshot().records, store.getSettings().monthlyLimitUsd))
+      throw new Error(LIMIT_REACHED)
     return speechCues.run(id, range)
   })
   ipcMain.handle(IPC.CANCEL_CUES, (event, id: string) => {

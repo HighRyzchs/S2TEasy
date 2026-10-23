@@ -265,13 +265,14 @@
 .outcomes {
   font-size: 13.5px;
 }
-.card.month {
-  flex-direction: row;
+.month-row {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
 }
-.month > div {
+.month-row > div {
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -279,6 +280,34 @@
 .month-value {
   font-size: 24px;
   font-weight: 500;
+}
+.month-value span {
+  font-size: 15px;
+}
+.month-meter {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--raised);
+  overflow: hidden;
+}
+.month-meter i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+.month-meter.reached i {
+  background: var(--danger);
+}
+.month-limit {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--dim);
+}
+.month-limit .input {
+  width: 110px;
 }
 .usage-foot {
   max-width: 80ch;
