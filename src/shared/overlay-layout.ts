@@ -1,21 +1,4 @@
-import type { OverlayTheme } from './overlay-theme'
 import type { OverlayPosition } from './types'
-
-export function overlaySize(theme: OverlayTheme): { width: number; height: number } {
-  const vertical = theme.orientation === 'vertical'
-  const width = vertical ? 264 : theme.skin === 'studio' ? 608 : theme.showTranscript ? 568 : 444
-  const height = vertical
-    ? theme.showTranscript
-      ? 284
-      : 240
-    : theme.skin === 'studio' || theme.showTranscript
-      ? 104
-      : 88
-  return {
-    width: Math.round(width * theme.scale),
-    height: Math.round((height + (vertical ? 254 : 144)) * theme.scale)
-  }
-}
 
 export function overlayCoordinates(
   area: { x: number; y: number; width: number; height: number },

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { overlayCoordinates, overlaySize } from './overlay-layout'
-import { defaultOverlayTheme } from './overlay-theme'
+import { overlayCoordinates } from './overlay-layout'
 import { OVERLAY_POSITIONS } from './types'
 
 describe('overlay placement', () => {
@@ -30,11 +29,5 @@ describe('overlay placement', () => {
       x: -196,
       y: 178
     })
-  })
-  it('allocates enough space for a scaled vertical overlay', () => {
-    const size = overlaySize({ ...defaultOverlayTheme(), orientation: 'vertical', scale: 1.4 })
-    expect(size.height).toBeGreaterThan(size.width)
-    expect(size.width).toBeGreaterThanOrEqual(144 * 1.4 + 16)
-    expect(size.height).toBeGreaterThanOrEqual(252 * 1.4 + 16)
   })
 })
