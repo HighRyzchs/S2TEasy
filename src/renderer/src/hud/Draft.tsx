@@ -58,7 +58,7 @@ export function WordList({
     if (token.kind === 'tag') {
       const cue = token.text.slice(1, -1).trim().toLowerCase()
       nodes.push(
-        <Fragment key={token.start}>
+        <Fragment key={`tag-${index}-${token.start}`}>
           <span className="hud-tag" data-cue={cue} title="Speech cue">
             {token.text}
           </span>{' '}

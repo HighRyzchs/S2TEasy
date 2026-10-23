@@ -33,6 +33,7 @@ import { TextInjector } from './inject'
 import { transcribeAudio, type TranscribeInput } from './openrouter'
 import { RouterAudioClient } from './router-audio'
 import { SessionJournal } from './session-journal'
+import { LiveCues, type CueWindowResult } from './live-cues'
 
 type Host = {
   overlay: { showInactive: () => void; hide: () => void; isDestroyed: () => boolean }
@@ -57,6 +58,13 @@ type Host = {
     settings: AppSettings,
     signal: AbortSignal
   ) => Promise<CueAnalysis | undefined>
+  /** Speech cues while talking: analyze one stretch of this session's journal audio. */
+  analyzeCueWindow?: (
+    item: HistoryItem,
+    settings: AppSettings,
+    range: { startMs: number; endMs: number },
+    signal: AbortSignal
+  ) => Promise<CueWindowResult | undefined>
 }
 
 type Dependencies = {
@@ -97,6 +105,9 @@ export class DictationController {
   private watchdog: NodeJS.Timeout | null = null
   private pasteAbort = new AbortController()
   private requestAbort: AbortController | null = null
+  private liveCues: LiveCues | null = null
+  private liveCuesAbort: AbortController | null = null
+  private journalBytes = 0
   private lastLevelAt = 0
   private stream: RouterAudioClient | null = null
   private item: HistoryItem | null = null
@@ -212,7 +223,38 @@ export class DictationController {
   setSessionCues(on: boolean): void {
     if (!this.settings || !this.busy) return
     this.settings.speechCues = { ...this.settings.speechCues, enabled: on, automatic: on }
-    this.setState({ ...this.state, cues: on })
+    if (!on) this.stopLiveCues()
+    this.setState({ ...this.state, cues: on, liveCues: on ? this.state.liveCues : undefined })
+    if (on && !this.liveCues && !this.practiceText) this.startLiveCues()
+  }
+
+  /** Journal audio recorded so far in this session, in milliseconds (16 kHz mono PCM16). */
+  private journalMs(): number {
+    return Math.floor(this.journalBytes / 32)
+  }
+
+  private startLiveCues(): void {
+    const analyze = this.host.analyzeCueWindow
+    const item = this.item
+    const settings = this.settings
+    if (!analyze || !item || !settings || !this.requestAbort) return
+    const gen = this.generation
+    this.liveCuesAbort = new AbortController()
+    this.liveCues = new LiveCues({
+      analyze: (range, signal) => analyze(item, settings, range, signal),
+      signal: AbortSignal.any([this.requestAbort.signal, this.liveCuesAbort.signal]),
+      model: settings.speechCues.model,
+      startMs: this.journalMs(),
+      onCues: (liveCues) => {
+        if (gen === this.generation && this.busy) this.setState({ ...this.state, liveCues })
+      }
+    })
+  }
+
+  private stopLiveCues(): void {
+    this.liveCuesAbort?.abort()
+    this.liveCuesAbort = null
+    this.liveCues = null
   }
 
   /**
@@ -294,6 +336,8 @@ export class DictationController {
     this.pausing = false
     this.paused = false
     this.segmentStartMs = 0
+    this.journalBytes = 0
+    this.stopLiveCues()
     this.finishHeld = false
     this.clearFinishTimer()
     this.workChain = Promise.resolve()
@@ -329,6 +373,7 @@ export class DictationController {
         message: settings.sttEngine === 'router-audio' ? 'Connecting' : 'Listening',
         cues: settings.speechCues.enabled && settings.speechCues.automatic
       })
+      if (!practice && settings.speechCues.enabled && settings.speechCues.automatic) this.startLiveCues()
       this.host.placeOverlay()
       if (settings.showOverlay) this.host.overlay.showInactive()
       await this.beginSegment(gen)
@@ -450,8 +495,10 @@ export class DictationController {
         this.settings?.recoveryAudio ||
         this.settings?.keepAudioForTraining ||
         (this.settings?.speechCues.enabled && this.settings.speechCues.automatic)
-      )
+      ) {
         this.host.journal.append(this.item.id, bytes)
+        this.journalBytes += bytes.length
+      }
       this.stream?.sendPcm(bytes)
     } catch (error) {
       this.fail(errorMessage(error), gen)
@@ -548,24 +595,23 @@ export class DictationController {
       return
     }
     // Words are durable before optional audio interpretation. Its failure must not lose dictation.
+    const live = this.liveCues
     if (
       this.settings.speechCues.enabled &&
       this.settings.speechCues.automatic &&
-      this.host.analyzeCompleted
+      (live || this.host.analyzeCompleted)
     ) {
       this.setState({
         ...this.state,
         status: 'transcribing',
-        message: 'Words saved · listening for delivery',
+        message: live ? 'Words saved · finishing speech cues' : 'Words saved · listening for delivery',
         rms: 0,
         bars: []
       })
       try {
-        const analysis = await this.host.analyzeCompleted(
-          this.item,
-          this.settings,
-          this.requestAbort!.signal
-        )
+        const analysis = live
+          ? await live.finish(this.journalMs())
+          : await this.host.analyzeCompleted!(this.item, this.settings, this.requestAbort!.signal)
         if (!this.valid(gen)) return
         this.item.cueAnalysis = analysis
       } catch (error) {
@@ -823,6 +869,7 @@ export class DictationController {
     const take = pending.length - hold
     if (take <= 0) return ''
     const { text, hits } = applyVocabularyDetailed(pending.slice(0, take).join(' '), this.vocabulary())
+    this.liveCues?.phrase(this.typedText.split(/\s+/).filter(Boolean).length, this.journalMs())
     this.typedRawWords += take
     this.typedText = joinUtterances([this.typedText, text])
     this.hits.push(...hits)

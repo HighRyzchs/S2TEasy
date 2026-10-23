@@ -207,6 +207,8 @@ export type OverlayState = {
   /** A short message for the HUD, such as where an edit was saved. */
   notice?: string
   noticeAt?: number
+  /** Speech cues heard so far, each shown before the word it starts at (word index in `partial`). */
+  liveCues?: { word: number; label: string }[]
 }
 
 export type ModelOption = {
