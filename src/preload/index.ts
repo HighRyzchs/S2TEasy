@@ -20,6 +20,8 @@ export type S2TApi = {
   saveOutput: (value: OutputPreferences) => Promise<AppSettings>
   copyOutput: (id: string, format: 'plain' | 'tags' | 'json') => Promise<boolean>
   learnWord: (request: LearnWordRequest) => Promise<AppSettings>
+  /** The icon of a program that appears in History, as a data URL, or null. */
+  appIcon: (exe: string) => Promise<string | null>
   /** Replace characters [start, end) of the open session's text. */
   hudEdit: (
     sessionId: string,
@@ -98,6 +100,7 @@ const api: S2TApi = {
   saveOutput: (value) => ipcRenderer.invoke(IPC.SAVE_OUTPUT, value),
   copyOutput: (id, format) => ipcRenderer.invoke(IPC.COPY_OUTPUT, id, format),
   learnWord: (request) => ipcRenderer.invoke(IPC.LEARN_WORD, request),
+  appIcon: (exe) => ipcRenderer.invoke(IPC.APP_ICON, exe),
   hudEdit: (sessionId, start, end, text) =>
     ipcRenderer.invoke(IPC.HUD_EDIT, sessionId, start, end, text),
   hudPause: () => ipcRenderer.invoke(IPC.HUD_PAUSE),
