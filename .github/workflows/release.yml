@@ -39,9 +39,11 @@ jobs:
             release/windows-update-smoke.json
             release/electron-update-handoff.json
       - name: Write artifact checksums
+        id: checksums
         shell: pwsh
         run: |
           $releaseVersion = (Get-Content package.json | ConvertFrom-Json).version
+          "tag=v$releaseVersion" >> $env:GITHUB_OUTPUT
           foreach ($artifact in @("release/S2Teasy-$releaseVersion-win-x64.exe", "release/S2Teasy-$releaseVersion-portable.exe")) {
             if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) { throw "Missing required release artifact: $artifact" }
           }
@@ -51,6 +53,9 @@ jobs:
           } | Set-Content release/SHA256SUMS.txt -Encoding ascii
       - uses: softprops/action-gh-release@v2
         with:
+          # A tag push releases that tag; a manual run releases package.json's version from this commit.
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || steps.checksums.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           fail_on_unmatched_files: true
           generate_release_notes: true
           body_path: docs/RELEASE_NOTES.md
