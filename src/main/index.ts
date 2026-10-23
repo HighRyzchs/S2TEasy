@@ -8,7 +8,8 @@ import type { WordTiming } from '../shared/word-timing'
 import { audioResponse } from './audio-response'
 import { wordExample } from './word-example'
 import { SpeechCueService } from './speech-cue-service'
-import { fetchCueModels } from './speech-cue-model'
+import { analyzeCueAudio, fetchCueModels } from './speech-cue-model'
+import { observeAudio } from './audio-observations'
 import type { CueRequest, CueFeedback } from '../shared/speech-cues'
 import { join } from 'node:path'
 import { writeFileSync } from 'node:fs'
@@ -204,6 +205,30 @@ async function setup(): Promise<void> {
       mainWindow?.show()
       mainWindow?.focus()
       sendMain(IPC.OPEN_REVIEW, id)
+    },
+    analyzeCueWindow: async (item, settings, range, signal) => {
+      if (extrasPaused(usage.snapshot().records, settings.monthlyLimitUsd))
+        throw new Error(LIMIT_REACHED)
+      if (!settings.apiKey.trim())
+        throw new Error('Save an OpenRouter key in Voice intelligence to hear speech cues.')
+      const excerpt = journal.readPcmExcerpt(item.id, range)
+      const observed = observeAudio(excerpt)
+      if (observed.durationMs < 500 || observed.rms < 0.002) return undefined
+      const result = await analyzeCueAudio({
+        apiKey: settings.apiKey,
+        settings: settings.speechCues,
+        wavBase64: pcmToWav(excerpt).toString('base64'),
+        durationMs: observed.durationMs,
+        startMs: range.startMs,
+        signal,
+        onUsage: (row) =>
+          sendMain(IPC.USAGE_CHANGED, usage.record({ ...row, sessionId: item.id, source: 'speech-cues' }))
+      })
+      const shift = (at: { startMs: number; endMs: number }) => ({
+        startMs: at.startMs + range.startMs,
+        endMs: at.endMs + range.startMs
+      })
+      return { ...result, observations: { ...observed, quietIntervals: observed.quietIntervals.map(shift) } }
     },
     analyzeCompleted: async (item, settings, signal) => {
       if (extrasPaused(usage.snapshot().records, settings.monthlyLimitUsd))
