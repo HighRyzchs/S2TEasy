@@ -39,6 +39,24 @@ export async function fetchCueModels(
     .map((m) => ({ slug: m.id!, name: m.name ?? m.id! }))
 }
 
+// Live cues analyze every few phrases; the model list barely changes, so check it once in a while.
+const MODEL_CHECK_MS = 10 * 60_000
+let modelCheck: { key: string; at: number; slugs: Set<string> } | null = null
+
+/** Forget the cached model list (tests, or after the key changes). */
+export function resetCueModelCheck(): void {
+  modelCheck = null
+}
+
+async function cueModelAvailable(apiKey: string, model: string, signal: AbortSignal): Promise<boolean> {
+  const key = apiKey.trim()
+  if (!modelCheck || modelCheck.key !== key || Date.now() - modelCheck.at > MODEL_CHECK_MS) {
+    const models = await fetchCueModels(apiKey, signal)
+    modelCheck = { key, at: Date.now(), slugs: new Set(models.map((m) => m.slug)) }
+  }
+  return modelCheck.slugs.has(model)
+}
+
 export async function analyzeCueAudio(input: {
   apiKey: string
   settings: SpeechCueSettings
@@ -50,8 +68,7 @@ export async function analyzeCueAudio(input: {
 }): Promise<Pick<CueAnalysis, 'quality' | 'summary' | 'cues'>> {
   const { settings, signal } = input
   signal.throwIfAborted()
-  const models = await fetchCueModels(input.apiKey, signal)
-  if (!models.some((m) => m.slug === settings.model))
+  if (!(await cueModelAvailable(input.apiKey, settings.model, signal)))
     throw new Error(
       'Choose a current audio-input chat model with structured output. Dedicated STT slugs cannot analyze emotion.'
     )

@@ -1,7 +1,8 @@
-import { afterEach, expect, it, vi } from 'vitest'
-import { analyzeCueAudio, fetchCueModels } from './speech-cue-model'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { analyzeCueAudio, fetchCueModels, resetCueModelCheck } from './speech-cue-model'
 import { defaultSpeechCues } from '../shared/speech-cues'
 const model = defaultSpeechCues().model
+beforeEach(() => resetCueModelCheck())
 const catalogue = {
   data: [
     {
@@ -99,6 +100,7 @@ it('logs reported cost on invalid model output, and never retries paid errors', 
   expect(i.onUsage).toHaveBeenCalledWith(
     expect.objectContaining({ costUsd: 0.002, outcome: 'error' })
   )
+  resetCueModelCheck()
   fetcher
     .mockReset()
     .mockResolvedValueOnce(response(catalogue))
@@ -109,6 +111,17 @@ it('logs reported cost on invalid model output, and never retries paid errors', 
   expect(next.onUsage).toHaveBeenCalledWith(
     expect.objectContaining({ costUsd: null, outcome: 'error' })
   )
+})
+it('checks the model list once for repeated live-cue requests', async () => {
+  const reply = response({
+    choices: [{ message: { content: JSON.stringify({ quality: 'usable', summary: 'ok', cues: [] }) } }],
+    usage: { cost: 0.001 }
+  })
+  const fetcher = vi.fn().mockResolvedValueOnce(response(catalogue)).mockResolvedValue(reply)
+  vi.stubGlobal('fetch', fetcher)
+  await analyzeCueAudio(input())
+  await analyzeCueAudio(input())
+  expect(fetcher).toHaveBeenCalledTimes(3)
 })
 it('records cancellation without persisting late returned cues', async () => {
   const controller = new AbortController(),

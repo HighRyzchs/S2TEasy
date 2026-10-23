@@ -21,6 +21,7 @@ import {
   relocateSpan,
   spanRange,
   tokenize,
+  withLiveCues,
   wordCount,
   type Span
 } from './tokens'
@@ -100,8 +101,8 @@ export function Hud({
   const anchor = anchorOf(position)
   const cues = state.cues ?? false
   const tokens = useMemo(
-    () => tokenize(state.partial, state.typedLength ?? 0),
-    [state.partial, state.typedLength]
+    () => withLiveCues(tokenize(state.partial, state.typedLength ?? 0), cues ? state.liveCues : undefined),
+    [state.partial, state.typedLength, state.liveCues, cues]
   )
   const words = wordCount(tokens)
   const cue = cues ? latestCue(tokens) : undefined

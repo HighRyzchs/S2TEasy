@@ -430,6 +430,35 @@ it('keeps saved words and finishes if optional cue analysis fails; copy time nev
   expect(t.analyzeCompleted).toHaveBeenCalledOnce()
   t.controller.cancel()
 })
+it('hears speech cues per phrase while talking and saves them with the session', async () => {
+  const t = setup({
+    speechCues: { ...defaultSettings().speechCues, enabled: true, automatic: true },
+    recoveryAudio: false
+  })
+  t.transcribe.mockResolvedValue('no way he said yes')
+  const analyzeCueWindow = vi.fn(async (_item: HistoryItem, _settings: unknown, range: { startMs: number; endMs: number }) => ({
+    quality: 'usable' as const,
+    summary: 'Bright and quick.',
+    cues: [
+      { id: 'c', kind: 'emotion' as const, label: 'excited', strength: 'clear' as const, startMs: range.startMs, endMs: range.startMs + 900, evidence: 'pitch rises' }
+    ],
+    observations: { durationMs: range.endMs - range.startMs, rms: 0.1, clippedFraction: 0, quietIntervals: [] }
+  }))
+  Object.assign(t.host, { analyzeCueWindow })
+  await t.controller.start()
+  const gen = t.controller.currentGeneration()
+  t.controller.onPcm(new Uint8Array(4000 * 32), gen)
+  await t.controller.onUtterance('audio', gen)
+  expect(analyzeCueWindow).toHaveBeenCalledWith(expect.anything(), expect.anything(), { startMs: 0, endMs: 4000 }, expect.any(AbortSignal))
+  await vi.waitFor(() =>
+    expect(t.host.onOverlay).toHaveBeenCalledWith(expect.objectContaining({ liveCues: [{ word: 0, label: 'excited' }] }))
+  )
+  t.controller.stop()
+  await t.controller.onFinished('', '', 1000, gen)
+  expect(t.analyzeCompleted).not.toHaveBeenCalled()
+  expect(t.history[0].cueAnalysis?.cues).toMatchObject([{ label: 'excited', startMs: 0 }])
+  expect(t.history[0].status).toBe('complete')
+})
 it('cancels pending cue analysis without saving a late result or pasting stale words', async () => {
   const t = setup({
     speechCues: { ...defaultSettings().speechCues, enabled: true, automatic: true },

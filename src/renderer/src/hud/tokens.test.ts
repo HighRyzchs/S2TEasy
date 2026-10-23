@@ -3,6 +3,7 @@ import {
   cleanWord,
   cueColor,
   extendSelection,
+  withLiveCues,
   latestCue,
   normalizeEdit,
   relocateSpan,
@@ -124,5 +125,22 @@ describe('cues', () => {
     expect(cueColor('calm')).toBeDefined()
     expect(cueColor('whispers')).toBeUndefined()
     expect(cueColor(undefined)).toBeUndefined()
+  })
+})
+
+describe('withLiveCues', () => {
+  it('draws each cue before the word it starts at, without moving word ranges', () => {
+    const tokens = tokenize('no way he said yes', 6)
+    const out = withLiveCues(tokens, [
+      { word: 0, label: 'excited' },
+      { word: 3, label: 'laughter' },
+      { word: 9, label: 'calm' }
+    ])
+    expect(out.map((t) => t.text)).toEqual(['[excited]', 'no', 'way', 'he', '[laughter]', 'said', 'yes', '[calm]'])
+    const said = out.find((t) => t.text === 'said')!
+    expect('no way he said yes'.slice(said.start, said.end)).toBe('said')
+    expect(spanRange(out, 1, 3)).toEqual({ start: 0, end: 9 })
+    expect(spanRange(out, 3, 5)).toBeNull()
+    expect(withLiveCues(tokens, undefined)).toBe(tokens)
   })
 })

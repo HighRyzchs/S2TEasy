@@ -29,6 +29,31 @@ export function tokenize(text: string, typedLength = 0): Token[] {
   return tokens
 }
 
+/**
+ * Live speech cues arrive separately from the text (so edits keep exact character ranges); each is
+ * drawn before the word it starts at, as a zero-width tag token that can never be edited.
+ */
+export function withLiveCues(tokens: Token[], cues: { word: number; label: string }[] | undefined): Token[] {
+  if (!cues?.length) return tokens
+  const before = new Map<number, string[]>()
+  for (const cue of cues) before.set(cue.word, [...(before.get(cue.word) ?? []), cue.label])
+  const out: Token[] = []
+  let word = 0
+  for (const token of tokens) {
+    if (token.kind === 'word') {
+      for (const label of before.get(word) ?? [])
+        out.push({ kind: 'tag', text: `[${label}]`, start: token.start, end: token.start, typed: token.typed })
+      before.delete(word)
+      word += 1
+    }
+    out.push(token)
+  }
+  const end = tokens.length ? tokens[tokens.length - 1].end : 0
+  for (const labels of before.values())
+    for (const label of labels) out.push({ kind: 'tag', text: `[${label}]`, start: end, end, typed: false })
+  return out
+}
+
 export function wordCount(tokens: Token[]): number {
   return tokens.reduce((count, token) => count + (token.kind === 'word' ? 1 : 0), 0)
 }
