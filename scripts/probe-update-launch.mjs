@@ -30,7 +30,7 @@ const { buildVerifiedApplyScript } = require('./helper.cjs');
 const directory = ${JSON.stringify(directory)}, diagnostics = ${JSON.stringify(diagnostics)};
 async function run() {
   const rows=[],context=process.versions.electron?'electron':'node';
-  for (const name of ['legacy-detached', 'no-windowstyle', 'current', 'bootstrap']) {
+  for (const name of ['legacy-detached', 'current', 'pipe-open', 'pipe-close', 'bootstrap']) {
     const stem=context+'-'+name;
     const receipt=join(directory, stem+'-result.json'), cancel=join(directory,stem+'-cancelled');
     const payload=join(directory, stem+'-payload.bin');writeFileSync(payload,'synthetic payload');
@@ -41,7 +41,8 @@ async function run() {
     if(name==='bootstrap')args.push('-Command',"$ErrorActionPreference='Stop'; Write-Output 'bootstrap started'; & ([scriptblock]::Create([System.IO.File]::ReadAllText('"+scriptPath.replace(/'/g,"''")+"')))");
     else args.push('-EncodedCommand',Buffer.from(script,'utf16le').toString('base64'));
     const log=openSync(join(diagnostics, stem+'.log'),'a');
-    const child=spawn(join(process.env.SystemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),args,{detached:name!=='current',windowsHide:true,stdio:['ignore',log,log],cwd:directory});closeSync(log);
+    const child=spawn(join(process.env.SystemRoot,'System32','WindowsPowerShell','v1.0','powershell.exe'),args,{detached:name!=='current',windowsHide:true,stdio:[name.startsWith('pipe-')?'pipe':'ignore',log,log],cwd:directory});closeSync(log);
+    if(name==='pipe-close')child.stdin.end();
     let error='',exited=false,closed=false,code=null,signal=null;child.on('close',()=>{closed=true});child.on('error',e=>{error=e.message;exited=true});child.on('exit',(c,s)=>{exited=true;code=c;signal=s});
     const deadline=Date.now()+12000;
     while(!exited&&!existsSync(receipt)&&Date.now()<deadline)await new Promise(r=>setTimeout(r,100));
