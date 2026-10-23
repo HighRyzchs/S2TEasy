@@ -72,7 +72,7 @@ global.fetch=async url=>String(url).includes('/releases/latest')?new Response(JS
 const states=[];let timer;
 app.whenReady().then(async()=>{
  const updater=new UpdateLauncher(()=>'',state=>{states.push(state);writeFileSync(join(diagnostics,'states.json'),JSON.stringify(states,null,2));if(state.phase==='error'){console.error(state.message);clearTimeout(timer);app.exit(1)}},folder,diagnostics);
- timer=setTimeout(()=>{console.error('Electron handoff timed out');app.exit(1)},20000);
+ timer=setTimeout(()=>{console.error('Electron handoff timed out');app.exit(1)},45000);
  if((await updater.check({download:true})).phase!=='ready')throw Error('Fixture update not ready');
  updater.install();
 });
@@ -90,7 +90,7 @@ process.on('unhandledRejection',e=>{console.error(e);app.exit(1)});
     const timeout = setTimeout(() => {
       child.kill()
       fail(new Error('Electron fixture timeout'))
-    }, 30000)
+    }, 60000)
     child.once('error', (e) => {
       clearTimeout(timeout)
       fail(e)

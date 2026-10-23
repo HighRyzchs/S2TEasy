@@ -362,8 +362,8 @@ export class UpdateLauncher {
           } catch {
             /* A receipt can be absent or mid-write; wait for a valid matching acknowledgement. */
           }
-          if (Date.now() - started >= 10000)
-            fail('The update helper did not acknowledge startup within 10 seconds.')
+          if (Date.now() - started >= 30000)
+            fail('The update helper did not acknowledge startup within 30 seconds.')
         }, 100)
       })
       child.unref()

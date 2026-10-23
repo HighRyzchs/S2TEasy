@@ -245,10 +245,10 @@ it('requires a matching startup acknowledgement and cancels the attempt on timeo
   const path = join(directory, 'update-result.json'),
     receipt = JSON.parse(readFileSync(path, 'utf8'))
   writeFileSync(path, JSON.stringify({ ...receipt, attemptId: 'old-attempt', status: 'waiting' }))
-  await vi.advanceTimersByTimeAsync(10000)
+  await vi.advanceTimersByTimeAsync(30000)
   expect(updater.getStatus()).toMatchObject({
     phase: 'error',
-    message: expect.stringMatching(/10 seconds/)
+    message: expect.stringMatching(/30 seconds/)
   })
   expect(app.quit).not.toHaveBeenCalled()
   expect(child.kill).toHaveBeenCalledOnce()
@@ -314,4 +314,23 @@ it('recognizes manual recovery without claiming the earlier failed automatic att
     message: expect.stringMatching(/Running 1.3.1.*did not confirm completion/)
   })
   expect(recovered.diagnostics()).toContain('Helper exited 0')
+})
+
+it('allows a cold Windows helper to acknowledge after ten seconds while keeping the app open', async () => {
+  vi.useFakeTimers()
+  const child = Object.assign(new EventEmitter(), { unref: vi.fn(), kill: vi.fn() })
+  launcher.spawn.mockReturnValue(child)
+  const { updater, directory } = setup()
+  await updater.check({ download: true })
+  updater.install()
+  child.emit('spawn')
+  await vi.advanceTimersByTimeAsync(15000)
+  expect(updater.getStatus().phase).toBe('applying')
+  expect(app.quit).not.toHaveBeenCalled()
+  const path = join(directory, 'update-result.json')
+  const receipt = JSON.parse(readFileSync(path, 'utf8'))
+  writeFileSync(path, JSON.stringify({ ...receipt, status: 'waiting' }))
+  await vi.advanceTimersByTimeAsync(350)
+  expect(app.quit).toHaveBeenCalledOnce()
+  expect(child.kill).not.toHaveBeenCalled()
 })

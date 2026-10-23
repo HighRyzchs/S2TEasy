@@ -1,3 +1,13 @@
+## Give cold Windows launches time to acknowledge — v1.8.2
+
+- Increase the verified helper-startup window from 10 to 30 seconds. A separate cold Windows run reached the earlier deadline despite passing launch/upgrade runs; allow startup time without closing the app early or assuming success.
+- Add a delayed-acknowledgment regression. App shutdown still requires the correct attempt ID and a verified waiting receipt; exits, errors and missing acknowledgment keep the app open.
+- Include the v1.8.1 GUI update bridge, actual Electron/NSIS checks, and the redesigned Your voice desktop studio described below.
+
+From 1.7.2 or 1.8.0, run this win-x64 installer directly once. Those installed versions still contain the detached PowerShell launcher. Existing settings, History and appearance choices are preserved.
+
+---
+
 ## Bring the studio into the app, fix the updater launch — v1.8.1
 
 - Make **Your voice** the first sidebar destination and the default workspace. Carry the approved prototype into the actual desktop layout: generous typography, paper cards, an output studio beside the recorder, a mixed library, a focused word editor, and Paper/Night views. Keep the real microphone, History, word rules, cue review and visible HUD output choices connected.
