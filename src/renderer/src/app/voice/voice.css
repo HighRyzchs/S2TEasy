@@ -72,3 +72,9 @@ div.queue button.queue-chip[aria-pressed='true'] { background: var(--accent); bo
 .per-app li:first-child { border-top: 0; }
 .per-app-name { flex: 1 1 auto; min-width: 0; font-size: 14px; }
 .per-app .seg button { padding: 4px 10px; min-height: 28px; font-size: 12.5px; }
+.accent-list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 12px; }
+.accent-list li { display: flex; flex-direction: column; gap: 6px; }
+.accent-line { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.accent-sentence { font-size: 15px; }
+.accent-result { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.accent-swap { display: inline-flex; align-items: center; gap: 6px; background: var(--raised); border-radius: 8px; padding: 3px 4px 3px 9px; }
