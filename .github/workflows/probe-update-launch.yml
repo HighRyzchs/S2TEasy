@@ -1,0 +1,25 @@
+name: Probe desktop update launch
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['scripts/probe-update-launch.mjs', '.github/workflows/probe-update-launch.yml']
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node scripts/probe-update-launch.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Desktop-launch-probe
+          path: release/launch-probe/
