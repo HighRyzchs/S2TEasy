@@ -1,78 +1,65 @@
-# Your voice · interactive design lab
+# Your voice · one output-first workspace
 
 [Open the working prototype](https://highryzchs.github.io/S2TEasy/voice-lab/).
 
-**Expression & tone** now opens first. It is the proposed audio-to-tags experience: emotion, delivery, pacing and nonverbal events inserted beside the original words. This is separate from vocabulary correction and sound shortcuts. See the [expressive-transcription design and code map](EXPRESSIVE_TRANSCRIPTION.md).
+The voice lab now combines personal words, sound shortcuts, expression tags and voice references on **one page**. One recorder supplies one output preview and one library. Vocabulary and emotion controls no longer occupy separate navigation destinations. This remains a browser prototype for review before migrating the desktop app.
 
-Try sample tag output and phrase-level corrections, or choose **Try my voice locally** for real acoustic measurements and an optional neutral reference. Example emotions are simulated; personal-recording tags are user labeled. No automatic emotion classifier or cloud call runs in this browser. Up to eight labeled takes and a neutral reference stay in page memory only.
+## Try the complete loop
 
-Vocabulary and Voice Practice currently live in separate desktop tabs. This browser experiment brings them together as **Your voice**: one small library for names, words, phrases, and labeled sound examples. It is a proposed interface to try before migrating the desktop app.
+1. **Start with the output.** The example combines real vocabulary rules with illustrative delivery tags. `shiv on` becomes `Siobhán`, while `[excited]` remains a delivery label.
+2. **Click a word** to remember a correction. The small editor opens over the same page; saving changes the output immediately. Clicking an existing personal name opens its existing rule.
+3. **Click a [tag]** to correct or omit its interpretation. The inline editor returns keyboard focus to the tag, or to the output heading if the tag was omitted. Escape closes it.
+4. Choose **With expression**, **Plain words**, or **JSON**, then **Copy output**. **Tune tags** expands the category and clear-only controls beside the preview.
+5. **Record once** in the try-it corner. Supply the spoken words, then choose **Measure this take locally**. The browser does not perform speech recognition. Approximate WPM updates when you edit the supplied text.
+6. Choose how the take sounded and **Remember this delivery**, or keep an ordinary take as the neutral reference. Both appear in the same library. These labels are yours, not model predictions.
+7. Use **Add something** for a word, phrase, sound shortcut, expression example, or neutral reference. Word and sound editors can explicitly attach the **last completed take**, so they do not open another microphone recorder.
+8. Expand **Models & interpretation** below the library to edit speech and Gemini cue-model IDs in place. Usage & spend remains its own navigation destination because it is an analytics view.
 
-## Try it in a minute
-
-1. Choose **Words & sounds**. Open a sample card or choose **Add something that’s you**.
-2. Choose a word, phrase, or sound cue. For a text rule, connect the mistaken transcript to what you want written.
-3. Optionally record a short example, stop, and play it back. Save the card.
-4. Type the mistaken words in **See the difference**. Enabled word and phrase rules apply immediately. Edit or pause them on their cards.
-5. Open **Models & settings** to edit the two model IDs, or **Usage & spend** to try the billing filters. **Reset demo** restores the examples after confirmation.
+The library filters **Everything / Words & phrases / Sounds / Expressions & references** keep the same page and shared state. Search spans the saved words and session references. **Replay & compare** opens a saved reference in the shared recorder’s player; **Remove** deletes it. Reset restores example cards and model preferences and discards session audio and references after confirmation.
 
 ## What works, and what is a demonstration
 
-| Area                          | This prototype                                                                                                                                               |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Personal library              | Add, edit, delete, search, filter, and pause cards. Text drafts persist in this browser.                                                                     |
-| Text corrections              | The desktop app’s actual whole-word/phrase correction function. No AI or microphone transcription.                                                           |
-| Voice examples                | Real local microphone recording, volume meter, and playback; at most 15 seconds per take. Requires a supported browser and permission.                       |
-| Sound cues                    | Label and record an example. **No automatic sound-to-word recognition.** A sound label never becomes a text replacement.                                     |
-| Model IDs                     | Editable browser preferences, saved locally. No compatibility lookup or paid requests. Desktop settings are unchanged.                                       |
-| Analytics                     | Filterable **sample data**, separated into dictation, recovery, and voice cues. Sample dollar amounts are neither current model prices nor account activity. |
-| Personal correction assistant | Proposed only; not called or billed.                                                                                                                         |
+| Area               | This prototype                                                                                                                                                                                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| One output         | Word rules and selected expression tags compose into the same copied result. Words are editable through personal rules; labels are edited separately.                                                  |
+| Personal words     | Add, edit, delete, search, filter and pause cards. Text drafts persist in this browser.                                                                                                                |
+| Corrections        | The desktop app’s actual whole-word/phrase correction function, applied inside each finalized phrase. Rules never run on rendered tag labels. Cross-phrase replacements are deliberately not invented. |
+| Expression tags    | Example interpretations, or explicit user labels on a personal take. Phrase correction, omission, category filtering, plain output and JSON provenance work.                                           |
+| Recording          | Real local microphone capture, volume meter and playback; at most 15 seconds per take. Exactly one capture component on the page.                                                                      |
+| Local measurements | Approximate pitch, digital energy, quiet-frame fraction and supplied-word WPM. Compare with a user-approved neutral take. No emotion classifier.                                                       |
+| Voice references   | One neutral reference and up to eight labeled examples, stored in page memory with their audio and supplied words.                                                                                     |
+| Sound shortcuts    | A label, intended text and optional completed audio example. **No automatic sound-to-word recognition.** Sound labels never become vocabulary replacements.                                            |
+| Models             | Inline, editable browser preferences. No API key, compatibility lookup, cloud opt-in or paid request. Desktop settings are unchanged.                                                                  |
+| Usage & spend      | Clearly labeled sample data with dictation, recovery and voice-cue filters. No account connection or historic billing import.                                                                          |
 
-The animated hero is decorative. Only the recording editor’s waveform responds to microphone volume. Examples do not adapt or retrain a speech model, and practice is not an accent score.
+Emotion interpretation and automatic desktop tag insertion remain planned. See [Expressive transcription](EXPRESSIVE_TRANSCRIPTION.md) for the intended audio-to-tags architecture and its current boundaries.
 
-## Privacy and storage
+## Privacy, recording and persistence
 
-No sign-in, API key, audio upload, speech-recognition service, or paid request is used by this page. Microphone access begins only when you press Record. Stop, cancel, closing the editor, hiding the page, or navigating away releases the microphone; a permission response arriving after dismissal is also cleaned up.
+The page makes no paid or AI request. The microphone opens only when you press Record. Stop, cancel, opening a card editor or reset dialog, switching to Usage, hiding the page, or leaving releases capture. Replaying a saved reference first cancels active capture. A late microphone permission response after dismissal is also cleaned up. Word editors play an existing take; they do not create another recorder.
 
-Text cards and model preferences use the browser key `s2teasy-voice-lab-v1`, separate from desktop app data. They remain until you clear browser storage or reset this demo. Up to 100 cards are kept. Do not enter secrets into these example fields.
+Text cards and model preferences use `s2teasy-voice-lab-v1`, separate from desktop data, and remain until reset or browser storage deletion. Up to 100 cards are kept. If storage is blocked, the page reports that text changes are temporary. Do not enter secrets into example fields.
 
-Recordings stay in the current page’s memory; reloading or leaving discards them. Save keeps an example available for playback during that page session. Closing without saving discards the editor’s new take. There is no audio persistence, export, or training upload. If browser storage is blocked, the page reports that text changes are temporary.
+Audio, attached word examples and reference profiles stay in page memory and disappear on reload. Attaching a completed take is explicit. These examples are not uploaded and do not retrain a model. Opening an editor stops the microphone rather than recording behind its dialog. Playback stops and object URLs are revoked when the relevant player closes or changes source.
 
-## Where is Gemini in the desktop app?
+Changing the output format does not grant permission for a future cloud audio service. The desktop integration will need an independent, clearly explained opt-in for audio uploads and extra provider charges.
 
-There are two separate model settings:
+## Gemini and older spend in the desktop app
 
-- **Speech recognition:** Settings → Speech engine → Audio model slug. This chooses the model that transcribes your words when using OpenRouter.
-- **Speech cues:** Settings → Voice intelligence → Audio understanding model. The starting candidate is `google/gemini-2.5-flash-lite`; users can edit its slug. This optional audio-understanding call is separate from speech transcription. Current audio capability, structured output, provider routing, and pricing still need to match the job.
+Speech recognition and speech-cue analysis have different model IDs. In desktop v1.7.2, choose the OpenRouter speech model under **Settings → Speech engine → Audio model slug**. The optional audio-understanding model is under **Settings → Voice intelligence → Audio understanding model**; the starting candidate is `google/gemini-2.5-flash-lite`. The prototype places both fields on the same page, with their purpose labeled. Audio/provider compatibility still matters.
 
-The prototype puts both jobs beside each other so their purpose and editable model IDs are easier to find. A model name alone does not guarantee that its route supports audio.
-
-## Why historical spend can be missing
-
-The desktop app records usage locally from provider responses to its own calls. It does **not** import historical OpenRouter account activity. Calls made before local usage logging, calls from another device, and activity in other clients will not appear automatically. Text transcript history cannot reconstruct a missing provider cost. Missing cost data remains unknown, not zero.
-
-The prototype’s categories describe the work: regular dictation, saved-audio recovery, and optional voice-cue analysis. These are not independent OpenRouter invoices. A future contextual correction feature should have its own category rather than being mixed with transcription. The existing desktop chart currently groups dictation and recovery under Speech to text.
+The desktop app records usage locally from provider responses to its own calls. It does **not** import historical OpenRouter account activity. Calls made before local usage logging, on other devices, or in other clients do not appear automatically. Text history cannot reconstruct missing provider costs. Unknown prices remain unknown, not zero. The sample billing categories describe workflow tasks, not separate OpenRouter invoices.
 
 ## Code map
 
-```mermaid
-flowchart LR
-    Card[Your voice card] --> Text[Word or phrase]
-    Card --> Sound[Labeled sound example]
-    Text --> Rules[Existing vocabulary rules]
-    Rules --> Preview[Local text playground]
-    Text --> Example[Optional microphone example]
-    Sound --> Example
-    Example --> Playback[Session-only playback]
-    Sound -. future .-> Recognition[Sound recognition engine]
-```
+- [VoiceWorkspace](../src/renderer/src/VoiceWorkspace.tsx): one preview, tag inspector, recorder, mixed library, reference profiles and inline model fields.
+- [Page and card editor](../src/renderer/src/voice-lab-main.tsx): browser draft persistence, word/sound editing, explicit completed-take attachment and usage preview.
+- [Expression example fixtures](../src/renderer/src/voice-workspace-data.ts): illustrative scenarios, not actual model responses.
+- [Combined transcript formatter](../src/shared/expressive-transcript.ts): vocabulary inside finalized phrases, separate allowlisted tags, output filtering and provenance.
+- [Vocabulary rules](../src/shared/vocabulary.ts): the correction function also used by the desktop app.
+- [Local prosody](../src/shared/prosody.ts): bounded acoustic analysis, supplied-word pace and neutral-reference deltas.
+- [Shared recorder](../src/renderer/src/VoiceLabRecorder.tsx): permission, bounded capture, live volume and cleanup.
+- [Completed-take player](../src/renderer/src/VoiceClipPreview.tsx): card-editor playback without another microphone request.
+- [Browser draft boundaries](../src/renderer/src/voice-lab-data.ts): text-card validation, model preferences and sample billing data.
 
-- [Prototype interface](../src/renderer/src/voice-lab-main.tsx): unified library, editor, models, and sample billing UI.
-- [Draft boundaries and sample fixtures](../src/renderer/src/voice-lab-data.ts): validates browser drafts, keeps sounds out of text rules, distinguishes illustrative costs.
-- [Local recorder](../src/renderer/src/VoiceLabRecorder.tsx): bounded recording, live volume, playback, cancellation, and stream cleanup.
-- [Working vocabulary engine](../src/shared/vocabulary.ts): the same correction function the desktop app uses.
-- [Desktop practice](../src/renderer/src/PracticePanel.tsx) and [progress calculation](../src/shared/practice-progress.ts): current real recognizer practice; deliberately not simulated as model training.
-- [Desktop cue settings](../src/renderer/src/CueSettingsPanel.tsx) and [cue model route](../src/main/speech-cue-model.ts): actual optional audio-understanding integration.
-- [Desktop usage](../src/renderer/src/UsagePanel.tsx), [usage store](../src/main/usage-store.ts), and [usage aggregation](../src/shared/usage.ts): local provider-reported metrics.
-
-Build with `npm run build:site`, serve `.site/` with a static server, and visit `/voice-lab/`. The prototype has no Electron dependency. It is published with the project website, without changing the desktop app version.
+Build with `npm run build:site`, serve `.site/` and visit `/voice-lab/`. The website workflow publishes the prototype without changing the desktop version.

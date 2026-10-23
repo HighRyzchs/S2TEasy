@@ -1,6 +1,6 @@
 # Expressive transcription: the words and how they were said
 
-[Try Expression & tone](https://highryzchs.github.io/S2TEasy/voice-lab/) · [Prototype walkthrough](VOICE_LAB.md) · [Existing speech-cue architecture](CONCEPTS.md)
+[Try the unified Your voice workspace](https://highryzchs.github.io/S2TEasy/voice-lab/) · [Prototype walkthrough](VOICE_LAB.md) · [Existing speech-cue architecture](CONCEPTS.md)
 
 The target is **audio → words plus delivery tags**. For example:
 
@@ -64,20 +64,20 @@ A reasonable starting candidate for an audio-understanding benchmark is the alre
 
 ## What the prototype actually does
 
-**Expression & tone** is now the first page of the voice lab. It demonstrates automatically rendered example interpretations, category switches, a clear-only filter, phrase-level tag correction/omission, and copying inline tags, plain text, or structured JSON. The “same words” scenarios keep identical text while changing sample delivery tags. All model interpretations and metrics in those scenarios are labeled examples; there is no sample audio or hidden inference request.
+**Your voice** combines expression, word corrections, sound shortcuts and voice examples in one output-first workspace. There is no separate expression page. It demonstrates automatically rendered example interpretations, category switches, a clear-only filter, phrase-level tag correction/omission, and copying inline tags, plain text, or structured JSON. The “same words” scenarios keep identical text while changing sample delivery tags. Delivery interpretations in those scenarios are labeled examples; there is no sample audio or hidden inference request. Acoustic measurements are shown only after the user records and measures a take.
 
-**Try my voice locally** records and plays real audio. It computes:
+The shared try-it recorder records and plays real audio. Word and sound editors can explicitly reuse the same completed take; they never request a second microphone. It computes:
 
 - Approximate WPM from the words the user supplies divided by total recorded time, including pauses. This is not automatic transcription or an articulation-rate estimate. The word count is language-dependent.
 - An approximate median fundamental frequency and 10th–90th percentile pitch range in semitones, when sufficient periodic frames are found. Autocorrelation can fail on noise, whispering, or harmonics.
 - RMS digital level and its difference from a user-selected neutral reference. This is not calibrated physical loudness in dB SPL.
 - Quiet-frame fraction using an energy threshold, and an energy envelope. These are not word-aligned pauses or a trained speech detector.
 
-The personal recording’s emotion tag is **explicitly user labeled**. The measurements do not assign angry, happy, or any other emotional label. Up to eight labeled references can be kept and replayed in the current page session. Neutral measurements, recordings and labels are memory-only and disappear on reload; nothing is uploaded or trained. Leaving the panel stops capture. Reset clears all references.
+The personal recording’s emotion tag is **explicitly user labeled**. The measurements do not assign angry, happy, or any other emotional label. A neutral reference and up to eight labeled examples can be kept and replayed in the current page session. Neutral measurements, recordings and labels are memory-only and disappear on reload; nothing is uploaded or trained. Leaving the panel stops capture. Reset clears all references.
 
 ## Output and feedback contract
 
-The prototype formatter inserts allowlisted tags at phrase boundaries and preserves the original words and whitespace. Users choose emotion, delivery, pacing, and event categories independently, or disable tags entirely. “Clear only” hides tentative example-model tags, while an explicit user correction remains visible. Clear/tentative are assessments, not calibrated probabilities.
+The prototype formatter inserts allowlisted tags at phrase boundaries. Explicit saved vocabulary rules first correct the words inside each finalized phrase; tags are handled separately, so a word rule cannot rename a tag. Other wording and whitespace are preserved. Users choose emotion, delivery, pacing, and event categories independently, or disable tags entirely. “Clear only” hides tentative example-model tags, while an explicit user correction remains visible. Clear/tentative are assessments, not calibrated probabilities.
 
 Structured output keeps each phrase’s text and selected tags separate, with `sample-model` or `user` provenance. It makes no invented timestamp claim. A future desktop result should use genuine audio-model provenance and include actual phrase ranges where available. Inline brackets are convenient human-readable hints; receiving LLMs and speech engines may interpret them differently. They are not a universal audio-tag standard.
 
@@ -85,15 +85,15 @@ Feedback must remain distinct from pronunciation corrections. “I sounded frust
 
 ## Code map and implementation boundaries
 
-| Code                                                                     | Role                                                                                                                             |
-| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
-| [ExpressionLab](../src/renderer/src/ExpressionLab.tsx)                   | Working browser controls, sample scenarios, phrase feedback, local recording analysis, neutral comparison and session references |
-| [Expressive transcript contract](../src/shared/expressive-transcript.ts) | Allowlisted tag rendering, plain-text preservation, filtering and structured provenance; no inference                            |
-| [Local prosody measurements](../src/shared/prosody.ts)                   | Bounded acoustic analysis and reference deltas; deliberately no emotion classifier                                               |
-| [Browser recorder](../src/renderer/src/VoiceLabRecorder.tsx)             | Permission, capture, volume meter, bounded recording, playback and cleanup                                                       |
-| [Existing cue labels and settings](../src/shared/speech-cues.ts)         | Current desktop cue schema; the prototype’s expanded proposed labels are separate                                                |
-| [Existing audio model call](../src/main/speech-cue-model.ts)             | Actual opt-in audio understanding for manually requested retained excerpts; not automatically invoked by this sample             |
-| [Existing cue service](../src/main/speech-cue-service.ts)                | Audio excerpt validation, cancellation, history persistence and feedback                                                         |
-| [Dictation controller](../src/main/dictation.ts)                         | Current streaming, text recovery and insertion; automatic tag orchestration is not wired here yet                                |
+| Code                                                                     | Role                                                                                                                                  |
+| ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
+| [VoiceWorkspace](../src/renderer/src/VoiceWorkspace.tsx)                 | One output-first workspace, shared recorder, vocabulary and tag feedback, mixed library, neutral comparison and inline model settings |
+| [Expressive transcript contract](../src/shared/expressive-transcript.ts) | Allowlisted tag rendering, plain-text preservation, filtering and structured provenance; no inference                                 |
+| [Local prosody measurements](../src/shared/prosody.ts)                   | Bounded acoustic analysis and reference deltas; deliberately no emotion classifier                                                    |
+| [Browser recorder](../src/renderer/src/VoiceLabRecorder.tsx)             | Permission, capture, volume meter, bounded recording, playback and cleanup                                                            |
+| [Existing cue labels and settings](../src/shared/speech-cues.ts)         | Current desktop cue schema; the prototype’s expanded proposed labels are separate                                                     |
+| [Existing audio model call](../src/main/speech-cue-model.ts)             | Actual opt-in audio understanding for manually requested retained excerpts; not automatically invoked by this sample                  |
+| [Existing cue service](../src/main/speech-cue-service.ts)                | Audio excerpt validation, cancellation, history persistence and feedback                                                              |
+| [Dictation controller](../src/main/dictation.ts)                         | Current streaming, text recovery and insertion; automatic tag orchestration is not wired here yet                                     |
 
 The next desktop work is automatic consented phrase analysis, real timing alignment, persistent optional reference profiles, feedback evaluation, and safe insertion/fallback behavior. Browser measurements and sample scenarios are not evidence that emotional recognition accuracy has been validated.

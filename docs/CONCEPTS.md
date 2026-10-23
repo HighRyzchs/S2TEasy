@@ -1,8 +1,7 @@
 # Why S2Teasy exists, and how it works
 
-For automatic emotion/delivery tags beside the spoken words, see [Expressive transcription](EXPRESSIVE_TRANSCRIPTION.md) and its [working browser sample](https://highryzchs.github.io/S2TEasy/voice-lab/). The sample distinguishes local acoustic measurements from example model interpretations.
+Try the [unified Your voice workspace](https://highryzchs.github.io/S2TEasy/voice-lab/): one output preview, recorder and library for personal words, sound shortcuts and delivery tags. The [walkthrough and code map](VOICE_LAB.md) distinguish working local interactions from example interpretations; [Expressive transcription](EXPRESSIVE_TRANSCRIPTION.md) describes the intended automatic audio-to-tags pipeline.
 
-Try the proposed unified vocabulary/practice interface in the [Your voice lab](https://highryzchs.github.io/S2TEasy/voice-lab/). Its [walkthrough and code map](VOICE_LAB.md) distinguish working browser interactions from future recognition features.
 
 [Start here](../README.md) · [Try speech cues](#try-emotion-and-delivery-analysis) · [Code map](#follow-the-code) · [Design details](PERSONAL_SPEECH_DESIGN.md) · [Privacy](PRIVACY.md)
 

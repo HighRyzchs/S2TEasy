@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   defaultExpressionOptions,
+  personalizePhrases,
   renderExpressiveTranscript,
   type ExpressionSegment
 } from './expressive-transcript'
@@ -37,6 +38,24 @@ describe('expressive transcript output', () => {
     expect(renderExpressiveTranscript(segments, defaultExpressionOptions(), 'inline')).toBe(
       'Hello. \n  Are you sure?'
     )
+  })
+  it('combines word rules and phrase tags without replacing tag labels or mutating source text', () => {
+    const original: ExpressionSegment[] = [
+      { ...segments[0]!, text: 'Hello, shiv on. I am excited. ' },
+      segments[1]!
+    ]
+    const corrected = personalizePhrases(original, [
+      { id: 'name', heard: 'shiv on', meant: 'Siobhán', enabled: true },
+      { id: 'literal', heard: 'excited', meant: 'ready', enabled: true }
+    ])
+    const options = { ...defaultExpressionOptions(), enabled: true }
+    expect(renderExpressiveTranscript(corrected, options, 'inline')).toBe(
+      '[excited] Hello, Siobhán. I am ready. \n  [soft] Are you sure?'
+    )
+    expect(
+      JSON.parse(renderExpressiveTranscript(corrected, options, 'json')).segments[0].tags[0].label
+    ).toBe('excited')
+    expect(original[0]!.text).toBe('Hello, shiv on. I am excited. ')
   })
   it('honors categories, tentative filtering, dismissal and explicit user corrections', () => {
     const options = { ...defaultExpressionOptions(), enabled: true }

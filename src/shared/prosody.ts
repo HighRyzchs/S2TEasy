@@ -14,6 +14,16 @@ export type ProsodyMeasurement = {
 const quantile = (sorted: number[], fraction: number) =>
   sorted[Math.floor((sorted.length - 1) * fraction)]!
 
+export function suppliedPace(transcript: string, durationMs: number) {
+  const wordCount = transcript.trim()
+    ? (transcript.match(/[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu)?.length ?? 0)
+    : null
+  return {
+    wordCount,
+    wordsPerMinute: wordCount === null || durationMs <= 0 ? null : wordCount / (durationMs / 60000)
+  }
+}
+
 function pitch(frame: Float32Array, rate: number): number | null {
   let mean = 0
   for (const v of frame) mean += v
@@ -96,9 +106,6 @@ export function measureProsody(
   pitches.sort((a, b) => a - b)
   const hasPitch = pitches.length >= 5
   const durationMs = (samples.length / sampleRate) * 1000
-  const words = transcript.trim()
-    ? (transcript.match(/[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu)?.length ?? 0)
-    : null
   return {
     durationMs,
     rmsDbfs: Math.max(-90, 20 * Math.log10(Math.sqrt(squares / samples.length) || 1e-9)),
@@ -109,8 +116,7 @@ export function measureProsody(
     pitchedFrameFraction: energies.length ? pitches.length / energies.length : 0,
     quietFraction: energies.length ? quiet / energies.length : 1,
     clippedFraction: clipped / samples.length,
-    wordCount: words,
-    wordsPerMinute: words === null ? null : words / (durationMs / 60000),
+    ...suppliedPace(transcript, durationMs),
     envelope: Array.from({ length: 64 }, (_, i) => {
       const start = Math.floor((i * energies.length) / 64),
         end = Math.max(start + 1, Math.floor(((i + 1) * energies.length) / 64))

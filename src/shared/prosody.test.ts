@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compareProsody, measureProsody } from './prosody'
+import { compareProsody, measureProsody, suppliedPace } from './prosody'
 const rate = 16000
 function tone(hz: number, amplitude = 0.15, seconds = 2) {
   return Float32Array.from(
@@ -32,6 +32,15 @@ describe('local prosody measurements', () => {
     expect(difference.pitchChangeSemitones).toBeCloseTo(12, 0)
     expect(difference.energyChangeDb).toBeCloseTo(6.02, 1)
     expect(difference.paceChangePercent).toBeCloseTo(50, 1)
+  })
+  it('updates supplied-word pace without reprocessing audio or carrying an empty transcript rate', () => {
+    expect(suppliedPace('One two three four', 2000)).toEqual({ wordCount: 4, wordsPerMinute: 120 })
+    expect(suppliedPace('One two three four five six', 2000)).toEqual({
+      wordCount: 6,
+      wordsPerMinute: 180
+    })
+    expect(suppliedPace('', 2000)).toEqual({ wordCount: null, wordsPerMinute: null })
+    expect(suppliedPace('One', 0).wordsPerMinute).toBeNull()
   })
   it('accepts finite decoder overshoot while reporting the overloaded signal', () => {
     const measured = measureProsody(tone(200, 1.05), rate)

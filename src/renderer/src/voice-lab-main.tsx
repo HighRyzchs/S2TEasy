@@ -1,18 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { applyVocabulary } from '@shared/vocabulary'
-import { VoiceLabRecorder } from './VoiceLabRecorder'
-import { ExpressionLab } from './ExpressionLab'
+import { VoiceWorkspace } from './VoiceWorkspace'
+import { VoiceClipPreview } from './VoiceClipPreview'
 import {
   defaultModels,
   LAB_STORAGE,
   readLabDraft,
   sampleCalls,
   sampleCards,
-  textRules,
-  validModelSlug,
   type BillingClass,
-  type LabModels,
   type VoiceCard,
   type VoiceKind
 } from './voice-lab-data'
@@ -82,26 +78,10 @@ function Brand() {
     </a>
   )
 }
-function VoiceOrb() {
-  return (
-    <div className="vl-orbit" aria-hidden="true">
-      <span className="vl-orbit-tag tag-one">Siobhán ✓</span>
-      <span className="vl-orbit-tag tag-two">my little hum ♫</span>
-      <div className="vl-orb">
-        <div className="vl-orb-bars">
-          {[16, 29, 44, 62, 39, 54, 26, 13].map((height, i) => (
-            <i key={i} style={{ height, animationDelay: `${i * -0.22}s` }} />
-          ))}
-        </div>
-        <span>one of a kind</span>
-      </div>
-      <span className="vl-orbit-star">✳</span>
-    </div>
-  )
-}
 function EntryEditor({
   card,
   initialAudio,
+  lastTake,
   existing,
   cards,
   onClose,
@@ -110,6 +90,7 @@ function EntryEditor({
 }: {
   card: VoiceCard
   initialAudio?: Blob
+  lastTake?: Blob
   existing: boolean
   cards: VoiceCard[]
   onClose: () => void
@@ -120,7 +101,6 @@ function EntryEditor({
   const [draft, setDraft] = useState(card)
   const [blob, setBlob] = useState(initialAudio)
   const [error, setError] = useState('')
-  const [recording, setRecording] = useState(false)
   useEffect(() => {
     dialog.current?.showModal()
   }, [])
@@ -173,7 +153,6 @@ function EntryEditor({
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          if (recording) return
           const heard = draft.heard.trim(),
             meant = draft.meant.trim()
           if (!heard || !meant) {
@@ -242,11 +221,32 @@ function EntryEditor({
         </label>
         {isSound && (
           <p className="vl-note lavender">
-            Sound cues are a design experiment. You can label and record a sound here; automatic
-            sound recognition still needs to be built.
+            Sound shortcuts are a design experiment. Label a sound and optionally attach your
+            completed take. Automatic sound recognition is not connected.
           </p>
         )}
-        <VoiceLabRecorder blob={blob} onChange={setBlob} onBusyChange={setRecording} />
+        <div className="vw-attach-take">
+          <strong>A voice example, if you’d like</strong>
+          {blob && (
+            <>
+              <VoiceClipPreview blob={blob} />
+              <button type="button" className="vl-text-button" onClick={() => setBlob(undefined)}>
+                Remove attached audio
+              </button>
+            </>
+          )}
+          {lastTake && lastTake !== blob && (
+            <button type="button" className="vl-secondary" onClick={() => setBlob(lastTake)}>
+              Attach last completed take
+            </button>
+          )}
+          <p>
+            {lastTake
+              ? 'Attach only if this take is a useful example for this card.'
+              : 'Use the recorder in Your voice first, then attach the completed take here.'}{' '}
+            Audio stays in this page session and disappears on reload.
+          </p>
+        </div>
         {!isSound && (
           <label className="vl-check">
             <input
@@ -254,7 +254,7 @@ function EntryEditor({
               checked={draft.enabled}
               onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
             />
-            Use this correction in the text playground
+            Use this correction in my output
           </label>
         )}
         {error && (
@@ -271,7 +271,7 @@ function EntryEditor({
           <button type="button" className="vl-secondary" onClick={onClose}>
             Cancel
           </button>
-          <button className="vl-primary" disabled={recording}>
+          <button className="vl-primary">
             {existing ? 'Save changes' : 'Add to my voice'}{' '}
             <span>
               <Arrow />
@@ -280,105 +280,6 @@ function EntryEditor({
         </div>
       </form>
     </dialog>
-  )
-}
-function Models({ models, onSave }: { models: LabModels; onSave: (models: LabModels) => void }) {
-  const [draft, setDraft] = useState(models)
-  const [message, setMessage] = useState('')
-  return (
-    <section className="vl-models">
-      <div className="vl-page-title">
-        <span className="vl-overline">THE HELP BEHIND YOUR VOICE</span>
-        <h1>Your models. In plain sight.</h1>
-        <p>Two different jobs. Two clearly editable model IDs.</p>
-      </div>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault()
-          if (!validModelSlug(draft.speech.trim()) || !validModelSlug(draft.cues.trim())) {
-            setMessage('Use a model ID like provider/model-name in both fields.')
-            return
-          }
-          onSave({ speech: draft.speech.trim(), cues: draft.cues.trim() })
-          setMessage('Saved in this browser prototype. Your desktop settings have not changed.')
-        }}
-      >
-        <div className="vl-model-grid">
-          {(
-            [
-              {
-                key: 'speech',
-                title: 'Speech → text',
-                icon: 'Aa',
-                description: 'The model that writes down what you say.',
-                hint: 'Desktop: Settings → Speech engine → Audio model slug',
-                tint: 'mint'
-              },
-              {
-                key: 'cues',
-                title: 'Emotion & delivery',
-                icon: '✳',
-                description: 'Optional audio understanding for tone, pacing and cues.',
-                hint: 'Desktop: Settings → Voice intelligence → Audio understanding model',
-                tint: 'peach'
-              }
-            ] as const
-          ).map((item) => (
-            <article className={`vl-model-card ${item.tint}`} key={item.key}>
-              <span className="vl-card-symbol">{item.icon}</span>
-              <h2>{item.title}</h2>
-              <p>{item.description}</p>
-              <label className="vl-field">
-                OpenRouter model ID / slug
-                <input
-                  value={draft[item.key]}
-                  onChange={(e) => setDraft({ ...draft, [item.key]: e.target.value })}
-                  maxLength={160}
-                  required
-                  spellCheck={false}
-                />
-              </label>
-              <small>{item.hint}</small>
-            </article>
-          ))}
-        </div>
-        <p className="vl-note">
-          No API key is needed here. These fields save a design preference locally; the prototype
-          makes no model calls and does not check model availability. In the app, audio support and
-          provider compatibility still matter.
-        </p>
-        <div className="vl-model-actions">
-          <button className="vl-primary">
-            Save model preferences <Arrow />
-          </button>
-          <button
-            type="button"
-            className="vl-secondary"
-            onClick={() => {
-              setDraft(defaultModels)
-              setMessage('Default model IDs restored in the form. Save to keep them.')
-            }}
-          >
-            Use defaults
-          </button>
-        </div>
-        <p role="status" className="vl-muted">
-          {message}
-        </p>
-      </form>
-      <div className="vl-future">
-        <span>
-          <Arrow />
-        </span>
-        <div>
-          <strong>Later: a personal correction assistant</strong>
-          <p>
-            A small text-only pass could suggest your saved words in context. It should be optional,
-            preserve meaning, and have its own cost category. This is planned, not running here.
-          </p>
-        </div>
-      </div>
-    </section>
   )
 }
 function Usage() {
@@ -540,10 +441,8 @@ function VoiceLab() {
   const [initial] = useState(initialDraft)
   const [cards, setCards] = useState(initial.cards)
   const [models, setModels] = useState(initial.models)
-  const [page, setPage] = useState<'expression' | 'voice' | 'models' | 'usage'>('expression')
-  const [filter, setFilter] = useState<'all' | VoiceKind>('all')
-  const [query, setQuery] = useState('')
-  const [text, setText] = useState('Hey shiv on, let’s try s two t easy.\non my way shortcut')
+  const [page, setPage] = useState<'voice' | 'usage'>('voice')
+  const [lastTake, setLastTake] = useState<Blob>()
   const [editor, setEditor] = useState<{ card: VoiceCard; existing: boolean } | null>(null)
   const [audio, setAudio] = useState<Record<string, Blob>>({})
   const [notice, setNotice] = useState('')
@@ -560,14 +459,13 @@ function VoiceLab() {
     }
   }, [cards, models])
   useEffect(() => {
+    if (!notice) return
+    const timer = setTimeout(() => setNotice(''), 5500)
+    return () => clearTimeout(timer)
+  }, [notice])
+  useEffect(() => {
     if (resetting) resetDialog.current?.showModal()
   }, [resetting])
-  const visible = cards.filter(
-    (card) =>
-      (filter === 'all' || card.kind === filter) &&
-      `${card.heard} ${card.meant}`.toLocaleLowerCase().includes(query.toLocaleLowerCase())
-  )
-  const output = useMemo(() => applyVocabulary(text, textRules(cards)), [text, cards])
   const add = (kind: VoiceKind = 'word') =>
     setEditor({
       existing: false,
@@ -590,9 +488,7 @@ function VoiceLab() {
           <nav aria-label="Prototype sections">
             {(
               [
-                { id: 'expression', icon: '〰', label: 'Expression & tone' },
-                { id: 'voice', icon: '✳', label: 'Words & sounds' },
-                { id: 'models', icon: '◈', label: 'Models & settings' },
+                { id: 'voice', icon: '✳', label: 'Your voice' },
                 { id: 'usage', icon: '▥', label: 'Usage & spend' }
               ] as const
             ).map((item) => (
@@ -633,211 +529,43 @@ function VoiceLab() {
               {storageError}
             </p>
           )}
-          <ExpressionLab key={labRevision} active={page === 'expression'} model={models.cues} />
-          {page === 'expression' ? null : page === 'voice' ? (
-            <>
-              <section className="vl-hero">
-                <div>
-                  <span className="vl-overline">YOUR WORDS. YOUR ACCENT. YOUR WAY.</span>
-                  <h1>
-                    Sounds like <span>you.</span>
-                  </h1>
-                  <p>
-                    Names it never gets right. Your favorite phrases.
-                    <br className="vl-desktop-break" /> Even that little sound only you make.
-                    <br className="vl-desktop-break" /> Give them all a home.
-                  </p>
-                  <button className="vl-primary" onClick={() => add()}>
-                    ＋ Add something that’s you
-                  </button>
-                  <span className="vl-hero-caption">
-                    One place for vocabulary & voice practice.
-                  </span>
-                </div>
-                <VoiceOrb />
-              </section>
-              <div className="vl-steps">
-                <div>
-                  <span>1</span>
-                  <p>
-                    <strong>Add your word</strong>
-                    <small>Or a phrase. Or a little sound.</small>
-                  </p>
-                </div>
-                <span className="vl-step-arrow">→</span>
-                <div>
-                  <span>2</span>
-                  <p>
-                    <strong>Say it your way</strong>
-                    <small>Record an optional example.</small>
-                  </p>
-                </div>
-                <span className="vl-step-arrow">→</span>
-                <div>
-                  <span>3</span>
-                  <p>
-                    <strong>Make it feel right</strong>
-                    <small>Try a text rule. Tweak any time.</small>
-                  </p>
-                </div>
-              </div>
-              <div className="vl-content-grid">
-                <section className="vl-library">
-                  <div className="vl-section-title">
-                    <div>
-                      <h2>
-                        Your voice, collected<span>.</span>
-                      </h2>
-                      <p>A little library of the things that make you, you.</p>
-                    </div>
-                    <span className="vl-count">{cards.length} little things</span>
-                  </div>
-                  <div className="vl-filter-row" aria-label="Voice library filters">
-                    {([{ id: 'all', label: 'Everything' }, ...kinds] as const).map((kind) => (
-                      <button
-                        key={kind.id}
-                        className={filter === kind.id ? 'selected' : ''}
-                        aria-pressed={filter === kind.id}
-                        onClick={() => setFilter(kind.id)}
-                      >
-                        {kind.label}
-                      </button>
-                    ))}
-                  </div>
-                  <label className="vl-search">
-                    <span aria-hidden="true">⌕</span>
-                    <input
-                      type="search"
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      placeholder="Find a word, phrase or sound…"
-                      aria-label="Search your voice library"
-                    />
-                  </label>
-                  <div className="vl-card-grid">
-                    {visible.map((card) => (
-                      <button
-                        key={card.id}
-                        className={`vl-voice-card ${card.kind}`}
-                        onClick={() => setEditor({ card, existing: true })}
-                      >
-                        <div className="vl-card-top">
-                          <span className="vl-card-symbol">
-                            {kinds.find((kind) => kind.id === card.kind)!.icon}
-                          </span>
-                          <span className="vl-card-type">
-                            {card.sample ? 'EXAMPLE · ' : ''}
-                            {card.kind === 'sound'
-                              ? 'SOUND CUE'
-                              : card.kind === 'phrase'
-                                ? 'PHRASE'
-                                : 'WORD / NAME'}
-                          </span>
-                          <span className="vl-card-edit">
-                            <Arrow />
-                          </span>
-                        </div>
-                        <h3>{card.kind === 'sound' ? card.heard : card.meant}</h3>
-                        <p>
-                          {card.kind === 'sound'
-                            ? `Means “${card.meant}”`
-                            : `Instead of “${card.heard}”`}
-                        </p>
-                        <div className="vl-card-bottom">
-                          <span>
-                            <i
-                              className={
-                                card.kind === 'sound' ? 'planned' : card.enabled ? '' : 'paused'
-                              }
-                            />
-                            {card.kind === 'sound'
-                              ? 'Recognition planned'
-                              : card.enabled
-                                ? 'Text rule on'
-                                : 'Text rule paused'}
-                          </span>
-                          <span>{audio[card.id] ? '♫ Your take' : '＋ Try your voice'}</span>
-                        </div>
-                      </button>
-                    ))}
-                    <button
-                      className="vl-add-card"
-                      onClick={() => add(filter === 'all' ? 'word' : filter)}
-                    >
-                      <span>＋</span>
-                      <strong>Something missing?</strong>
-                      <small>Add a little more you.</small>
-                    </button>
-                  </div>
-                  {visible.length === 0 && (
-                    <p className="vl-muted">
-                      {cards.length
-                        ? 'Nothing here yet. Try another filter or add your own.'
-                        : 'Your library is ready for its first word.'}
-                    </p>
-                  )}
-                  <p className="vl-library-foot">
-                    ✧ Examples are starting points. Edit them, replace them, make them yours.
-                  </p>
-                </section>
-                <aside className="vl-playground">
-                  <span className="vl-overline">THE LITTLE TRY-IT CORNER</span>
-                  <h2>See the difference.</h2>
-                  <p>Type the words it mishears. Watch your saved text rules tidy them up.</p>
-                  <label className="vl-field">
-                    What it heard
-                    <textarea
-                      rows={4}
-                      maxLength={2000}
-                      value={text}
-                      onChange={(e) => setText(e.target.value)}
-                    />
-                  </label>
-                  <div className="vl-play-arrow">
-                    ↓ <span>Your enabled text rules</span>
-                  </div>
-                  <div className="vl-output">
-                    <span>WHAT YOU MEANT</span>
-                    <p data-testid="corrected-text">
-                      {output || 'Your corrected words will appear here.'}
-                    </p>
-                  </div>
-                  <p className="vl-fine">
-                    A real text-rule preview. No microphone transcription or AI call. Sound cards
-                    are kept separate.
-                  </p>
-                  <div className="vl-sound-invite">
-                    <span>♫</span>
-                    <strong>A sound shortcut of your own?</strong>
-                    <p>
-                      A happy hum. A tiny click. Start by giving it a name and an optional
-                      recording.
-                    </p>
-                    <button className="vl-text-button" onClick={() => add('sound')}>
-                      Explore a sound cue <Arrow />
-                    </button>
-                  </div>
-                </aside>
-              </div>
-              <section className="vl-honesty">
-                <span>♡</span>
-                <div>
-                  <strong>Your accent belongs here.</strong>
-                  <p>
-                    Practice is about helping the app understand you. Saved examples don’t retrain a
-                    speech model yet; text rules are exact corrections you control.
-                  </p>
-                </div>
-                <button className="vl-text-button" onClick={() => setPage('models')}>
-                  Meet your models <Arrow />
-                </button>
-              </section>
-            </>
-          ) : page === 'models' ? (
-            <Models models={models} onSave={setModels} />
-          ) : (
-            <Usage />
-          )}
+          <VoiceWorkspace
+            key={labRevision}
+            active={page === 'voice'}
+            editorOpen={!!editor || resetting}
+            cards={cards}
+            audio={audio}
+            models={models}
+            onModelsChange={setModels}
+            onTakeChange={setLastTake}
+            onNotice={setNotice}
+            onAdd={add}
+            onEdit={(card) => setEditor({ card, existing: true })}
+            onTeachWord={(word) => {
+              const known = cards.find(
+                (card) =>
+                  card.kind !== 'sound' &&
+                  (card.meant.toLocaleLowerCase() === word.toLocaleLowerCase() ||
+                    card.heard.toLocaleLowerCase() === word.toLocaleLowerCase())
+              )
+              setEditor(
+                known
+                  ? { card: known, existing: true }
+                  : {
+                      existing: false,
+                      card: {
+                        id: crypto.randomUUID(),
+                        kind: 'word',
+                        heard: word.slice(0, 120),
+                        meant: word.slice(0, 120),
+                        enabled: true,
+                        sample: false
+                      }
+                    }
+              )
+            }}
+          />
+          {page === 'usage' && <Usage />}
           <footer className="vl-footer">
             <span>Made for the way you speak.</span>
             <span>
@@ -858,6 +586,7 @@ function VoiceLab() {
           {...editor}
           cards={cards}
           initialAudio={audio[editor.card.id]}
+          lastTake={lastTake}
           onClose={() => setEditor(null)}
           onSave={(card, blob) => {
             setCards((old) =>
@@ -872,7 +601,7 @@ function VoiceLab() {
               return next
             })
             setNotice(
-              `${card.kind === 'sound' ? card.heard : card.meant} saved. ${card.kind === 'sound' ? 'Sound recognition is still a prototype.' : 'Try its text rule in the playground.'}`
+              `${card.kind === 'sound' ? card.heard : card.meant} saved. ${card.kind === 'sound' ? 'Sound recognition is still a prototype.' : 'Your output uses the updated word rule.'}`
             )
             setEditor(null)
           }}
@@ -910,13 +639,12 @@ function VoiceLab() {
             <button
               className="vl-primary"
               onClick={() => {
-                setPage('expression')
+                setPage('voice')
                 setLabRevision((value) => value + 1)
                 setCards(sampleCards)
                 setModels(defaultModels)
                 setAudio({})
-                setQuery('')
-                setFilter('all')
+                setLastTake(undefined)
                 setResetting(false)
                 setNotice('Demo reset to the starting examples.')
               }}

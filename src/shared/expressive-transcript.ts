@@ -1,3 +1,5 @@
+import { applyVocabulary, type VocabularyEntry } from './vocabulary'
+
 /** Proposed expressive-STT contract. Brackets describe delivery, not hidden feelings. */
 export const EXPRESSION_LABELS = {
   emotion: [
@@ -27,6 +29,13 @@ export type ExpressionTag = {
   dismissed?: boolean
 }
 export type ExpressionSegment = { id: string; text: string; tags: ExpressionTag[] }
+/** Apply personal words inside each finalized phrase, never to bracket labels. */
+export function personalizePhrases(
+  segments: ExpressionSegment[],
+  rules: VocabularyEntry[]
+): ExpressionSegment[] {
+  return segments.map((segment) => ({ ...segment, text: applyVocabulary(segment.text, rules) }))
+}
 export type ExpressionOptions = {
   enabled: boolean
   clearOnly: boolean
