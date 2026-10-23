@@ -40,6 +40,18 @@ memory.update = {
 
 function mockApi(): Window['s2t'] {
   return {
+    saveOutput: async (output) => {
+      const { normalizeOutputPreferences } = await import('@shared/output')
+      memory.settings = { ...memory.settings, output: normalizeOutputPreferences(output) }
+      return memory.settings
+    },
+    copyOutput: async (id, format) => {
+      const { renderOutput } = await import('@shared/output')
+      const item = memory.history.find((row) => row.id === id)
+      if (!item) throw new Error('This take is no longer available.')
+      await navigator.clipboard.writeText(renderOutput(item, memory.settings.output, format))
+      return true
+    },
     getUpdateDiagnostics: async () =>
       'S2Teasy preview update report\nNo native update or installer was executed.',
     openUpdateInstaller: async () => {

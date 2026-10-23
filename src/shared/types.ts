@@ -1,3 +1,4 @@
+import { normalizeOutputPreferences, type OutputPreferences } from './output'
 import type { WordTiming } from './word-timing'
 import type { UsageState } from './usage'
 import { defaultOverlayTheme, normalizeOverlayTheme, type OverlayTheme } from './overlay-theme'
@@ -61,6 +62,7 @@ export type AppState = {
 }
 
 export type AppSettings = {
+  output: OutputPreferences
   speechCues: SpeechCueSettings
   displayName: string
   welcomeCompleted: boolean
@@ -125,6 +127,7 @@ export type AudioLevelPayload = {
 
 export type HistoryItem = {
   cueAnalysis?: CueAnalysis
+  cueError?: string
   id: string
   text: string
   model: string
@@ -144,6 +147,8 @@ export type OverlayStatus =
   'hidden' | 'listening' | 'transcribing' | 'inserting' | 'success' | 'error' | 'arm-paste'
 
 export type OverlayState = {
+  cueAnalysis?: CueAnalysis
+  cueError?: string
   status: OverlayStatus
   partial: string
   message: string
@@ -161,6 +166,7 @@ export type ModelOption = {
 }
 
 export const defaultSettings = (): AppSettings => ({
+  output: normalizeOutputPreferences(),
   speechCues: normalizeSpeechCues(),
   displayName: '',
   welcomeCompleted: false,
@@ -226,6 +232,7 @@ export function normalizeDisplayName(value: unknown): string {
 export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSettings {
   const merged: AppSettings = { ...defaultSettings(), ...(raw ?? {}) }
   merged.displayName = normalizeDisplayName(raw?.displayName)
+  merged.output = normalizeOutputPreferences(raw?.output)
   merged.speechCues = normalizeSpeechCues(raw?.speechCues)
   merged.welcomeCompleted = raw?.welcomeCompleted === true
   merged.setupChecklistDismissed = raw?.setupChecklistDismissed === true

@@ -1548,3 +1548,31 @@
 .vw-model-settings > summary > small {
   color: #6e815f;
 }
+.vw-output-toolbar {
+  flex-wrap: wrap;
+}
+.vw-output-toolbar .output-choices {
+  --ink-2: #fff;
+  --paper: #31493d;
+  --line: #dce6df;
+  flex-basis: 100%;
+  border-top: 1px solid #e0e8e2;
+  padding-top: 18px;
+  margin-top: 4px;
+}
+.vw-output-toolbar .output-choices .hint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #63766a;
+}
+.vw-direct-copy {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.vw-direct-copy > span {
+  font-size: 12px;
+  color: #51715b;
+}

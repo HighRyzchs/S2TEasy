@@ -5,9 +5,11 @@ import {
   normalizeOverlayTheme,
   type OverlayTheme
 } from '@shared/overlay-theme'
-import { emptyOverlay, type OverlayState } from '@shared/types'
+import { defaultSettings, emptyOverlay, type OverlayState } from '@shared/types'
 import { composeOverlayBars, previewTarget } from '@shared/waveform'
 import { OverlayHud } from './OverlayHud'
+import { OutputChoices } from './OutputChoices'
+import type { OutputPreferences } from '@shared/output'
 
 const preview = import.meta.env.VITE_BROWSER_PREVIEW === '1'
 
@@ -24,6 +26,9 @@ export function OverlayApp() {
         }
       : emptyOverlay()
   )
+  const [output, setOutput] = useState(defaultSettings().output)
+  const [outputBusy, setOutputBusy] = useState(false)
+  const [outputMessage, setOutputMessage] = useState('')
   const [theme, setTheme] = useState<OverlayTheme>(defaultOverlayTheme)
   const [bars, setBars] = useState<number[]>(() => Array.from({ length: WAVEFORM_BARS }, () => 0.1))
   const themeRef = useRef(theme)
@@ -45,11 +50,13 @@ export function OverlayApp() {
   useEffect(() => {
     void window.s2t.getState().then((app) => {
       setTheme(normalizeOverlayTheme(app.settings.overlayTheme))
+      setOutput(app.settings.output)
       if (app.overlay && !receivedState.current) setState(app.overlay)
     })
-    return window.s2t.onSettings((settings) =>
+    return window.s2t.onSettings((settings) => {
       setTheme(normalizeOverlayTheme(settings.overlayTheme))
-    )
+      setOutput(settings.output)
+    })
   }, [])
 
   useEffect(() => {
@@ -82,24 +89,92 @@ export function OverlayApp() {
   const canStop =
     state.status === 'listening' || state.status === 'transcribing' || state.status === 'inserting'
 
+  const saveOutput = async (value: OutputPreferences) => {
+    setOutputBusy(true)
+    setOutputMessage('')
+    try {
+      setOutput((await window.s2t.saveOutput(value)).output)
+    } catch {
+      setOutputMessage('Could not save choices. Try again.')
+    } finally {
+      setOutputBusy(false)
+    }
+  }
+  const copy = async (format: 'plain' | 'tags') => {
+    setOutputMessage('')
+    try {
+      const id = stateRef.current.sessionId
+      const ok = id
+        ? await window.s2t.copyOutput(id, format)
+        : await window.s2t.copyHistory(stateRef.current.partial)
+      if (!ok) throw new Error('Clipboard busy')
+      setOutputMessage(
+        format === 'plain'
+          ? 'Words copied · corrections kept'
+          : stateRef.current.cueAnalysis?.cues.length
+            ? 'Words + selected cues copied'
+            : 'Words copied · no saved cues yet'
+      )
+    } catch {
+      setOutputMessage('Copy failed. Try again.')
+    }
+  }
   return (
-    <OverlayHud
-      state={state}
-      bars={bars}
-      theme={theme}
-      canStop={canStop}
-      live={!preview}
-      preview={preview}
-      onStop={stopRecording}
-      onCopy={() => window.s2t.copyHistory(stateRef.current.partial)}
-      onReview={() => {
-        void window.s2t.reviewDictation()
-      }}
-      onDismiss={() => {
-        setState(emptyOverlay())
-        void window.s2t.cancelRecording().catch(() => undefined)
-      }}
-    />
+    <div
+      className="hud-session"
+      data-orientation={theme.orientation}
+      style={{ '--overlay-scale': theme.scale } as React.CSSProperties}
+    >
+      <div className="hud-display">
+        <OverlayHud
+          state={state}
+          bars={bars}
+          theme={theme}
+          canStop={canStop}
+          live={!preview}
+          preview={preview}
+          onStop={stopRecording}
+          onCopy={async () => {
+            const id = stateRef.current.sessionId
+            const ok = id
+              ? await window.s2t.copyOutput(id, 'plain')
+              : await window.s2t.copyHistory(stateRef.current.partial)
+            if (!ok) throw new Error('Clipboard busy')
+          }}
+          onReview={() => {
+            void window.s2t.reviewDictation()
+          }}
+          onDismiss={() => {
+            setState(emptyOverlay())
+            void window.s2t.cancelRecording().catch(() => undefined)
+          }}
+        />
+      </div>
+      <section className="hud-output" aria-label="Output and copy choices">
+        <OutputChoices
+          compact
+          value={output}
+          disabled={outputBusy}
+          onChange={(value) => void saveOutput(value)}
+        />
+        <div className="hud-copy-row">
+          <button disabled={!state.partial.trim()} onClick={() => void copy('plain')}>
+            Copy words
+          </button>
+          <button disabled={!state.partial.trim()} onClick={() => void copy('tags')}>
+            Copy with tags
+          </button>
+          <span>Word fixes stay ✓</span>
+        </div>
+        <div className="hud-output-message" role="status">
+          {outputMessage ||
+            state.cueError ||
+            (state.cueAnalysis
+              ? 'Timed audio cues ready · review interpretations before sharing'
+              : 'Tags use saved audio cues; copy never starts a paid call.')}
+        </div>
+      </section>
+    </div>
   )
 }
 

@@ -1,0 +1,156 @@
+.your-voice {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.your-voice .voice-output {
+  border-radius: 24px;
+  border-color: color-mix(in srgb, var(--sage) 45%, var(--line));
+  background:
+    radial-gradient(ellipse at top right, var(--amber-soft), transparent 65%), var(--ink-2);
+}
+.voice-kept {
+  color: var(--sage);
+  font-size: 12px;
+}
+.voice-output-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 22px 0 14px;
+  flex-wrap: wrap;
+}
+.voice-output-toolbar label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: var(--paper-dim);
+  font-size: 12px;
+}
+.voice-output-toolbar select {
+  max-width: 300px;
+}
+.voice-result {
+  min-height: 125px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+  font-size: 20px;
+  background: var(--ink);
+  border: 1px solid var(--line);
+  padding: 24px;
+  border-radius: 18px;
+}
+.voice-result.json {
+  font:
+    13px/1.7 ui-monospace,
+    monospace;
+  max-height: 400px;
+  overflow: auto;
+}
+.voice-copy-actions {
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+.voice-record {
+  border-radius: 24px;
+}
+.voice-record-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.voice-record-actions > div {
+  flex: 1;
+  min-width: 180px;
+}
+.voice-record-actions p {
+  margin: 5px 0;
+}
+.voice-mic {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 58px;
+  height: 58px;
+  border-radius: 22px;
+  font-size: 30px;
+  background: var(--amber-soft);
+  color: var(--sage);
+  border: 1px solid var(--line);
+}
+.voice-mic.recording {
+  animation: voice-breathe 1.2s ease-in-out infinite alternate;
+}
+@keyframes voice-breathe {
+  to {
+    box-shadow: 0 0 0 9px var(--amber-soft);
+  }
+}
+.voice-library {
+  margin: 30px 0;
+}
+.voice-library > .picks {
+  margin: 18px 0;
+}
+.your-voice .picks button[aria-pressed='true'] {
+  color: var(--ink);
+  background: var(--sage);
+}
+.voice-library-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+.voice-library-card {
+  border-radius: 20px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.voice-library-card .inline {
+  flex-wrap: wrap;
+}
+.voice-listen audio {
+  width: 100%;
+  margin: 16px 0;
+}
+.voice-model-settings summary {
+  cursor: pointer;
+  font-weight: 600;
+  padding: 6px 0;
+}
+.voice-model-settings summary span {
+  font-size: 12px;
+  color: var(--paper-dim);
+  margin-left: 15px;
+}
+.voice-model-settings .cue-settings {
+  border: 0;
+  padding: 24px 0 0;
+  margin-bottom: 0;
+}
+.voice-feedback {
+  position: sticky;
+  bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--ink-2);
+  box-shadow: var(--shadow);
+  z-index: 2;
+}
+@media (max-width: 760px) {
+  .voice-output-toolbar select {
+    max-width: 200px;
+  }
+  .voice-result {
+    font-size: 17px;
+    padding: 16px;
+  }
+  .your-voice .section-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}

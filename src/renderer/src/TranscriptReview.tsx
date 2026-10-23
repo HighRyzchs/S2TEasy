@@ -3,6 +3,7 @@ import { suggestCorrections, type Correction } from '@shared/corrections'
 import type { HistoryItem, AppSettings } from '@shared/types'
 import { SpeechCuePanel } from './SpeechCuePanel'
 import './review.css'
+import { OutputChoices } from './OutputChoices'
 
 export function TranscriptReview({
   item,
@@ -83,6 +84,18 @@ export function TranscriptReview({
           ×
         </button>
       </div>
+      <section className="block">
+        <h3>Copy your way</h3>
+        <OutputChoices
+          value={settings.output}
+          onChange={(value) =>
+            void run(async () => {
+              await window.s2t.saveOutput(value)
+            })
+          }
+          disabled={busy}
+        />
+      </section>
       {active && (
         <p className="notice" role="status">
           Finishing this recording. You can read along; saving unlocks when it finishes.
@@ -262,6 +275,7 @@ export function TranscriptReview({
       <SpeechCuePanel
         item={item}
         settings={settings.speechCues}
+        output={settings.output}
         text={text}
         active={active}
         position={position}

@@ -71,7 +71,8 @@ export function selectedExpressionTags(
 export function renderExpressiveTranscript(
   segments: ExpressionSegment[],
   options: ExpressionOptions,
-  format: 'inline' | 'plain' | 'json'
+  format: 'inline' | 'plain' | 'json',
+  placement: 'before' | 'after' | 'context' = 'before'
 ): string {
   const plainText = segments.map((segment) => segment.text).join('')
   if (format === 'plain') return plainText
@@ -95,11 +96,25 @@ export function renderExpressiveTranscript(
       null,
       2
     )
+  if (placement === 'context') {
+    const context = segments
+      .flatMap((segment, index) =>
+        selectedExpressionTags(segment, options).map(
+          (tag) => `[${tag.label} · phrase ${index + 1}]`
+        )
+      )
+      .join(' ')
+    return context ? `${plainText}\n\n[Voice context]\n${context}` : plainText
+  }
   return segments
     .map((segment) => {
       const tags = selectedExpressionTags(segment, options)
       if (!tags.length || !segment.text.trim()) return segment.text
       const leading = segment.text.match(/^\s*/u)![0]
+      if (placement === 'after') {
+        const trailing = segment.text.match(/\s*$/u)![0]
+        return `${segment.text.slice(0, segment.text.length - trailing.length)} ${tags.map((tag) => `[${tag.label}]`).join(' ')}${trailing}`
+      }
       return `${leading}${tags.map((tag) => `[${tag.label}]`).join(' ')} ${segment.text.slice(leading.length)}`
     })
     .join('')

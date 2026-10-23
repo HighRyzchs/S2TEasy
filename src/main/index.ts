@@ -1,3 +1,5 @@
+import { analyzeAutomaticCues } from './automatic-cues'
+import { normalizeOutputPreferences, renderOutput, type OutputPreferences } from '../shared/output'
 import { copyTranscript } from './inject'
 import { UsageStore } from './usage-store'
 import { app, BrowserWindow, dialog, ipcMain, session, protocol } from 'electron'
@@ -156,6 +158,13 @@ async function setup(): Promise<void> {
       mainWindow?.focus()
       sendMain(IPC.OPEN_REVIEW, id)
     },
+    analyzeCompleted: (item, settings, signal) =>
+      analyzeAutomaticCues(journal.readPcm(item.id), settings, signal, (row) =>
+        sendMain(
+          IPC.USAGE_CHANGED,
+          usage.record({ ...row, sessionId: item.id, source: 'speech-cues' })
+        )
+      ),
     getSettings: () => store.getSettings(),
     onOverlay: overlayChanged,
     onHistoryItem: (item: HistoryItem) => {
@@ -255,6 +264,35 @@ async function setup(): Promise<void> {
     const key = store.getSettings().apiKey
     if (!key.trim()) throw new Error('Save your OpenRouter key first.')
     return fetchCueModels(key)
+  })
+
+  const requireOutputWindow = (event: Electron.IpcMainInvokeEvent) => {
+    if (event.sender !== mainWindow?.webContents && event.sender !== overlayWindow?.webContents)
+      throw new Error('Output controls are available only in the app and HUD.')
+  }
+  ipcMain.handle(IPC.SAVE_OUTPUT, (event, value: OutputPreferences) => {
+    requireOutputWindow(event)
+    // Presentation preferences can change mid-recording without changing the capture snapshot.
+    const settings = store.saveSettings({ output: normalizeOutputPreferences(value) })
+    broadcastSettings()
+    return settings
+  })
+  ipcMain.handle(IPC.COPY_OUTPUT, (event, id: string, format: 'plain' | 'tags' | 'json') => {
+    requireOutputWindow(event)
+    if (!['plain', 'tags', 'json'].includes(format)) throw new Error('Unsupported copy format.')
+    const item = store.getHistory().find((row) => row.id === id)
+    if (!item) throw new Error('This take is no longer available.')
+    const settings = store.getSettings()
+    const copyItem = item.unconfirmedText?.trim()
+      ? {
+          ...item,
+          text: joinUtterances([
+            item.text,
+            applyVocabulary(item.unconfirmedText, settings.vocabulary)
+          ])
+        }
+      : item
+    return copyTranscript(renderOutput(copyItem, settings.output, format))
   })
 
   ipcMain.handle(IPC.SAVE_SETTINGS, (_event, patch: Partial<AppSettings>) => {
@@ -387,7 +425,13 @@ async function setup(): Promise<void> {
     const item = store.getHistory().find((row) => row.id === id)
     if (!item || typeof text !== 'string' || text.length > 1_000_000)
       throw new Error('Invalid transcript.')
-    const next = { ...item, rawText: item.rawText ?? item.text, text }
+    const next = {
+      ...item,
+      rawText: item.rawText ?? item.text,
+      text,
+      // Audio cue ranges stay valid; provider word alignment does not survive free text edits.
+      words: text === item.text ? item.words : undefined
+    }
     journal.save(next)
     store.addHistory(next)
     broadcastHistory()

@@ -1,6 +1,11 @@
 # Roadmap
 
-## Implemented in this development version
+## Implemented in v1.8.0
+
+- Unified Your voice workspace with output, recording, word rules, playback and cue review.
+- Visible output placement/category pills and plain/tagged copy on the HUD.
+- Separate opt-in for one bounded first-30-seconds post-take audio interpretation call; durable words survive enrichment failure.
+- [Workflow, theory and linked function map](OUTPUT_WORKSPACE.md).
 
 - Ordered incremental batch processing and session-aware recorder IPC.
 - Checkpointed transcript history, temporary recovery audio, error/interruption states.
@@ -31,7 +36,7 @@ These are proposed features, not capabilities shipped by the welcome-tour releas
 
 ## Pronunciation learning
 
-See [Personal words and expressive speech](PERSONAL_SPEECH_DESIGN.md) for the longer-term correction/cue architecture, initial OpenRouter candidate, example costs and evaluation plan. Contextual word correction and acoustic personalization remain future work. Manual audio cue analysis is implemented experimentally; [follow its code and test it](CONCEPTS.md).
+See [Personal words and expressive speech](PERSONAL_SPEECH_DESIGN.md) for the longer-term correction/cue architecture, initial OpenRouter candidate, example costs and evaluation plan. Contextual word correction and acoustic personalization remain future work. Manual and separately opted-in bounded automatic audio cue analysis are implemented experimentally; [follow its code and test it](CONCEPTS.md).
 
 The development build now groups completed practice takes by intended phrase and model, comparing original recognition and showing retained audio examples. It does not score accent quality or establish acoustic adaptation.
 

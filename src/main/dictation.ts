@@ -1,3 +1,4 @@
+import type { CueAnalysis } from '../shared/speech-cues'
 import type { WordTiming } from '../shared/word-timing'
 import type { UsageRecord } from '../shared/usage'
 import { randomUUID } from 'node:crypto'
@@ -30,6 +31,11 @@ type Host = {
   isRecovering?: () => boolean
   onUsage?: (usage: UsageRecord) => void
   onReview?: (id: string) => void
+  analyzeCompleted?: (
+    item: HistoryItem,
+    settings: AppSettings,
+    signal: AbortSignal
+  ) => Promise<CueAnalysis | undefined>
 }
 
 type Dependencies = {
@@ -257,7 +263,11 @@ export class DictationController {
   onPcm(bytes: Uint8Array, gen = this.generation): void {
     if (gen !== this.generation || !this.busy || this.failed || !this.item) return
     try {
-      if (this.settings?.recoveryAudio || this.settings?.keepAudioForTraining)
+      if (
+        this.settings?.recoveryAudio ||
+        this.settings?.keepAudioForTraining ||
+        (this.settings?.speechCues.enabled && this.settings.speechCues.automatic)
+      )
         this.host.journal.append(this.item.id, bytes)
       this.stream?.sendPcm(bytes)
     } catch (error) {
@@ -313,6 +323,32 @@ export class DictationController {
         this.fail('No finalized speech received. Recover retained audio from History.', gen)
         return
       }
+      // Words are durable before optional audio interpretation. Its failure must not lose dictation.
+      if (
+        this.settings.speechCues.enabled &&
+        this.settings.speechCues.automatic &&
+        this.host.analyzeCompleted
+      ) {
+        this.setState({
+          ...this.state,
+          status: 'transcribing',
+          message: 'Words saved · listening for delivery',
+          rms: 0,
+          bars: []
+        })
+        try {
+          const analysis = await this.host.analyzeCompleted(
+            this.item,
+            this.settings,
+            this.requestAbort!.signal
+          )
+          if (!this.valid(gen)) return
+          this.item.cueAnalysis = analysis
+        } catch (error) {
+          if (!this.valid(gen)) return
+          this.item.cueError = `Voice cues unavailable: ${errorMessage(error)}`
+        }
+      }
       // Persist before attempting any final insertion; focus/clipboard failures cannot erase text.
       this.checkpoint()
       if (!this.practiceText && !this.reviewRequested && this.settings.insertMode === 'final') {
@@ -350,7 +386,7 @@ export class DictationController {
         rms: 0,
         bars: []
       })
-      this.scheduleHide()
+      this.scheduleHide(15000)
     } catch (error) {
       this.fail(errorMessage(error), gen)
     }
@@ -587,7 +623,17 @@ export class DictationController {
   }
 
   private setState(state: OverlayState): void {
-    this.state = { ...state, mode: this.practiceText ? 'practice' : 'dictation' }
+    this.state = {
+      ...state,
+      mode: this.practiceText ? 'practice' : 'dictation',
+      ...(state.status !== 'hidden' && this.item
+        ? {
+            sessionId: this.item.id,
+            cueAnalysis: this.item.cueAnalysis,
+            cueError: this.item.cueError
+          }
+        : {})
+    }
     this.host.onOverlay(this.state)
   }
   private scheduleHide(delay = 1400): void {

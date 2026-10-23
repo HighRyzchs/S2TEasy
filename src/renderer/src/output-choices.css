@@ -1,0 +1,59 @@
+.output-choices {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+.output-choice-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.output-choice-row > span {
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 68px;
+  opacity: 0.75;
+}
+.output-choice-row button {
+  border: 1px solid var(--line, #42544f);
+  border-radius: 999px;
+  background: var(--ink-2, #182624);
+  color: var(--paper, #eff9f5);
+  padding: 9px 14px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  min-height: 36px;
+}
+.output-choice-row button[aria-pressed='true'] {
+  background: #a5e6ce;
+  color: #17392c;
+  border-color: #a5e6ce;
+}
+.output-choice-row button:focus-visible {
+  outline: 2px solid #88dcca;
+  outline-offset: 3px;
+}
+.output-choice-row button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+.output-choices p {
+  margin: 0;
+}
+.output-choices.compact {
+  gap: 6px;
+}
+.output-choices.compact .output-choice-row {
+  gap: 5px;
+}
+.output-choices.compact .output-choice-row > span {
+  min-width: 50px;
+  font-size: 11px;
+}
+.output-choices.compact button {
+  font-size: 11px;
+  padding: 5px 9px;
+  min-height: 28px;
+}

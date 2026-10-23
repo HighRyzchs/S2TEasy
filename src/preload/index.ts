@@ -1,3 +1,4 @@
+import type { OutputPreferences } from '../shared/output'
 import type { UsageState } from '../shared/usage'
 import type { CueRequest, CueFeedback } from '../shared/speech-cues'
 import { contextBridge, ipcRenderer } from 'electron'
@@ -15,6 +16,9 @@ import type {
 import type { ModelOption } from '../shared/types'
 
 export type S2TApi = {
+  saveOutput: (value: OutputPreferences) => Promise<AppSettings>
+  copyOutput: (id: string, format: 'plain' | 'tags' | 'json') => Promise<boolean>
+
   getUpdateDiagnostics: () => Promise<string>
   openUpdateInstaller: () => Promise<UpdateStatus>
   openUpdateDiagnostics: () => Promise<void>
@@ -74,6 +78,8 @@ export type S2TApi = {
 }
 
 const api: S2TApi = {
+  saveOutput: (value) => ipcRenderer.invoke(IPC.SAVE_OUTPUT, value),
+  copyOutput: (id, format) => ipcRenderer.invoke(IPC.COPY_OUTPUT, id, format),
   getUpdateDiagnostics: () => ipcRenderer.invoke(IPC.GET_UPDATE_DIAGNOSTICS),
   openUpdateInstaller: () => ipcRenderer.invoke(IPC.OPEN_UPDATE_INSTALLER),
   openUpdateDiagnostics: () => ipcRenderer.invoke(IPC.OPEN_UPDATE_DIAGNOSTICS),

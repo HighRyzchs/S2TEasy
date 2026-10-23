@@ -32,8 +32,8 @@ export function CueSettingsPanel({
       <h3>More than the words</h3>
       <p className="hint">
         Listen for emotional delivery, monotone speech, emphasis, pace and nonverbal cues. Analysis
-        runs only when you request it in Transcript Review, on an excerpt of up to 30 seconds. It
-        does not slow live typing.
+        uses audio excerpts of up to 30 seconds. Choose manual review or explicitly opt in to one
+        automatic request after each take. Live typing keeps working while you speak.
       </p>
       <label className="consent">
         <input
@@ -43,8 +43,21 @@ export function CueSettingsPanel({
         />
         <span>
           Enable paid cloud speech-cue analysis. Requested audio excerpts and my style guidance go
-          to OpenRouter and its model provider, even if my speech engine is local. No recordings are
-          analyzed automatically.
+          to OpenRouter and its model provider, even if my speech engine is local.
+        </span>
+      </label>
+      <label className="consent">
+        <input
+          type="checkbox"
+          checked={draft.automatic}
+          disabled={!draft.enabled}
+          onChange={(e) => change({ automatic: e.target.checked })}
+        />
+        <span>
+          Automatically analyze the first 30 seconds after each take · one additional paid audio
+          call. Later speech stays untagged. Copying or changing output choices never makes a call.
+          Audio needed for this request stays local until completion, then follows my retention
+          settings.
         </span>
       </label>
       <div className="field">

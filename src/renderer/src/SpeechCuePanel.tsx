@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { CUE_LABELS, cueExport, type SpeechCueSettings } from '@shared/speech-cues'
+import { CUE_LABELS, type SpeechCueSettings } from '@shared/speech-cues'
 import type { HistoryItem } from '@shared/types'
 import './speech-cues.css'
+import { renderOutput, defaultOutputPreferences, type OutputPreferences } from '@shared/output'
 
 export function SpeechCuePanel({
   item,
@@ -10,8 +11,10 @@ export function SpeechCuePanel({
   active,
   position,
   onHistory,
-  onConfigure
+  onConfigure,
+  output = defaultOutputPreferences()
 }: {
+  output?: OutputPreferences
   item: HistoryItem
   settings: SpeechCueSettings
   text: string
@@ -252,7 +255,9 @@ export function SpeechCuePanel({
               disabled={busy}
               onClick={() =>
                 void run(async () => {
-                  await window.s2t.copyHistory(cueExport(text, result, false))
+                  await window.s2t.copyHistory(
+                    renderOutput({ text, cueAnalysis: result }, output, 'tags')
+                  )
                   setMessage('Expressive text copied.')
                 })
               }
@@ -264,7 +269,9 @@ export function SpeechCuePanel({
               disabled={busy}
               onClick={() =>
                 void run(async () => {
-                  await window.s2t.copyHistory(cueExport(text, result, true))
+                  await window.s2t.copyHistory(
+                    renderOutput({ text, cueAnalysis: result }, output, 'json')
+                  )
                   setMessage('Structured context copied.')
                 })
               }

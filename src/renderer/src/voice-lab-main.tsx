@@ -521,7 +521,7 @@ function VoiceLab() {
             <span>✧</span>
             <p>
               Try the next chapter of S2Teasy.{' '}
-              <strong>Browser prototype · desktop app unchanged.</strong>
+              <strong>Browser prototype · desktop v1.8.0 has its own unified workspace.</strong>
             </p>
           </div>
           {storageError && (

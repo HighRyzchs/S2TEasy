@@ -2,14 +2,14 @@
 
 [Open the working prototype](https://highryzchs.github.io/S2TEasy/voice-lab/).
 
-The voice lab now combines personal words, sound shortcuts, expression tags and voice references on **one page**. One recorder supplies one output preview and one library. Vocabulary and emotion controls no longer occupy separate navigation destinations. This remains a browser prototype for review before migrating the desktop app.
+The voice lab now combines personal words, sound shortcuts, expression tags and voice references on **one page**. One recorder supplies one output preview and one library. Vocabulary and emotion controls no longer occupy separate navigation destinations. Desktop v1.8.0 now ships a real unified workspace and HUD output controls. See [desktop instructions and code map](OUTPUT_WORKSPACE.md); the browser lab still has its own sample data and session-only reference experiments.
 
 ## Try the complete loop
 
 1. **Start with the output.** The example combines real vocabulary rules with illustrative delivery tags. `shiv on` becomes `Siobhán`, while `[excited]` remains a delivery label.
 2. **Click a word** to remember a correction. The small editor opens over the same page; saving changes the output immediately. Clicking an existing personal name opens its existing rule.
 3. **Click a [tag]** to correct or omit its interpretation. The inline editor returns keyboard focus to the tag, or to the output heading if the tag was omitted. Escape closes it.
-4. Choose **With expression**, **Plain words**, or **JSON**, then **Copy output**. **Tune tags** expands the category and clear-only controls beside the preview.
+4. Choose **With expression**, **Plain words**, or **JSON**, then **Copy output**. Placement, category and clear-only pills are always visible. Use **Copy words** or **Copy with tags** directly; word corrections stay in both.
 5. **Record once** in the try-it corner. Supply the spoken words, then choose **Measure this take locally**. The browser does not perform speech recognition. Approximate WPM updates when you edit the supplied text.
 6. Choose how the take sounded and **Remember this delivery**, or keep an ordinary take as the neutral reference. Both appear in the same library. These labels are yours, not model predictions.
 7. Use **Add something** for a word, phrase, sound shortcut, expression example, or neutral reference. Word and sound editors can explicitly attach the **last completed take**, so they do not open another microphone recorder.
@@ -32,7 +32,7 @@ The library filters **Everything / Words & phrases / Sounds / Expressions & refe
 | Models             | Inline, editable browser preferences. No API key, compatibility lookup, cloud opt-in or paid request. Desktop settings are unchanged.                                                                  |
 | Usage & spend      | Clearly labeled sample data with dictation, recovery and voice-cue filters. No account connection or historic billing import.                                                                          |
 
-Emotion interpretation and automatic desktop tag insertion remain planned. See [Expressive transcription](EXPRESSIVE_TRANSCRIPTION.md) for the intended audio-to-tags architecture and its current boundaries.
+Desktop audio interpretation and a separately opted-in first-30-seconds automatic request are implemented in v1.8.0. Automatic tagged insertion into external apps and personal acoustic calibration remain planned. See [Expressive transcription](EXPRESSIVE_TRANSCRIPTION.md) for the intended audio-to-tags architecture and its current boundaries.
 
 ## Privacy, recording and persistence
 
@@ -42,11 +42,11 @@ Text cards and model preferences use `s2teasy-voice-lab-v1`, separate from deskt
 
 Audio, attached word examples and reference profiles stay in page memory and disappear on reload. Attaching a completed take is explicit. These examples are not uploaded and do not retrain a model. Opening an editor stops the microphone rather than recording behind its dialog. Playback stops and object URLs are revoked when the relevant player closes or changes source.
 
-Changing the output format does not grant permission for a future cloud audio service. The desktop integration will need an independent, clearly explained opt-in for audio uploads and extra provider charges.
+Changing the output format does not grant permission for a future cloud audio service. The desktop integration has independent opt-ins for paid audio analysis and automatic requests; browser choices do not affect those opt-ins.
 
 ## Gemini and older spend in the desktop app
 
-Speech recognition and speech-cue analysis have different model IDs. In desktop v1.7.2, choose the OpenRouter speech model under **Settings → Speech engine → Audio model slug**. The optional audio-understanding model is under **Settings → Voice intelligence → Audio understanding model**; the starting candidate is `google/gemini-2.5-flash-lite`. The prototype places both fields on the same page, with their purpose labeled. Audio/provider compatibility still matters.
+Speech recognition and speech-cue analysis have different model IDs. In desktop v1.8.0, choose the OpenRouter speech model under **Settings → Speech engine → Audio model slug**. The optional audio-understanding model is on **Your voice → Audio intelligence & model settings** (also available in Settings → Voice intelligence); the starting candidate is `google/gemini-2.5-flash-lite`. The prototype places both fields on the same page, with their purpose labeled. Audio/provider compatibility still matters.
 
 The desktop app records usage locally from provider responses to its own calls. It does **not** import historical OpenRouter account activity. Calls made before local usage logging, on other devices, or in other clients do not appear automatically. Text history cannot reconstruct missing provider costs. Unknown prices remain unknown, not zero. The sample billing categories describe workflow tasks, not separate OpenRouter invoices.
 
@@ -62,4 +62,4 @@ The desktop app records usage locally from provider responses to its own calls. 
 - [Completed-take player](../src/renderer/src/VoiceClipPreview.tsx): card-editor playback without another microphone request.
 - [Browser draft boundaries](../src/renderer/src/voice-lab-data.ts): text-card validation, model preferences and sample billing data.
 
-Build with `npm run build:site`, serve `.site/` and visit `/voice-lab/`. The website workflow publishes the prototype without changing the desktop version.
+Build with `npm run build:site`, serve `.site/` and visit `/voice-lab/`. The website workflow publishes the browser lab independently of desktop releases.

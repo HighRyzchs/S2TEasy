@@ -1,6 +1,8 @@
 export const EMOTIONS = [
   'neutral',
   'calm',
+  'angry',
+  'upset',
   'excited',
   'happy',
   'sad',
@@ -20,6 +22,7 @@ export type CueKind = keyof typeof CUE_LABELS
 export type Emotion = (typeof EMOTIONS)[number]
 export type SpeechCueSettings = {
   enabled: boolean
+  automatic: boolean
   model: string
   emotions: boolean
   delivery: boolean
@@ -31,6 +34,7 @@ export type SpeechCueSettings = {
 }
 export const defaultSpeechCues = (): SpeechCueSettings => ({
   enabled: false,
+  automatic: false,
   model: 'google/gemini-2.5-flash-lite',
   emotions: true,
   delivery: true,
@@ -44,6 +48,7 @@ export function normalizeSpeechCues(raw?: Partial<SpeechCueSettings> | null): Sp
   const base = defaultSpeechCues()
   return {
     enabled: raw?.enabled === true,
+    automatic: raw?.enabled === true && raw?.automatic === true,
     model:
       typeof raw?.model === 'string' && raw.model.trim()
         ? raw.model.trim().slice(0, 160)

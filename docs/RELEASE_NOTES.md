@@ -1,3 +1,19 @@
+## Your voice, at your fingertips — v1.8.0
+
+- Combine Vocabulary and Voice practice into **Your voice**: one output preview, recorder, correction form, searchable word/take library, local playback and audio-cue review. Existing settings and History migrate in place.
+- Make tag placement and category pills visible. Choose **Before words**, **After words**, or **Context below**; include emotion, delivery, pacing and nonverbal sounds independently. Copy corrected words, words with saved tags, or structured JSON.
+- Put the same choices and **Copy words / Copy with tags** directly on the HUD, including during recording. Keep word corrections in both formats. Copying and presentation changes never start an inference call or rewrite previously inserted text. Allow 15 seconds to copy after finishing; Dismiss still closes immediately.
+- Add a separate, default-off automatic cue option: at most one paid audio call on the first 30 seconds after a take. Keep timestamp scope on every printed cue; later speech stays untagged. Keep manual excerpts, editable model slug, per-take feedback and separate usage accounting.
+- Persist words before analysis, preserve them if the optional model fails, and reject late results after cancellation. Capture/tail flushing and words-only insertion remain intact. Automatic analysis may add finish latency and requires the existing OpenRouter audio capability/policy checks.
+- Expand emotion labels to angry/upset, filter output without altering saved interpretations, and preserve explicit user labels with the clear-only filter. Edited transcripts discard obsolete word alignment while retaining explicitly time-scoped audio cues.
+- Update the theory, workflow, privacy notes, diagrams and linked source map. The browser design lab has the same visible output choices and still makes no paid requests.
+
+Real audio interpretation remains experimental. Automated provider tests use simulated responses; they do not establish emotion accuracy. Neutral-reference conditioning, acoustic model training, automatic personal noise shortcuts and live phrase-level tagged insertion remain future work.
+
+**Updating:** the v1.7.2 installer safeguards and diagnostic reports are included. If you are still on v1.5.1 and its Restart button only closes the app, quit from the tray and run the new **win-x64 installer EXE directly** once. Existing local data is retained. The portable EXE is a separate package.
+
+---
+
 ## Publish the verified installer intact — v1.7.2
 
 - Preserve the publishable installer by running native upgrade tests on a temporary copy. Verify the original build artifact remains unchanged after the test.

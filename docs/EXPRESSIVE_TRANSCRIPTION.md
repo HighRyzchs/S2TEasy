@@ -14,6 +14,12 @@ The words remain the speaker’s words. Tags describe perceived vocal expression
 
 The user described this as the reverse direction of [ElevenLabs audio tags](https://elevenlabs.io/blog/v3-audiotags): their desired behavior is to infer descriptive tags from recorded speech rather than supply tags to generate speech. The article was inaccessible from this development environment. These are our proposed labels and output semantics, not a verified ElevenLabs compatibility claim.
 
+## Shipping in desktop v1.8.0
+
+[Your voice: workflow, architecture and source map](OUTPUT_WORKSPACE.md) describes the implementation. The desktop has a unified page, visible output pills, HUD plain/tagged copying, manual audio-cue review, and a separate default-off automatic option making one request on the first 30 seconds after each take. Timed bracket labels can precede words, follow words, or appear in context below. Vocabulary stays in every format. Existing external-app insertion stays words only.
+
+The phrase-level examples above describe the longer-term design. Current desktop labels include audio ranges rather than claiming word alignment. General interpretation uses actual audio, a configurable model, and optional text guidance. Neutral-reference comparison and acoustic personalization are browser experiments, not inputs to desktop inference.
+
 ## Four kinds of expression
 
 | Category                       | Examples                                            | Evidence to consider                                                                                   |
@@ -25,7 +31,7 @@ The user described this as the reverse direction of [ElevenLabs audio tags](http
 
 A loud, fast voice can express excitement, frustration, or an ordinary speaking style. A quiet or even voice does not establish sadness. These measurements are useful evidence; no single threshold establishes an emotion. Descriptions concern perceived delivery, not a verified internal emotional state.
 
-## The intended automatic desktop flow
+## Longer-term phrase-level flow
 
 ```mermaid
 flowchart LR
@@ -47,7 +53,7 @@ For a first automatic integration, evaluate approximately 4–8 second phrase wi
 
 With tags enabled, briefly buffer a finalized phrase so its tags and text can be inserted together. Keep provisional words visible in the HUD. Do not retroactively rewrite an external input that the user may have edited. Save plain text before requesting cues. If the optional cue request fails or misses its deadline, commit the words without tags and preserve the untagged result for recovery. The voice-cue path must not lose final words, strand a HUD, or block cancellation. Existing microphone-tail flushing must still run at Stop.
 
-All of that orchestration is **planned**, not connected to live desktop insertion by this prototype. There is no new desktop release in this change.
+This phrase-level streaming and tagged-insertion design remains **planned**. The bounded post-take implementation in v1.8.0 is described above; it does not retroactively modify an external input.
 
 ## General interpretation, then a personal reference
 
@@ -79,7 +85,7 @@ The personal recording’s emotion tag is **explicitly user labeled**. The measu
 
 The prototype formatter inserts allowlisted tags at phrase boundaries. Explicit saved vocabulary rules first correct the words inside each finalized phrase; tags are handled separately, so a word rule cannot rename a tag. Other wording and whitespace are preserved. Users choose emotion, delivery, pacing, and event categories independently, or disable tags entirely. “Clear only” hides tentative example-model tags, while an explicit user correction remains visible. Clear/tentative are assessments, not calibrated probabilities.
 
-Structured output keeps each phrase’s text and selected tags separate, with `sample-model` or `user` provenance. It makes no invented timestamp claim. A future desktop result should use genuine audio-model provenance and include actual phrase ranges where available. Inline brackets are convenient human-readable hints; receiving LLMs and speech engines may interpret them differently. They are not a universal audio-tag standard.
+Structured output keeps each phrase’s text and selected tags separate, with `sample-model` or `user` provenance. It makes no invented timestamp claim. Desktop structured output uses genuine `audio-model` or `user` provenance and the model-estimated audio ranges, separate from the sample formatter. Inline brackets are convenient human-readable hints; receiving LLMs and speech engines may interpret them differently. They are not a universal audio-tag standard.
 
 Feedback must remain distinct from pronunciation corrections. “I sounded frustrated here” changes a delivery label; it must never become a text replacement rule or silently rewrite the speaker’s intent.
 

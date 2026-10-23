@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DictationController } from './dictation'
 import { SessionJournal } from './session-journal'
+import type { CueAnalysis } from '../shared/speech-cues'
 import { defaultSettings, type HistoryItem, type RecordingCommand } from '../shared/types'
 import type { RouterAudioClient } from './router-audio'
 
@@ -26,7 +27,11 @@ function setup(overrides = {}) {
     apiKey: 'test-key',
     ...overrides
   }
+  const analyzeCompleted = vi
+    .fn<() => Promise<CueAnalysis | undefined>>()
+    .mockResolvedValue(undefined)
   const host = {
+    analyzeCompleted,
     journal,
     overlay: { hide: vi.fn(), showInactive: vi.fn(), isDestroyed: () => false },
     getSettings: () => settings,
@@ -43,7 +48,17 @@ function setup(overrides = {}) {
     injector: { captureTarget: vi.fn(), paste, pasteBlock: paste },
     transcribe
   })
-  return { controller, settings, history, journal, commands, paste, transcribe, host }
+  return {
+    controller,
+    settings,
+    history,
+    journal,
+    commands,
+    paste,
+    transcribe,
+    host,
+    analyzeCompleted
+  }
 }
 const deferred = () => {
   let resolve!: (value: string) => void
@@ -377,4 +392,102 @@ it('completes successfully when Review aborts an insertion already in its pre-pa
   t.controller.reviewCurrent()
   await finishing
   expect(t.history[0]).toMatchObject({ status: 'complete', text: 'hello', error: undefined })
+})
+
+it('keeps saved words and finishes if optional cue analysis fails; copy time never changes insertion', async () => {
+  const prefs = { ...defaultSettings().speechCues, enabled: true, automatic: true }
+  const t = setup({ speechCues: prefs, recoveryAudio: false, insertMode: 'final' })
+  t.analyzeCompleted.mockImplementation(async () => {
+    expect(t.history[0].text).toBe('hello')
+    expect(t.journal.hasAudio(t.history[0].id)).toBe(true)
+    throw new Error('Audio provider unavailable')
+  })
+  await t.controller.start()
+  const gen = t.controller.currentGeneration()
+  t.controller.onPcm(new Uint8Array([1, 2, 3, 4]), gen)
+  await t.controller.onUtterance('audio', gen)
+  t.controller.stop()
+  await t.controller.onFinished('', '', 1000, gen)
+  expect(t.history[0]).toMatchObject({
+    text: 'hello',
+    status: 'complete',
+    hasAudio: false,
+    cueError: 'Voice cues unavailable: Audio provider unavailable'
+  })
+  expect(t.paste).toHaveBeenCalledWith('hello', expect.any(AbortSignal))
+  expect(t.analyzeCompleted).toHaveBeenCalledOnce()
+  t.controller.cancel()
+})
+it('cancels pending cue analysis without saving a late result or pasting stale words', async () => {
+  const t = setup({
+    speechCues: { ...defaultSettings().speechCues, enabled: true, automatic: true },
+    insertMode: 'final'
+  })
+  let resolve!: () => void
+  t.analyzeCompleted.mockImplementation(
+    () =>
+      new Promise((done) => {
+        resolve = () => done(undefined)
+      })
+  )
+  await t.controller.start()
+  const gen = t.controller.currentGeneration()
+  await t.controller.onUtterance('audio', gen)
+  t.controller.stop()
+  const finishing = t.controller.onFinished('', '', 1000, gen)
+  await vi.waitFor(() => expect(t.analyzeCompleted).toHaveBeenCalledOnce())
+  t.controller.cancel()
+  resolve()
+  await finishing
+  expect(t.history[0]).toMatchObject({ text: 'hello', status: 'cancelled' })
+  expect(t.paste).not.toHaveBeenCalled()
+  expect(t.host.onOverlay.mock.calls.at(-1)?.[0].status).toBe('hidden')
+})
+
+it('saves successful automatic cues to History and the HUD while expiring transient audio', async () => {
+  const t = setup({
+    speechCues: { ...defaultSettings().speechCues, enabled: true, automatic: true },
+    recoveryAudio: false
+  })
+  const analysis: CueAnalysis = {
+    schemaVersion: 1,
+    id: 'cue-analysis',
+    model: 'audio-model',
+    createdAt: 1,
+    startMs: 0,
+    endMs: 1000,
+    quality: 'usable',
+    summary: 'Even delivery',
+    observations: { durationMs: 1000, rms: 0.1, clippedFraction: 0, quietIntervals: [] },
+    cues: [
+      {
+        id: 'cue-0',
+        kind: 'delivery',
+        label: 'monotone',
+        startMs: 0,
+        endMs: 1000,
+        strength: 'clear',
+        evidence: 'Limited pitch variation'
+      }
+    ]
+  }
+  t.analyzeCompleted.mockResolvedValue(analysis)
+  await t.controller.start()
+  const gen = t.controller.currentGeneration()
+  t.controller.onPcm(new Uint8Array([1, 2, 3, 4]), gen)
+  await t.controller.onUtterance('audio', gen)
+  t.controller.stop()
+  await t.controller.onFinished('', '', 1000, gen)
+  expect(t.history[0]).toMatchObject({
+    text: 'hello',
+    status: 'complete',
+    hasAudio: false,
+    cueAnalysis: analysis
+  })
+  expect(t.host.onOverlay.mock.calls.at(-1)?.[0]).toMatchObject({
+    status: 'success',
+    sessionId: t.history[0].id,
+    cueAnalysis: analysis
+  })
+  t.controller.cancel()
 })

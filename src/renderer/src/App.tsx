@@ -16,11 +16,10 @@ import { HistoryPanel } from './HistoryPanel'
 import { SettingsPanel, type SettingsSection } from './SettingsPanel'
 import { WelcomeTour } from './WelcomeTour'
 import { startError } from '@shared/engine'
-import { VocabularyPanel } from './VocabularyPanel'
-import { PracticePanel } from './PracticePanel'
+import { YourVoicePanel } from './YourVoicePanel'
 
 const preview = import.meta.env.VITE_BROWSER_PREVIEW === '1'
-type Tab = 'overview' | 'history' | 'vocabulary' | 'practice' | 'settings' | 'usage'
+type Tab = 'overview' | 'history' | 'voice' | 'settings' | 'usage'
 
 export function App() {
   const [tourDismissed, setTourDismissed] = useState(false)
@@ -120,7 +119,7 @@ export function App() {
   }
   const addWord = async (heard: string, meant: string) => {
     if (settings.vocabulary.some((row) => row.heard.toLowerCase() === heard.trim().toLowerCase()))
-      throw new Error('A rule already exists for that phrase. Manage it in Vocabulary.')
+      throw new Error('A rule already exists for that phrase. Manage it in Your voice.')
     await save({
       vocabulary: [
         ...settings.vocabulary,
@@ -155,8 +154,7 @@ export function App() {
               ['overview', 'Overview', '◫'],
               ['history', 'History', '◷'],
               ['usage', 'Usage & spend', '↗'],
-              ['vocabulary', 'Vocabulary', 'Aa'],
-              ['practice', 'Voice practice', '≋'],
+              ['voice', 'Your voice', '≋'],
               ['settings', 'Settings', '⚙']
             ] as const
           ).map(([id, label, icon]) => (
@@ -201,7 +199,9 @@ export function App() {
         <header className="workspace-bar">
           <span>
             {settings.displayName ? `${settings.displayName}’s workspace` : 'Personal workspace'}{' '}
-            <span className="breadcrumb">/ {tab[0].toUpperCase() + tab.slice(1)}</span>
+            <span className="breadcrumb">
+              / {tab === 'voice' ? 'Your voice' : tab[0].toUpperCase() + tab.slice(1)}
+            </span>
           </span>
           <span className={active ? 'connection active' : 'connection'}>
             <i />
@@ -452,21 +452,18 @@ export function App() {
               }
             />
           )}
-          {tab === 'vocabulary' && (
-            <VocabularyPanel
-              displayName={settings.displayName}
-              entries={settings.vocabulary}
-              onChange={async (vocabulary) => save({ vocabulary })}
-            />
-          )}
-          {tab === 'practice' && (
-            <PracticePanel
-              key={practiceTarget}
-              initialTarget={practiceTarget}
+          {tab === 'voice' && (
+            <YourVoicePanel
               settings={settings}
               history={history}
               overlay={overlay}
-              onHistory={() => setTab('history')}
+              initialTarget={practiceTarget}
+              onSave={save}
+              onHistory={setHistory}
+              onOutput={async (value) => {
+                setSettings(await window.s2t.saveOutput(value))
+              }}
+              onReview={setReviewId}
             />
           )}
           {tab === 'settings' && (
@@ -510,7 +507,7 @@ export function App() {
           onHistory={setHistory}
           onConfigureCues={() => {
             setReviewId(null)
-            openSettings('intelligence')
+            setTab('voice')
           }}
           key={reviewId}
           item={history.find((row) => row.id === reviewId)!}
@@ -522,7 +519,7 @@ export function App() {
           onPractice={(text) => {
             setPracticeTarget(text)
             setReviewId(null)
-            setTab('practice')
+            setTab('voice')
           }}
           onExample={async (index, intended) => {
             setHistory(await window.s2t.saveWordExample(reviewId, index, intended))

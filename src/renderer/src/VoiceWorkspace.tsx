@@ -1,3 +1,5 @@
+import { OutputChoices } from './OutputChoices'
+import type { OutputPreferences } from '@shared/output'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   EXPRESSION_LABELS,
@@ -96,6 +98,7 @@ export function VoiceWorkspace({
   const [scene, setScene] = useState<Scene>('shifting')
   const [segments, setSegments] = useState(() => sampleSegments('shifting'))
   const [words, setWords] = useState('')
+  const [placement, setPlacement] = useState<OutputPreferences['placement']>('before')
   const [options, setOptions] = useState(() => ({ ...defaultExpressionOptions(), enabled: true }))
   const [format, setFormat] = useState<'inline' | 'plain' | 'json'>('inline')
   const [blob, setBlob] = useState<Blob>()
@@ -180,7 +183,7 @@ export function VoiceWorkspace({
           ]
         : []
   const phrases = personalizePhrases(rawSegments, textRules(cards))
-  const output = renderExpressiveTranscript(phrases, options, format)
+  const output = renderExpressiveTranscript(phrases, options, format, placement)
   const corrected = phrases.some((phrase, i) => phrase.text !== rawSegments[i]!.text)
   const activeTag = selectedTag
     ? rawSegments
@@ -390,45 +393,53 @@ export function VoiceWorkspace({
                 </button>
               ))}
             </div>
-            <details className="vw-tag-options">
-              <summary>Tune tags</summary>
-              <div>
-                {(Object.keys(EXPRESSION_LABELS) as ExpressionKind[]).map((kind) => (
-                  <label key={kind}>
-                    <input
-                      type="checkbox"
-                      checked={options.kinds[kind]}
-                      onChange={(e) =>
-                        setOptions({
-                          ...options,
-                          kinds: { ...options.kinds, [kind]: e.target.checked }
-                        })
-                      }
-                    />
-                    {categoryNames[kind]}
-                  </label>
-                ))}
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={options.clearOnly}
-                    onChange={(e) => setOptions({ ...options, clearOnly: e.target.checked })}
-                  />
-                  Only clear model interpretations
-                </label>
-                <small>
-                  “Clear” is an assessment, not a probability. Your explicit corrections remain
-                  visible.
-                </small>
-              </div>
-            </details>
+            <OutputChoices
+              value={{ placement, kinds: options.kinds, clearOnly: options.clearOnly }}
+              onChange={(value) => {
+                setPlacement(value.placement)
+                setOptions({ ...options, kinds: value.kinds, clearOnly: value.clearOnly })
+              }}
+            />
+          </div>
+          <div className="vw-direct-copy">
+            <button
+              className="vl-secondary"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(
+                    renderExpressiveTranscript(phrases, options, 'plain')
+                  )
+                  setMessage('Words copied. Your vocabulary corrections stay.')
+                } catch {
+                  setMessage('Clipboard unavailable. Select the output to copy it.')
+                }
+              }}
+            >
+              Copy words
+            </button>
+            <button
+              className="vl-primary"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(
+                    renderExpressiveTranscript(phrases, options, 'inline', placement)
+                  )
+                  setMessage('Words and selected tags copied.')
+                } catch {
+                  setMessage('Clipboard unavailable. Select the output to copy it.')
+                }
+              }}
+            >
+              Copy with tags
+            </button>
+            <span>Word corrections always stay ✓</span>
           </div>
           <div
             className={`vw-output ${format === 'json' ? 'json' : ''}`}
             data-testid="workspace-output"
             aria-label="Your output"
           >
-            {format === 'json' ? (
+            {format === 'json' || placement === 'context' || placement === 'after' ? (
               output
             ) : phrases.length ? (
               phrases.map((phrase) => {
