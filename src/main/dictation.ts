@@ -34,6 +34,7 @@ import { transcribeAudio, type TranscribeInput } from './openrouter'
 import { RouterAudioClient } from './router-audio'
 import { SessionJournal } from './session-journal'
 import { LiveCues, type CueWindowResult } from './live-cues'
+import { accentSlots, type AccentSlot } from '../shared/accent-check'
 
 type Host = {
   overlay: { showInactive: () => void; hide: () => void; isDestroyed: () => boolean }
@@ -58,6 +59,14 @@ type Host = {
     settings: AppSettings,
     signal: AbortSignal
   ) => Promise<CueAnalysis | undefined>
+  /** Opt-in context check: which accent swaps to undo (text only, two choices per slot). */
+  checkAccents?: (
+    item: HistoryItem,
+    text: string,
+    slots: AccentSlot[],
+    settings: AppSettings,
+    signal: AbortSignal
+  ) => Promise<{ text: string; reverted: AccentSlot[] }>
   /** Speech cues while talking: analyze one stretch of this session's journal audio. */
   analyzeCueWindow?: (
     item: HistoryItem,
@@ -226,6 +235,39 @@ export class DictationController {
     if (!on) this.stopLiveCues()
     this.setState({ ...this.state, cues: on, liveCues: on ? this.state.liveCues : undefined })
     if (on && !this.liveCues && !this.practiceText) this.startLiveCues()
+  }
+
+  /**
+   * With the context check on, ask once whether each accent swap fits its sentence and put back the
+   * heard word where it does not. The words are already saved; a failed check changes nothing.
+   */
+  private async checkAccentSwaps(gen: number): Promise<void> {
+    const check = this.host.checkAccents
+    if (!check || !this.settings?.accentContextCheck || this.practiceText || !this.item) return
+    const slots = accentSlots(this.typedText, this.vocabulary(), this.hits)
+    if (!slots.length) return
+    this.setState({ ...this.state, status: 'transcribing', message: 'Words saved · checking accent fixes', rms: 0, bars: [] })
+    let result: { text: string; reverted: AccentSlot[] }
+    try {
+      result = await check(this.item, this.typedText, slots, this.settings, this.requestAbort!.signal)
+    } catch {
+      return
+    }
+    if (!this.valid(gen) || !result.reverted.length) return
+    this.typedText = result.text
+    for (const slot of result.reverted) {
+      const i = this.hits.findIndex((hit) => hit.entryId === slot.entryId)
+      if (i >= 0) this.hits.splice(i, 1)
+    }
+    this.updateText()
+    const words = result.reverted.map((slot) => `“${slot.heard}”`).join(', ')
+    if (this.liveTyping() && !this.reviewRequested) {
+      let outcome = ''
+      await this.enqueue(gen, async () => {
+        outcome = await this.replaceTyped()
+      })
+      if (outcome === 'typed') this.notice(`Context check put back ${words}.`)
+    } else this.notice(`Context check put back ${words}.`)
   }
 
   /** Journal audio recorded so far in this session, in milliseconds (16 kHz mono PCM16). */
@@ -594,6 +636,8 @@ export class DictationController {
       this.fail('No finalized speech received. Recover retained audio from History.', gen)
       return
     }
+    await this.checkAccentSwaps(gen)
+    if (!this.valid(gen)) return
     // Words are durable before optional audio interpretation. Its failure must not lose dictation.
     const live = this.liveCues
     if (

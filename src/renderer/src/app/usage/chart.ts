@@ -43,5 +43,6 @@ export { monthSpend } from '@shared/usage'
 export const SOURCE_LABEL: Record<UsageRecord['source'], string> = {
   dictation: 'Live speech',
   'speech-cues': 'Emotion cues',
+  'context-check': 'Context checks',
   recovery: 'Recovering dropped audio'
 }

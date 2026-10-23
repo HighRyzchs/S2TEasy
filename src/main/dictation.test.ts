@@ -430,6 +430,45 @@ it('keeps saved words and finishes if optional cue analysis fails; copy time nev
   expect(t.analyzeCompleted).toHaveBeenCalledOnce()
   t.controller.cancel()
 })
+it('lets the context check put back an accent swap that does not fit, before the draft is pasted', async () => {
+  const t = setup({
+    insertMode: 'final',
+    accentContextCheck: true,
+    vocabulary: [{ id: 'bite', heard: 'bike', meant: 'bite', enabled: true, kind: 'accent' }]
+  })
+  t.transcribe.mockResolvedValue('I ride my bike home')
+  const checkAccents = vi.fn(async (_item: HistoryItem, text: string, slots: { start: number; end: number }[]) => ({
+    text: text.slice(0, slots[0].start) + 'bike' + text.slice(slots[0].end),
+    reverted: slots
+  }))
+  Object.assign(t.host, { checkAccents })
+  await t.controller.start()
+  const gen = t.controller.currentGeneration()
+  await t.controller.onUtterance('audio', gen)
+  t.controller.stop()
+  await t.controller.onFinished('', '', 1000, gen)
+  expect(checkAccents).toHaveBeenCalledWith(expect.anything(), 'I ride my bite home', expect.any(Array), expect.anything(), expect.any(AbortSignal))
+  expect(t.paste).toHaveBeenCalledWith('I ride my bike home', expect.any(AbortSignal))
+  expect(t.history[0]).toMatchObject({ text: 'I ride my bike home', status: 'complete' })
+  expect(t.history[0].fixes ?? []).toEqual([])
+})
+
+it('keeps the words as they are when the context check fails', async () => {
+  const t = setup({
+    insertMode: 'final',
+    accentContextCheck: true,
+    vocabulary: [{ id: 'bite', heard: 'bike', meant: 'bite', enabled: true, kind: 'accent' }]
+  })
+  t.transcribe.mockResolvedValue('grab a quick bike')
+  Object.assign(t.host, { checkAccents: vi.fn().mockRejectedValue(new Error('HTTP 402')) })
+  await t.controller.start()
+  const gen = t.controller.currentGeneration()
+  await t.controller.onUtterance('audio', gen)
+  t.controller.stop()
+  await t.controller.onFinished('', '', 1000, gen)
+  expect(t.history[0]).toMatchObject({ text: 'grab a quick bite', status: 'complete' })
+})
+
 it('hears speech cues per phrase while talking and saves them with the session', async () => {
   const t = setup({
     speechCues: { ...defaultSettings().speechCues, enabled: true, automatic: true },

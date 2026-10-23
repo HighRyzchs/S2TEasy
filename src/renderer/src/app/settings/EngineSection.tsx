@@ -303,6 +303,17 @@ export function EngineSection() {
           checked={settings.requestWordTimings}
           onChange={(requestWordTimings) => quickSave({ requestWordTimings })}
         />
+        <Toggle
+          label="Check accent fixes in context"
+          hint={
+            settings.apiKey
+              ? 'After each session, a small OpenRouter text model reads the sentences around your accent words (like bike → bite) and puts back what you said where the fix does not fit. It can only choose between the two words. Costs a fraction of a cent per session that has one.'
+              : 'Save an OpenRouter key in Voice intelligence to use this.'
+          }
+          checked={settings.accentContextCheck}
+          disabled={!settings.apiKey && !settings.accentContextCheck}
+          onChange={(accentContextCheck) => quickSave({ accentContextCheck })}
+        />
         {engine === 'router-audio' && (
           <Toggle
             label={

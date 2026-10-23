@@ -112,7 +112,7 @@ export function analyze(input: {
     spend += cost
     const target = slot(row.createdAt)
     if (target) {
-      if (row.source === 'speech-cues') target.cues += cost
+      if (row.source === 'speech-cues' || row.source === 'context-check') target.cues += cost
       else if (row.source === 'recovery') target.recovery += cost
       else target.speech += cost
     }

@@ -7,7 +7,7 @@ const total = (row: Row) => row.speech + row.cues + row.recovery
 
 export const SERIES = [
   { key: 'speech', label: 'Speech', color: 'var(--series-1)' },
-  { key: 'cues', label: 'Emotion cues', color: 'var(--series-2)' },
+  { key: 'cues', label: 'Cues and checks', color: 'var(--series-2)' },
   { key: 'recovery', label: 'Recovery', color: 'var(--series-3)' }
 ] as const
 
