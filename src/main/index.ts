@@ -332,6 +332,18 @@ async function setup(): Promise<void> {
   })
 
   ipcMain.handle(IPC.SAVE_SETTINGS, (_event, patch: Partial<AppSettings>) => {
+    // Your voice can be edited mid-session: personal words apply to what is not typed yet.
+    const wordsOnly =
+      !!patch &&
+      typeof patch === 'object' &&
+      Object.keys(patch).length > 0 &&
+      Object.keys(patch).every((key) => key === 'vocabulary' || key === 'dismissedSuggestions')
+    if (wordsOnly && !recoveryBusy) {
+      const settings = store.saveSettings(patch)
+      dictation.updateVocabulary(settings.vocabulary)
+      broadcastSettings()
+      return settings
+    }
     if (dictation.isBusy() || recoveryBusy)
       throw new Error('Finish the current recording or recovery before changing settings.')
     const previous = store.getSettings()
