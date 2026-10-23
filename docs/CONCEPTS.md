@@ -1,6 +1,6 @@
 # Why S2Teasy exists, and how it works
 
-Try the [unified Your voice workspace](https://highryzchs.github.io/S2TEasy/voice-lab/): one output preview, recorder and library for personal words, sound shortcuts and delivery tags. The [walkthrough and code map](VOICE_LAB.md) distinguish working local interactions from example interpretations; [Expressive transcription](EXPRESSIVE_TRANSCRIPTION.md) describes the current bounded audio-to-tags path and longer-term phrase-level design. [Desktop v1.8.0 workflow and source map](OUTPUT_WORKSPACE.md) cover the unified page and HUD controls.
+Try the [interactive HUD demo](https://highryzchs.github.io/S2TEasy/overlay-demo/). [Expressive transcription](EXPRESSIVE_TRANSCRIPTION.md) describes the current bounded audio-to-tags path and longer-term phrase-level design. [Desktop v1.8.0 workflow and source map](OUTPUT_WORKSPACE.md) cover the unified page and HUD controls.
 
 [Start here](../README.md) · [Try speech cues](#try-emotion-and-delivery-analysis) · [Code map](#follow-the-code) · [Design details](PERSONAL_SPEECH_DESIGN.md) · [Privacy](PRIVACY.md)
 

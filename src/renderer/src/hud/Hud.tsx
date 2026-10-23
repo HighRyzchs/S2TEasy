@@ -41,6 +41,10 @@ export type HudProps = {
   /** Never fold the editor back to one line (browser preview). */
   keepOpen?: boolean
   preview?: boolean
+  /** Fill the nearest positioned parent instead of the window (settings screen, website). */
+  embedded?: boolean
+  /** A frozen copy: no animation loops or transitions, for galleries. */
+  still?: boolean
   /** The person dismissed an error. */
   onDismiss?: () => void
 }
@@ -69,6 +73,8 @@ export function Hud({
   defaultOpen = false,
   keepOpen = false,
   preview = false,
+  embedded = false,
+  still = false,
   onDismiss
 }: HudProps) {
   const root = useRef<HTMLDivElement>(null)
@@ -149,6 +155,7 @@ export function Hud({
 
   // The level ring and the edge glow follow the voice.
   useEffect(() => {
+    if (still) return
     let frame = 0
     let level = 0
     const tick = () => {
@@ -161,7 +168,7 @@ export function Hud({
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [settings.sensitivity])
+  }, [settings.sensitivity, still])
 
   const beginEdit = (first: number, last: number) => {
     const range = spanRange(tokens, first, last)
@@ -264,7 +271,7 @@ export function Hud({
           <span className="hud-ind rec">
             <MicIcon />
           </span>
-          <Wave barsRef={barsRef} pixel={pixel} />
+          <Wave barsRef={barsRef} pixel={pixel} still={still} />
           {block ? (
             <span className="grow hud-label" role="status">
               Listening{clickToEdit ? ' · click words to edit' : ''}
@@ -313,7 +320,7 @@ export function Hud({
       <>
         <div className="hud-row">
           <span className={`hud-ind ${rec ? 'rec' : 'held'}`}>{rec ? <MicIcon /> : <PauseIcon />}</span>
-          {rec && <Wave barsRef={barsRef} pixel={pixel} />}
+          {rec && <Wave barsRef={barsRef} pixel={pixel} still={still} />}
           <span className="grow hud-title" role="status">
             {rec ? 'Listening' : 'Paused'}
             <small>{rec ? 'keep talking · click a word to fix it' : 'click a word, or drag across several'}</small>
@@ -411,6 +418,9 @@ export function Hud({
       data-h={settings.style === 'edge' ? 'center' : anchor.h}
       data-skin={settings.style}
       data-preview={preview}
+      data-embedded={embedded}
+      data-mid={!position.includes('top') && !position.includes('bottom') && position !== 'bottom'}
+      data-still={still}
       style={{ '--hud-scale': settings.scale } as CSSProperties}
     >
       <div className="hud-anchor">

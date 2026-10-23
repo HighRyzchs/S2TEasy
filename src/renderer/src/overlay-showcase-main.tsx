@@ -1,171 +1,159 @@
-import { useState } from 'react'
+import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { defaultOverlayTheme, OVERLAY_SKINS, type OverlayTheme } from '@shared/overlay-theme'
-import { idleUpdate, type UpdateStatus } from '@shared/types'
-import { OverlayHud } from './OverlayHud'
-import { OverlayThemeEditor } from './OverlayThemeEditor'
-import { UpdatePanel } from './UpdatePanel'
-import { useHudPreview } from './useHudPreview'
-import './overlay-theme.css'
+import { HUD_STYLES, hudAccent, normalizeHudSettings, type HudStyle } from '@shared/hud'
+import { Logo } from './app/icons'
+import { Choice, Slider } from './app/hud-screen/controls'
+import { LiveHud } from './app/hud-screen/LiveHud'
+import { StaticHud } from './app/hud-screen/StaticHud'
+import { ACCENTS, PREVIEW_STATES, STYLE_INFO, type PreviewState } from './app/hud-screen/styles'
+import './app/theme.css'
+import './app/components.css'
 import './overlay-showcase.css'
 
-const descriptions: Record<OverlayTheme['skin'], string> = {
-  minimal: 'Quiet, focused, always in reach.',
-  frost: 'A little light for your thoughts.',
-  glass: 'Frosted edges. Soft reflections. Light through glass.',
-  cyberpunk: 'After-hours signal. Mint meets ultraviolet.',
-  pixel: 'One more thought. One more level.',
-  studio: 'The original mixer, with six cores and five waves.'
-}
-function Sample({ skin, vertical = false }: { skin: OverlayTheme['skin']; vertical?: boolean }) {
-  const demo = useHudPreview()
-  const theme = {
-    ...defaultOverlayTheme(),
-    skin,
-    showTranscript: !vertical,
-    orientation: vertical ? ('vertical' as const) : ('horizontal' as const)
-  }
-  return (
-    <article className={`sample sample-${skin}`}>
-      <div className="sample-caption">
-        <span>
-          {OVERLAY_SKINS.find((entry) => entry.id === skin)?.label}
-          {vertical ? ' · Vertical' : ''}
-        </span>
-        <button onClick={demo.start} title="Restart this preview">
-          Replay ↗
-        </button>
-      </div>
-      <div className={`hud-stage ${vertical ? 'vertical-stage' : ''}`}>
-        <div className="desktop-texture" aria-hidden="true">
-          <i />
-          <i />
-          <i />
-        </div>
-        {demo.state.status !== 'hidden' ? (
-          <OverlayHud
-            theme={theme}
-            state={demo.state}
-            bars={demo.bars}
-            canStop={['listening', 'transcribing', 'inserting'].includes(demo.state.status)}
-            onStop={demo.stop}
-            onDismiss={demo.dismiss}
-            preview
-          />
-        ) : (
-          <button className="replay-hud" onClick={demo.start}>
-            Overlay dismissed · Replay
-          </button>
-        )}
-      </div>
-      <p>{descriptions[skin]}</p>
-    </article>
-  )
-}
+document.documentElement.dataset.appearance = 'system'
+
+const PLACES = [
+  { id: 'top', label: 'Top' },
+  { id: 'center', label: 'Middle' },
+  { id: 'bottom', label: 'Bottom' }
+] as const
+
 function Showcase() {
-  const [theme, setTheme] = useState<OverlayTheme>({ ...defaultOverlayTheme(), skin: 'glass' })
-  const [update, setUpdate] = useState<UpdateStatus>({
-    ...idleUpdate('1.4.0', 'portable'),
-    phase: 'available',
-    availableVersion: '1.5.0',
-    message: 'Simulated update preview'
-  })
-  const [autoDownload, setAutoDownload] = useState(false)
+  const [style, setStyle] = useState<HudStyle>('island')
+  const [accent, setAccent] = useState(hudAccent('island'))
+  const [view, setView] = useState<PreviewState>('talking')
+  const [talk, setTalk] = useState<'compact' | 'full'>('compact')
+  const [scale, setScale] = useState(1)
+  const [place, setPlace] = useState<'top' | 'center' | 'bottom'>('bottom')
+  const [nonce, setNonce] = useState(0)
+  const hud = normalizeHudSettings({ style, accent, whileTalking: talk, scale })
+  const current = HUD_STYLES.find((row) => row.id === style) ?? HUD_STYLES[0]
+  const pick = (id: HudStyle) => {
+    setStyle(id)
+    setAccent(hudAccent(id))
+  }
+
   return (
-    <main className="showcase">
-      <section id="overlay-comparison">
-        <header>
-          <a className="studio-wordmark" href="../">
-            <svg viewBox="0 0 40 40" aria-hidden="true">
-              <rect width="40" height="40" rx="12" fill="#a5e6ce" />
-              <path
-                d="M10 19v3m5-9v15m5-19v22m5-17v12m5-7v3"
-                stroke="#122c24"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-            </svg>
-            S2Teasy <span>/ Overlay studio</span>
-          </a>
-          <span className="build-label">
-            <i /> LIVE COMPONENT PREVIEW
-          </span>
-        </header>
-        <div className="study-title">
-          <span className="overline">YOUR VOICE. YOUR ATMOSPHERE.</span>
-          <h1>
-            A small window.
-            <br />A world of possibilities.
-          </h1>
-          <p>Six looks. Moving waveforms. Make room for your own kind of flow.</p>
-        </div>
-        <div className="options-head">
-          <h2>Find your frequency.</h2>
-          <span>SIMULATED SPEECH · TRY STOP, CANCEL & REPLAY</span>
-        </div>
-        <div className="looks-grid">
-          {OVERLAY_SKINS.map(({ id }) => (
-            <Sample key={id} skin={id} />
-          ))}
-        </div>
-        <div className="design-notes">
-          <span>
-            <b>01</b> Volume-driven waveforms
-          </span>
-          <span>
-            <b>02</b> Stop, finish & dismiss
-          </span>
-          <span>
-            <b>03</b> Your image. Your layout.
-          </span>
-        </div>
+    <main className="demo">
+      <header className="demo-bar">
+        <a className="demo-brand" href="../">
+          <Logo size={30} />
+          S2Teasy
+        </a>
+        <nav aria-label="Site">
+          <a href="../">Website</a>
+          <a href="https://github.com/HighRyzchs/S2TEasy/releases/latest">Download</a>
+          <a href="https://github.com/HighRyzchs/S2TEasy">GitHub</a>
+        </nav>
+      </header>
+
+      <section className="demo-hero">
+        <span className="label">The HUD · live demo</span>
+        <h1>Your words, right where you are talking.</h1>
+        <p>
+          This is the real HUD from the desktop app, fed by simulated speech. Click a word to fix it, pause it, or pick a
+          different look. No microphone, no uploads.
+        </p>
       </section>
-      <section className="try-controls" id="playground">
-        <div className="options-head">
-          <div>
-            <span className="overline">MAKE YOURSELF AT HOME</span>
-            <h2>Your overlay, your way.</h2>
+
+      <section className="card demo-stage-card" aria-label="HUD preview">
+        <LiveHud hud={hud} position={place} state={view} nonce={nonce} className="demo-stage" />
+        <div className="demo-controls">
+          <Choice
+            label="State"
+            value={view}
+            options={PREVIEW_STATES}
+            onChange={(next) => {
+              setView(next)
+              setNonce((n) => n + 1)
+            }}
+          />
+          <Choice label="Where" value={place} options={[...PLACES]} onChange={setPlace} />
+          <Choice
+            label="While you talk"
+            value={talk}
+            options={[
+              { id: 'compact', label: 'One line' },
+              { id: 'full', label: 'Full text' }
+            ]}
+            onChange={setTalk}
+          />
+          <div className="field">
+            <span id="demo-color">Color</span>
+            <div className="hudsc-swatches" role="radiogroup" aria-labelledby="demo-color">
+              {ACCENTS.map((row) => (
+                <button
+                  key={row.value}
+                  type="button"
+                  role="radio"
+                  className="hudsc-sw"
+                  aria-checked={accent === row.value}
+                  aria-label={row.name}
+                  style={{ background: row.value }}
+                  onClick={() => setAccent(row.value)}
+                />
+              ))}
+            </div>
           </div>
-          <span>LOCAL PREVIEW · NOTHING IS UPLOADED</span>
+          <Slider
+            label="Size"
+            value={scale}
+            min={0.8}
+            max={1.4}
+            step={0.05}
+            format={(v) => `${Math.round(v * 100)}%`}
+            onCommit={setScale}
+          />
+          <button type="button" className="btn" onClick={() => setNonce((n) => n + 1)}>
+            Replay
+          </button>
         </div>
-        <p className="section-intro">
-          Try your microphone, switch to a vertical layout, tune the color and size, or bring an
-          image of your own. The controls below use the app’s actual overlay editor.
-        </p>
-        <OverlayThemeEditor theme={theme} onChange={setTheme} />
-        <p className="desktop-note">
-          Desktop placement options: top, bottom, four corners, either side, or center. Glass
-          transparency and desktop blur depend on Windows composition; this browser preview can blur
-          the scene behind it. Windows focus and always-on-top behavior require a desktop test.
-        </p>
       </section>
-      <section id="update-preview">
-        <div className="options-head">
-          <h2>In-app updates</h2>
-          <span>SIMULATION · NO DOWNLOAD</span>
+
+      <section aria-labelledby="demo-styles" className="demo-styles">
+        <div className="demo-styles-head">
+          <h2 id="demo-styles">Seven styles</h2>
+          <p>
+            <b>{current.label}.</b> {STYLE_INFO[current.id]}
+          </p>
         </div>
-        <UpdatePanel
-          update={update}
-          autoDownload={autoDownload}
-          onAutoDownload={setAutoDownload}
-          onUpdate={setUpdate}
-          onCheck={async (download) =>
-            download
-              ? { ...update, phase: 'ready', percent: 100 }
-              : { ...update, phase: 'available' }
-          }
-          onInstall={async () => ({
-            ...update,
-            phase: 'current',
-            message: 'Preview only — no app was restarted or installed.'
+        <div className="hudsc-gallery" role="radiogroup" aria-label="HUD style">
+          {HUD_STYLES.map((row) => {
+            const on = row.id === style
+            return (
+              <div
+                key={row.id}
+                className="hudsc-card"
+                role="radio"
+                aria-checked={on}
+                aria-label={row.label}
+                tabIndex={0}
+                onClick={() => pick(row.id)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    pick(row.id)
+                  }
+                }}
+              >
+                <StaticHud style={row.id} accent={on ? accent : row.accent} />
+                <strong>{row.label}</strong>
+              </div>
+            )
           })}
-        />
+        </div>
       </section>
-      <footer className="site-footer">
+
+      <footer className="demo-foot">
         <a href="https://github.com/HighRyzchs/S2TEasy">Open source. Open to your ideas. ↗</a>
         <span>Built for thoughts worth keeping.</span>
       </footer>
     </main>
   )
 }
-createRoot(document.getElementById('root')!).render(<Showcase />)
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <Showcase />
+  </StrictMode>
+)

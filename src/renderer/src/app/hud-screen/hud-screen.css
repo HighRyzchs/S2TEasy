@@ -1,0 +1,235 @@
+/* The HUD preview stage: a fixed dark desktop in both themes, because the HUD floats over whatever app you are in. */
+.hudsc-stage,
+.hudsc-thumb {
+  position: relative;
+  overflow: hidden;
+  border-radius: 12px;
+  background: radial-gradient(120% 90% at 20% 10%, #1b2a3a, #0e1720);
+  isolation: isolate;
+}
+.hudsc-stage {
+  height: 320px;
+  border: 1px solid var(--line);
+}
+.hudsc-thumb {
+  width: 100%;
+  pointer-events: none;
+  user-select: none;
+}
+.hudsc-thumb-inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+/* A faint stand-in for the app you are dictating into. */
+.hudsc-desk {
+  position: absolute;
+  inset: 0;
+  padding: 7% 8%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  opacity: 0.5;
+}
+.hudsc-desk i {
+  display: block;
+  height: 9px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.09);
+}
+.hudsc-desk i:nth-child(1) {
+  width: 46%;
+}
+.hudsc-desk i:nth-child(2) {
+  width: 72%;
+}
+.hudsc-desk i:nth-child(3) {
+  width: 58%;
+}
+
+.hudsc-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 12px;
+}
+.hudsc-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 8px 12px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 2px solid var(--line);
+  color: var(--fg);
+  cursor: pointer;
+  min-width: 0;
+}
+.hudsc-card:hover {
+  border-color: var(--line-strong);
+}
+.hudsc-card[aria-checked='true'] {
+  border-color: var(--accent);
+}
+.hudsc-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.hudsc-card strong {
+  font-size: 14px;
+  font-weight: 600;
+  padding: 0 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hudsc-preview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  gap: 20px;
+  align-items: stretch;
+}
+.hudsc-preview-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.hudsc-preview-side h2 {
+  font-size: 22px;
+  font-weight: 600;
+}
+.hudsc-preview-side p {
+  font-size: 14px;
+  color: var(--dim);
+  line-height: 1.55;
+}
+.hudsc-preview-side .seg {
+  align-self: flex-start;
+  margin-top: auto;
+}
+@media (max-width: 900px) {
+  .hudsc-preview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.hudsc-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.hudsc-sw {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--line-strong);
+  padding: 0;
+  cursor: pointer;
+  position: relative;
+}
+.hudsc-sw[aria-checked='true'] {
+  box-shadow: 0 0 0 2px var(--fg);
+}
+.hudsc-sw:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.hudsc-sw input[type='color'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.hudsc-sw.custom {
+  background: conic-gradient(#ff003c, #fcee0a, #a5e6ce, #00f0ff, #b9a2ff, #ff003c);
+}
+.input.hudsc-hex {
+  width: 96px;
+  font-family: var(--mono);
+}
+.hudsc-range {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+}
+.hudsc-range > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.hudsc-range > span > span:last-child {
+  color: var(--dim);
+}
+.hudsc-note {
+  font-size: 12.5px;
+  color: var(--faint);
+}
+.hudsc-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.hudsc-spots {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  max-width: 240px;
+}
+.hudsc-spot {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--raised);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.hudsc-spot span {
+  width: 10px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--faint);
+  opacity: 0.6;
+}
+.hudsc-spot[aria-checked='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.hudsc-spot[aria-checked='true'] span {
+  width: 18px;
+  background: var(--accent);
+  opacity: 1;
+}
+.hudsc-spot:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.hudsc-offsets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.hudsc-error {
+  border: 1px solid var(--danger);
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 14px;
+}
+.hudsc-section-title {
+  margin: 0;
+}
+
+.hudsc-cols .field > .seg {
+  align-self: flex-start;
+}

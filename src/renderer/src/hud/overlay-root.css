@@ -1,0 +1,12 @@
+/* The overlay window is a transparent stage; the app window keeps its own page styles. */
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  user-select: none;
+  -webkit-app-region: no-drag;
+}
