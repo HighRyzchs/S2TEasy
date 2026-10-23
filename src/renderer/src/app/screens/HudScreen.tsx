@@ -25,7 +25,7 @@ const SPOTS: { id: (typeof OVERLAY_POSITIONS)[number]; label: string }[] = [
 const HEX = /^#[0-9a-f]{6}$/i
 
 export function HudScreen() {
-  const { settings, save } = useApp()
+  const { settings, save, run, active } = useApp()
   const hud = settings.hud
   const [view, setView] = useState<PreviewState>('talking')
   const [nonce, setNonce] = useState(0)
@@ -91,9 +91,20 @@ export function HudScreen() {
                 </button>
               ))}
             </div>
-            <button type="button" className="btn" onClick={() => setNonce((n) => n + 1)}>
-              Replay
-            </button>
+            <div className="actions">
+              <button type="button" className="btn" onClick={() => setNonce((n) => n + 1)}>
+                Replay
+              </button>
+              <button
+                type="button"
+                className="btn"
+                disabled={active}
+                title={active ? 'Available when you are not dictating' : undefined}
+                onClick={() => void run(() => window.s2t.hudDemo())}
+              >
+                Show it on my screen
+              </button>
+            </div>
           </div>
         </div>
       </section>
