@@ -2,6 +2,7 @@ import type { WordTiming } from './word-timing'
 import type { UsageState } from './usage'
 import { defaultOverlayTheme, normalizeOverlayTheme, type OverlayTheme } from './overlay-theme'
 import { normalizeVocabulary, type VocabularyEntry } from './vocabulary'
+import { normalizeSpeechCues, type SpeechCueSettings, type CueAnalysis } from './speech-cues'
 
 export type { OverlayTheme }
 
@@ -59,6 +60,7 @@ export type AppState = {
 }
 
 export type AppSettings = {
+  speechCues: SpeechCueSettings
   displayName: string
   welcomeCompleted: boolean
   setupChecklistDismissed: boolean
@@ -121,6 +123,7 @@ export type AudioLevelPayload = {
 }
 
 export type HistoryItem = {
+  cueAnalysis?: CueAnalysis
   id: string
   text: string
   model: string
@@ -157,6 +160,7 @@ export type ModelOption = {
 }
 
 export const defaultSettings = (): AppSettings => ({
+  speechCues: normalizeSpeechCues(),
   displayName: '',
   welcomeCompleted: false,
   setupChecklistDismissed: false,
@@ -221,6 +225,7 @@ export function normalizeDisplayName(value: unknown): string {
 export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSettings {
   const merged: AppSettings = { ...defaultSettings(), ...(raw ?? {}) }
   merged.displayName = normalizeDisplayName(raw?.displayName)
+  merged.speechCues = normalizeSpeechCues(raw?.speechCues)
   merged.welcomeCompleted = raw?.welcomeCompleted === true
   merged.setupChecklistDismissed = raw?.setupChecklistDismissed === true
   merged.sttEngine =

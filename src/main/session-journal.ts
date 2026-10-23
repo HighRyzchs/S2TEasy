@@ -6,6 +6,7 @@ import {
   mkdirSync,
   openSync,
   readFileSync,
+  readSync,
   readdirSync,
   renameSync,
   rmSync,
@@ -66,6 +67,34 @@ export class SessionJournal {
 
   readPcm(id: string): Buffer {
     return readFileSync(this.path(id, 'pcm'))
+  }
+
+  readPcmExcerpt(id: string, range: { startMs: number; endMs: number }): Buffer {
+    if (
+      !Number.isFinite(range.startMs) ||
+      !Number.isFinite(range.endMs) ||
+      range.startMs < 0 ||
+      range.endMs <= range.startMs ||
+      range.endMs - range.startMs > 30000
+    )
+      throw new Error('Choose an excerpt of up to 30 seconds.')
+    const path = this.path(id, 'pcm')
+    const start = Math.floor(range.startMs * 16) * 2
+    const end = Math.min(Math.floor(statSync(path).size / 2) * 2, Math.floor(range.endMs * 16) * 2)
+    if (end <= start) throw new Error('The excerpt is outside the available recording.')
+    const bytes = Buffer.alloc(end - start)
+    const fd = openSync(path, 'r')
+    try {
+      let read = 0
+      while (read < bytes.length) {
+        const amount = readSync(fd, bytes, read, bytes.length - read, start + read)
+        if (!amount) throw new Error('The recording changed while reading the excerpt.')
+        read += amount
+      }
+    } finally {
+      closeSync(fd)
+    }
+    return bytes
   }
 
   removeAudio(id: string): void {

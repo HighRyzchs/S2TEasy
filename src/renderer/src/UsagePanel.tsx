@@ -11,7 +11,19 @@ const money = (value: number) =>
 export function UsagePanel({ usage, onExport }: { usage: UsageState; onExport: () => void }) {
   const [days, setDays] = useState(30)
   const [hover, setHover] = useState<number | null>(null)
-  const data = useMemo(() => summarizeUsage(usage.records, days), [usage.records, days])
+  const [task, setTask] = useState('all')
+  const data = useMemo(
+    () =>
+      summarizeUsage(
+        usage.records.filter(
+          (row) =>
+            task === 'all' ||
+            (task === 'cues' ? row.source === 'speech-cues' : row.source !== 'speech-cues')
+        ),
+        days
+      ),
+    [usage.records, days, task]
+  )
   const max = Math.max(...data.daily.map((d) => d.cost), 0.001)
   const points = data.daily.map((d, i) => [32 + (i / (days - 1)) * 836, 190 - (d.cost / max) * 142])
   const line = points
@@ -24,7 +36,7 @@ export function UsagePanel({ usage, onExport }: { usage: UsageState; onExport: (
         <div>
           <span className="eyebrow">A clearer picture</span>
           <h2>Every word, accounted for.</h2>
-          <p>Your dictation usage, kept on this device.</p>
+          <p>Your speech and cue-analysis usage, kept on this device.</p>
         </div>
         <button className="ghost" onClick={onExport} disabled={!usage.records.length}>
           Export CSV ↗
@@ -36,6 +48,21 @@ export function UsagePanel({ usage, onExport }: { usage: UsageState; onExport: (
         </p>
       )}
       <div className="usage-toolbar">
+        <label className="micro">
+          Task{' '}
+          <select
+            aria-label="Usage task"
+            value={task}
+            onChange={(event) => {
+              setTask(event.target.value)
+              setHover(null)
+            }}
+          >
+            <option value="all">All tasks</option>
+            <option value="speech">Speech to text</option>
+            <option value="cues">Speech cues</option>
+          </select>
+        </label>
         <div className="usage-period" aria-label="Usage period">
           {[7, 30, 90].map((n) => (
             <button
@@ -72,7 +99,7 @@ export function UsagePanel({ usage, onExport }: { usage: UsageState; onExport: (
           <small>Retry attempts counted once for audio</small>
         </article>
         <article>
-          <span>Transcription calls</span>
+          <span>API calls</span>
           <strong>{data.requests}</strong>
           <small>{data.errors} unsuccessful or cancelled attempts</small>
         </article>

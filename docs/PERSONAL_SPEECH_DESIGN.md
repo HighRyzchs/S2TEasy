@@ -1,6 +1,6 @@
 # Personal words and expressive speech
 
-Status: proposed architecture. The current app has explicit Vocabulary replacements, labeled local practice takes, optional provider word timings, and practice recognition summaries. Contextual LLM correction, acoustic matching, and cue recognition are **not implemented**. This document defines how to add them without losing live text or misrepresenting what the app has learned.
+Status: long-term architecture, partially implemented. The current app has explicit Vocabulary replacements, labeled local practice takes, optional provider word timings, practice recognition summaries, and **experimental manual audio cue analysis** with configurable emotion/delivery/pacing/event labels, user edits and structured copying. See [the shipped workflow and code map](CONCEPTS.md). Contextual LLM word correction, acoustic matching, continuous cue analysis and personalized acoustic calibration are **not implemented**. Remaining proposals below must not be read as shipped capabilities.
 
 ## Experience
 

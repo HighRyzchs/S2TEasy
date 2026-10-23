@@ -1,5 +1,15 @@
 # Windows release smoke test
 
+## 1.7.0 speech cues
+
+Follow [the cue walkthrough](CONCEPTS.md#try-emotion-and-delivery-analysis) with a short retained practice take and your own OpenRouter account. Verify emotion/delivery category controls, allowed labels, clear-only filtering and speaking-style guidance. Analyze the same words spoken neutrally, playfully and with emphasis; record inaccurate results and abstentions instead of assuming model quality.
+
+Check the selected excerpt and estimated timestamps, relabel a cue, revert to the model suggestion, dismiss/restore a cue, and reopen Review to confirm persistence. Copy expressive/structured context; ensure the spoken text is unchanged, user labels have `source: user`, and dismissed cues are absent. Delete analysis without deleting words. Verify separate Speech cues filtering in Usage & spend.
+
+Test invalid/text-only/STT-only slugs, bad key, exhausted credits, unsupported schema/provider route, silence, expired audio, ranges beyond the recording, network failure, Cancel and closing Review during a request. Failed/retried-by-user calls must not clear a previous good analysis, duplicate paid requests, resurrect deleted History or insert into another app. Cancellation may still incur provider charges. Cue analysis must stay off after upgrading an existing profile until explicitly enabled.
+
+## General regression checks
+
 Run against the packaged x64 build as well as Electron development mode. Use disposable text and your own provider account. Do not publish recordings or keys in test evidence.
 
 - Configure each supported engine and verify the selected model actually accepts audio. Test authentication failure and an unknown slug.

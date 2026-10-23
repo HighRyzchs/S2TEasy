@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { suggestCorrections, type Correction } from '@shared/corrections'
-import type { HistoryItem } from '@shared/types'
+import type { HistoryItem, AppSettings } from '@shared/types'
+import { SpeechCuePanel } from './SpeechCuePanel'
 import './review.css'
 
 export function TranscriptReview({
@@ -9,7 +10,10 @@ export function TranscriptReview({
   onSave,
   onRemember,
   onPractice,
-  onExample
+  onExample,
+  settings,
+  onHistory,
+  onConfigureCues
 }: {
   item: HistoryItem
   onClose: () => void
@@ -17,6 +21,9 @@ export function TranscriptReview({
   onRemember: (heard: string, meant: string) => Promise<void>
   onPractice: (text: string) => void
   onExample: (index: number, intended: string) => Promise<void>
+  settings: AppSettings
+  onHistory: (history: HistoryItem[]) => void
+  onConfigureCues: () => void
 }) {
   const [text, setText] = useState(item.text)
   const [dirty, setDirty] = useState(false)
@@ -252,6 +259,15 @@ export function TranscriptReview({
           ))}
         </section>
       )}
+      <SpeechCuePanel
+        item={item}
+        settings={settings.speechCues}
+        text={text}
+        active={active}
+        position={position}
+        onHistory={onHistory}
+        onConfigure={onConfigureCues}
+      />
       {error && (
         <p role="alert" className="status-bad">
           {error}

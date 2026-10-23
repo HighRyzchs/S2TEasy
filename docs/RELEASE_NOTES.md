@@ -1,8 +1,17 @@
-## Unreleased — personal speech foundations
+## Emotion and delivery, in your control — v1.7.0
+
+- Add experimental Speech cues in Settings → Voice intelligence: an independent audio-understanding model, emotion-label selection, delivery/monotone cues, pacing, laughter/sighs, optional style guidance and assessment filtering.
+- Analyze a selected retained audio excerpt of up to 30 seconds in Transcript Review. Off by default, explicitly requested, separately billed through OpenRouter. Verify audio chat plus structured-output capability; require the provider data-collection policy without silent fallback.
+- Review timestamped model interpretations, relabel or dismiss them while preserving the original result, then copy expressive text or versioned structured context for an AI chat. Original transcript and live insertion remain unchanged.
+- Measure local energy, clipping and quiet intervals without calling those measurements emotion detection. Track cue attempts in Usage & spend, with unknown costs kept unknown.
+- Cancel on request or Review closure, prevent duplicate analyses, reject invalid labels/timestamps and ignore results for deleted/changed takes. Provider errors preserve previous analysis and saved words.
+- Add a README-linked concept guide with theory, diagrams, source/test map and a step-by-step test path.
 
 - Group completed Voice practice takes by intended phrase and recognizer model. Compare original recognition, show recent outcomes and retained audio counts, and offer Practice again.
 - Exclude missing raw text and unfinished takes from match counts. Edited text and Vocabulary substitutions do not count as recognition successes. Counts describe current History, not accent quality or acoustic learning.
-- Document the proposed personal-word correction and optional speech-cue architecture, model candidate, cost example, consent boundaries and evaluation criteria. Contextual correction and cue recognition are not implemented in this development build.
+- Document the longer-term personal-word correction and speech-cue architecture, model candidate, cost example, consent boundaries and evaluation criteria. Contextual word correction and acoustic personalization are future work; manual cue analysis is experimental.
+
+Automated model tests use simulated responses; real paid audio-model accuracy, latency and availability are not established. Audio understanding does not reveal actual internal feelings. Native Windows execution requires desktop testing. See CONCEPTS.md for the test steps and PRIVACY.md for data handling.
 
 ## A comfortable first minute — v1.6.0
 

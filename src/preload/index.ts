@@ -1,4 +1,5 @@
 import type { UsageState } from '../shared/usage'
+import type { CueRequest, CueFeedback } from '../shared/speech-cues'
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipc'
 import type {
@@ -14,6 +15,11 @@ import type {
 import type { ModelOption } from '../shared/types'
 
 export type S2TApi = {
+  analyzeSpeechCues: (id: string, range: CueRequest) => Promise<HistoryItem[]>
+  cancelSpeechCues: (id: string) => Promise<void>
+  cueFeedback: (id: string, analysisId: string, patch: CueFeedback) => Promise<HistoryItem[]>
+  clearSpeechCues: (id: string) => Promise<HistoryItem[]>
+  fetchCueModels: () => Promise<ModelOption[]>
   reviewDictation: () => Promise<void>
   onReview: (cb: (id: string) => void) => () => void
   saveWordExample: (id: string, index: number, intended: string) => Promise<HistoryItem[]>
@@ -65,6 +71,12 @@ export type S2TApi = {
 }
 
 const api: S2TApi = {
+  analyzeSpeechCues: (id, range) => ipcRenderer.invoke(IPC.ANALYZE_CUES, id, range),
+  cancelSpeechCues: (id) => ipcRenderer.invoke(IPC.CANCEL_CUES, id),
+  cueFeedback: (id, analysisId, patch) =>
+    ipcRenderer.invoke(IPC.CUE_FEEDBACK, id, analysisId, patch),
+  clearSpeechCues: (id) => ipcRenderer.invoke(IPC.CLEAR_CUES, id),
+  fetchCueModels: () => ipcRenderer.invoke(IPC.CUE_MODELS),
   reviewDictation: () => ipcRenderer.invoke(IPC.REVIEW_DICTATION),
   saveWordExample: (id, index, intended) =>
     ipcRenderer.invoke(IPC.WORD_EXAMPLE, id, index, intended),

@@ -14,7 +14,10 @@ export type UsageMeasurement = {
   inputTokens?: number
   outputTokens?: number
 }
-export type UsageRecord = UsageMeasurement & { sessionId: string; source: 'dictation' | 'recovery' }
+export type UsageRecord = UsageMeasurement & {
+  sessionId: string
+  source: 'dictation' | 'recovery' | 'speech-cues'
+}
 export type UsageState = { records: UsageRecord[]; warning: string; truncated: boolean }
 export const emptyUsage = (): UsageState => ({ records: [], warning: '', truncated: false })
 export const dayKey = (date: Date) =>

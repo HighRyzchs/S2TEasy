@@ -23,6 +23,24 @@ const item = (): HistoryItem => ({
   status: 'recording'
 })
 describe('session journal', () => {
+  it('reads only a bounded aligned PCM excerpt and refuses invalid ranges', () => {
+    const { journal } = setup()
+    const pcm = Buffer.alloc(64000)
+    pcm.fill(5, 32000)
+    journal.append('session-1', pcm)
+    expect(journal.readPcmExcerpt('session-1', { startMs: 1000, endMs: 2500 })).toEqual(
+      Buffer.alloc(32000, 5)
+    )
+    expect(() => journal.readPcmExcerpt('session-1', { startMs: 0, endMs: 31000 })).toThrow(
+      '30 seconds'
+    )
+    expect(() => journal.readPcmExcerpt('../secret', { startMs: 0, endMs: 1000 })).toThrow(
+      'Invalid session'
+    )
+    expect(() => journal.readPcmExcerpt('session-1', { startMs: 3000, endMs: 4000 })).toThrow(
+      'outside'
+    )
+  })
   it('restores interrupted sessions and their independently persisted PCM after a restart', () => {
     const { directory, journal } = setup()
     journal.append('session-1', new Uint8Array([1, 2, 3, 4]))

@@ -10,6 +10,7 @@
 - Contribution docs, privacy documentation, project website, test/build workflows.
 - Optional personal profile, replayable welcome tour, and contextual setup checklist.
 - Local spend charts and CSV export; transcript review with explicit Vocabulary suggestions and genuine provider-timed word clips.
+- Experimental opt-in audio emotion/delivery/pacing/event analysis on selected retained excerpts, per-take cue editing, expressive/structured copying and separate usage accounting. [Concepts, architecture and code map](CONCEPTS.md).
 
 ## Next product improvements
 
@@ -30,7 +31,7 @@ These are proposed features, not capabilities shipped by the welcome-tour releas
 
 ## Pronunciation learning
 
-See [Personal words and expressive speech](PERSONAL_SPEECH_DESIGN.md) for the proposed correction/cue architecture, initial OpenRouter candidate, example costs and evaluation plan. Contextual correction and cue recognition are not shipped features.
+See [Personal words and expressive speech](PERSONAL_SPEECH_DESIGN.md) for the longer-term correction/cue architecture, initial OpenRouter candidate, example costs and evaluation plan. Contextual word correction and acoustic personalization remain future work. Manual audio cue analysis is implemented experimentally; [follow its code and test it](CONCEPTS.md).
 
 The development build now groups completed practice takes by intended phrase and model, comparing original recognition and showing retained audio examples. It does not score accent quality or establish acoustic adaptation.
 
@@ -42,7 +43,7 @@ The development build now groups completed practice takes by intended phrase and
 
 ## Longer term
 
-- Opt-in delivery cues and structured context export, beginning with measured pauses/pacing and keeping uncertain interpretations separate from spoken text.
+- Continuous cue analysis, validated personal acoustic baselines and a versioned integration SDK after the manual excerpt workflow has real-world quality/cost measurements.
 - Managed local model downloads with checksum verification, disk/memory estimates, and cancellation.
 - Smarter bounded recovery segmentation with silence overlap and alignment to avoid cutting words at recovery boundaries.
 - Timestamp-aware streaming final reconciliation across providers; no automatic replay of already-inserted phrases.

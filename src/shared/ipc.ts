@@ -1,4 +1,9 @@
 export const IPC = {
+  ANALYZE_CUES: 's2t:analyze-cues',
+  CANCEL_CUES: 's2t:cancel-cues',
+  CUE_FEEDBACK: 's2t:cue-feedback',
+  CLEAR_CUES: 's2t:clear-cues',
+  CUE_MODELS: 's2t:cue-models',
   OPEN_REVIEW: 's2t:open-review',
   REVIEW_DICTATION: 's2t:review-dictation',
   WORD_EXAMPLE: 's2t:word-example',

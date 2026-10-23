@@ -14,7 +14,19 @@ An open source Windows dictation app with live text, recoverable sessions, and a
 [![Website](https://github.com/HighRyzchs/S2TEasy/actions/workflows/pages.yml/badge.svg)](https://github.com/HighRyzchs/S2TEasy/actions/workflows/pages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-a5e6ce.svg)](LICENSE)
 
-[Project website](https://highryzchs.github.io/S2TEasy/) · [Interactive HUD preview](https://highryzchs.github.io/S2TEasy/overlay-demo/) · [Getting started](#getting-started) · [Development](#development) · [Privacy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md)
+[Project website](https://highryzchs.github.io/S2TEasy/) · [Interactive HUD preview](https://highryzchs.github.io/S2TEasy/overlay-demo/) · [Concepts & architecture](docs/CONCEPTS.md) · [Getting started](#getting-started) · [Development](#development) · [Privacy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md)
+
+**New: experimental emotion & delivery cues.** Analyze a retained audio excerpt with a configurable OpenRouter audio chat model, review emotional delivery, monotone speech, pacing and nonverbal cues, then copy expressive text or structured context for an AI conversation. Off by default; each requested analysis is a separate paid audio call. [Try it, understand the theory, and follow the code →](docs/CONCEPTS.md)
+
+```mermaid
+flowchart LR
+  Voice[Your voice] --> STT[Chosen speech engine]
+  STT --> Words[Saved words and live typing]
+  Voice --> Audio[Retained audio, when enabled]
+  Audio --> Review[Review a selected excerpt]
+  Review --> Cues[Optional emotion and delivery analysis]
+  Cues --> Context[Edited context for an AI conversation]
+```
 
 </div>
 

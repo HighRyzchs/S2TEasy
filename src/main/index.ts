@@ -5,6 +5,9 @@ import { randomUUID } from 'node:crypto'
 import type { WordTiming } from '../shared/word-timing'
 import { audioResponse } from './audio-response'
 import { wordExample } from './word-example'
+import { SpeechCueService } from './speech-cue-service'
+import { fetchCueModels } from './speech-cue-model'
+import type { CueRequest, CueFeedback } from '../shared/speech-cues'
 import { join } from 'node:path'
 import { writeFileSync } from 'node:fs'
 import { SessionJournal, pcmToWav } from './session-journal'
@@ -53,6 +56,7 @@ let dictation: DictationController
 let updater: UpdateLauncher
 let usage: UsageStore
 let journal: SessionJournal
+let speechCues: SpeechCueService
 let recoveryBusy = false
 let overlayState = emptyOverlay()
 let trayUi: ReturnType<typeof createTray> | null = null
@@ -97,10 +101,23 @@ async function setup(): Promise<void> {
   store = new Store()
   usage = new UsageStore(join(app.getPath('userData'), 'usage.json'))
   journal = new SessionJournal(join(app.getPath('userData'), 'sessions'))
+  speechCues = new SpeechCueService({
+    settings: () => store.getSettings(),
+    history: () => store.getHistory(),
+    read: (id, range) => journal.readPcmExcerpt(id, range),
+    save: (item) => {
+      journal.save(item)
+      store.addHistory(item)
+      broadcastHistory()
+    },
+    busy: () => dictation?.isBusy() || recoveryBusy,
+    usage: (sessionId, row) =>
+      sendMain(IPC.USAGE_CHANGED, usage.record({ ...row, sessionId, source: 'speech-cues' }))
+  })
   for (const item of journal.list(store.getSettings().audioRetentionDays)) store.addHistory(item)
   // Expire retained audio even when the app is left running for days.
   const retentionTimer = setInterval(() => {
-    if (dictation?.isBusy() || recoveryBusy) return
+    if (dictation?.isBusy() || recoveryBusy || speechCues.isBusy()) return
     for (const item of journal.list(store.getSettings().audioRetentionDays)) store.addHistory(item)
     broadcastHistory()
   }, 60 * 60_000)
@@ -213,6 +230,33 @@ async function setup(): Promise<void> {
     usage: usage.snapshot()
   }))
 
+  const requireMain = (event: Electron.IpcMainInvokeEvent) => {
+    if (event.sender !== mainWindow?.webContents)
+      throw new Error('Speech cues are only available from the main app.')
+  }
+  ipcMain.handle(IPC.ANALYZE_CUES, (event, id: string, range: CueRequest) => {
+    requireMain(event)
+    return speechCues.run(id, range)
+  })
+  ipcMain.handle(IPC.CANCEL_CUES, (event, id: string) => {
+    requireMain(event)
+    speechCues.cancel(id)
+  })
+  ipcMain.handle(IPC.CUE_FEEDBACK, (event, id: string, analysisId: string, patch: CueFeedback) => {
+    requireMain(event)
+    return speechCues.feedback(id, analysisId, patch)
+  })
+  ipcMain.handle(IPC.CLEAR_CUES, (event, id: string) => {
+    requireMain(event)
+    return speechCues.clear(id)
+  })
+  ipcMain.handle(IPC.CUE_MODELS, (event) => {
+    requireMain(event)
+    const key = store.getSettings().apiKey
+    if (!key.trim()) throw new Error('Save your OpenRouter key first.')
+    return fetchCueModels(key)
+  })
+
   ipcMain.handle(IPC.SAVE_SETTINGS, (_event, patch: Partial<AppSettings>) => {
     if (dictation.isBusy() || recoveryBusy)
       throw new Error('Finish the current recording or recovery before changing settings.')
@@ -229,6 +273,7 @@ async function setup(): Promise<void> {
     applyStartup(settings)
     if (overlayWindow) sizeOverlay(overlayWindow, settings.overlayTheme)
     broadcastSettings()
+    if (patch.speechCues || patch.apiKey !== undefined) speechCues.cancel()
     if (patch.autoUpdate === true) {
       void updater.check({ force: true, download: true })
     }
@@ -238,6 +283,7 @@ async function setup(): Promise<void> {
   ipcMain.handle(IPC.DELETE_HISTORY, (_event, id: string) => {
     if (dictation.isBusy() || recoveryBusy)
       throw new Error('Finish recording or recovery before deleting history.')
+    speechCues.cancel(id)
     journal.delete(id)
     const history = store.deleteHistory(id)
     broadcastHistory()
@@ -247,6 +293,7 @@ async function setup(): Promise<void> {
   ipcMain.handle(IPC.CLEAR_HISTORY, () => {
     if (dictation.isBusy() || recoveryBusy)
       throw new Error('Finish recording or recovery before clearing history.')
+    speechCues.cancel()
     for (const item of store.getHistory()) journal.delete(item.id)
     const history = store.clearHistory()
     broadcastHistory()

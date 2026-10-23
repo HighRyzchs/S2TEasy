@@ -40,6 +40,26 @@ memory.update = {
 
 function mockApi(): Window['s2t'] {
   return {
+    analyzeSpeechCues: async () => {
+      throw new Error(
+        'Audio cue analysis requires the desktop app. Preview does not upload audio or make paid calls.'
+      )
+    },
+    cancelSpeechCues: async () => undefined,
+    cueFeedback: async (id, analysisId, patch) => {
+      const { cueFeedback } = await import('@shared/speech-cues')
+      memory.history = memory.history.map((row) => {
+        const item = row as HistoryItem
+        return item.id === id && item.cueAnalysis?.id === analysisId
+          ? { ...item, cueAnalysis: cueFeedback(item.cueAnalysis, patch) }
+          : row
+      }) as typeof memory.history
+      return memory.history
+    },
+    clearSpeechCues: async () => memory.history,
+    fetchCueModels: async () => [
+      { slug: 'google/gemini-2.5-flash-lite', name: 'Gemini Flash-Lite · sample only' }
+    ],
     reviewDictation: async () => undefined,
     onReview: () => () => undefined,
     saveWordExample: async () => {

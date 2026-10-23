@@ -506,6 +506,12 @@ export function App() {
         )}
       {reviewId && history.find((row) => row.id === reviewId) && (
         <TranscriptReview
+          settings={settings}
+          onHistory={setHistory}
+          onConfigureCues={() => {
+            setReviewId(null)
+            openSettings('intelligence')
+          }}
           key={reviewId}
           item={history.find((row) => row.id === reviewId)!}
           onClose={() => setReviewId(null)}

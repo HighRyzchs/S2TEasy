@@ -1,5 +1,15 @@
 # Development validation
 
+## Emotion and delivery module (1.7.0)
+
+- All 173 tests across 43 files passed, including cue schema/filtering, original-label preservation, user/model export provenance, audio chat request shape, usage on invalid responses, cancellation, duplicate prevention, deleted-take protection, bounded excerpt reads and renderer cleanup.
+- Typechecking and production app/site builds passed. Dependency versions/integrities are unchanged; only root package version fields advance to 1.7.0.
+- Chromium checks at 1440, 820 and 390 px exercised settings save, a simulated excerpt request, emotion relabeling, cue dismissal, structured copying with unchanged words, and deletion. No page errors, microphone access or external calls occurred. The published screenshot is explicitly sample output.
+- A public catalogue read confirms the initial `google/gemini-2.5-flash-lite` candidate advertises audio input and structured output. No paid inference was performed; emotion interpretation accuracy, provider routing and real latency remain unverified.
+- Follow CONCEPTS.md and WINDOWS_TESTING.md for real-account and native Windows testing. Automated provider tests use simulated responses and cannot establish emotional understanding.
+
+## Earlier environment and release checks
+
 Validated in the Linux cloud environment using Node.js 24.19.0, npm 11.9.0, Electron 35.7.5, and Chromium. CI is configured for Node 22 LTS. These results apply to this prepared instance, not an independently restored task or a Windows release.
 
 - Frozen installation (`npm ci`) completed twice with Electron proxy support and normal TLS/package verification. Dependency versions and integrity entries remain unchanged. The lockfile root version was subsequently synchronized to the package version 1.5.0 for publication; this does not change dependencies.

@@ -1,4 +1,5 @@
 import { ProfileSettings } from './ProfileSettings'
+import { CueSettingsPanel } from './CueSettingsPanel'
 import { useEffect, useRef, useState } from 'react'
 import { LANGUAGES } from '@shared/constants'
 import { eventToAccelerator, formatHotkey } from '@shared/hotkey'
@@ -12,7 +13,8 @@ import { OverlayThemeEditor } from './OverlayThemeEditor'
 import { MicPreview } from './lib/mic'
 import { UpdatePanel } from './UpdatePanel'
 
-export type SettingsSection = 'engine' | 'dictation' | 'appearance' | 'privacy' | 'profile'
+export type SettingsSection =
+  'engine' | 'dictation' | 'appearance' | 'privacy' | 'profile' | 'intelligence'
 
 type Props = {
   initialSection?: SettingsSection
@@ -101,7 +103,8 @@ export function SettingsPanel({
           ['dictation', 'Dictation'],
           ['appearance', 'Appearance'],
           ['privacy', 'Privacy & data'],
-          ['profile', 'Profile & tour']
+          ['profile', 'Profile & tour'],
+          ['intelligence', 'Voice intelligence']
         ].map(([id, label]) => (
           <button
             key={id}
@@ -115,6 +118,7 @@ export function SettingsPanel({
         ))}
       </div>
       <div className="settings">
+        {section === 'intelligence' && <CueSettingsPanel settings={settings} onChange={onChange} />}
         {section === 'engine' && (
           <>
             <section className="block">
