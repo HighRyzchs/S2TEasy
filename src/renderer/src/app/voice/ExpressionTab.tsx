@@ -3,6 +3,7 @@ import type { ModelOption } from '@shared/types'
 import { CUE_LABELS, EMOTIONS, type CueAnalysis, type CueKind, type Emotion, type SpeechCueSettings } from '@shared/speech-cues'
 import { renderOutput, type OutputPreferences } from '@shared/output'
 import { useApp } from '../context'
+import { PerAppCues } from './PerAppCues'
 
 const GROUPS: { key: 'emotions' | 'delivery' | 'pacing' | 'events'; name: string; hint: string }[] = [
   { key: 'emotions', name: 'Emotions', hint: 'excited, calm, upset…' },
@@ -223,6 +224,7 @@ export function ExpressionTab() {
     <div className="columns voice-columns expr">
       <div className="col">
         <SpeechCuesCard />
+        <PerAppCues />
       </div>
       <div className="col">
         <TagStyleCard />

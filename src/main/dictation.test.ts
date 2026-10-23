@@ -13,7 +13,7 @@ afterEach(() => {
   dirs.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true }))
   vi.useRealTimers()
 })
-function setup(overrides = {}) {
+function setup(overrides = {}, injectorExtra: { targetApp?: () => string | null } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 's2teasy-controller-'))
   dirs.push(dir)
   const journal = new SessionJournal(dir)
@@ -45,7 +45,7 @@ function setup(overrides = {}) {
     placeOverlay: vi.fn()
   }
   const controller = new DictationController(host, {
-    injector: { captureTarget: vi.fn(), paste, pasteBlock: paste },
+    injector: { captureTarget: vi.fn(), paste, pasteBlock: paste, ...injectorExtra },
     transcribe
   })
   return {
@@ -67,6 +67,18 @@ const deferred = () => {
   })
   return { promise, resolve }
 }
+
+describe('per-app speech cues', () => {
+  it('turns cues on for a session in an app with an "on" rule, without changing saved settings', async () => {
+    const t = setup(
+      { appCues: { discord: true } },
+      { targetApp: () => 'C:\\Apps\\Discord\\Discord.exe' }
+    )
+    await t.controller.start()
+    expect(t.host.onOverlay).toHaveBeenCalledWith(expect.objectContaining({ status: 'listening', cues: true }))
+    expect(t.settings.speechCues.automatic).toBe(false)
+  })
+})
 
 describe('recoverable dictation sessions', () => {
   it('saves finalized words before paste, retaining them and audio when paste fails', async () => {

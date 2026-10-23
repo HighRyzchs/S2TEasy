@@ -2,7 +2,7 @@ import type { CueAnalysis } from '../shared/speech-cues'
 import type { WordTiming } from '../shared/word-timing'
 import type { UsageRecord } from '../shared/usage'
 import { randomUUID } from 'node:crypto'
-import { appFromPath } from '../shared/apps'
+import { appFromPath, cuesForApp } from '../shared/apps'
 import { startError } from '../shared/engine'
 import {
   joinUtterances,
@@ -314,6 +314,11 @@ export class DictationController {
       practiceTarget: practice?.intendedText,
       status: 'recording',
       app: practice ? undefined : appFromPath(this.dependencies.injector.targetApp?.())
+    }
+    if (!practice) {
+      const fallback = settings.speechCues.enabled && settings.speechCues.automatic
+      const on = cuesForApp(settings.appCues, this.item.app, fallback)
+      if (on !== fallback) settings.speechCues = { ...settings.speechCues, enabled: on, automatic: on }
     }
     try {
       this.checkpoint()
