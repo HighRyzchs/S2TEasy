@@ -114,6 +114,8 @@ export type AppSettings = {
   finishAfterMs: number
   /** Monthly spend limit for paid extras in US dollars; 0 means no limit. Speech is never stopped. */
   monthlyLimitUsd: number
+  /** Speech cues on or off per program (keyed by `appKey`), overriding the global switch. */
+  appCues: Record<string, boolean>
   hud: HudSettings
   /** Your voice suggestions the user chose not to see again (heard→meant keys). */
   dismissedSuggestions: string[]
@@ -256,6 +258,7 @@ export const defaultSettings = (): AppSettings => ({
   streamKeyterms: false,
   finishAfterMs: 7000,
   monthlyLimitUsd: 0,
+  appCues: {},
   hud: defaultHudSettings(),
   dismissedSuggestions: []
 })
@@ -351,6 +354,11 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
     Number.isFinite(raw?.monthlyLimitUsd) && raw!.monthlyLimitUsd! > 0
       ? Math.min(10_000, Math.round(raw!.monthlyLimitUsd! * 100) / 100)
       : 0
+  merged.appCues = Object.fromEntries(
+    Object.entries(raw?.appCues && typeof raw.appCues === 'object' ? raw.appCues : {})
+      .filter(([key, on]) => /^[\w .+-]{1,60}$/.test(key) && typeof on === 'boolean')
+      .slice(0, 200)
+  )
   merged.hud = normalizeHudSettings(raw?.hud, raw?.overlayTheme)
   merged.dismissedSuggestions = Array.isArray(raw?.dismissedSuggestions)
     ? raw.dismissedSuggestions.filter((key): key is string => typeof key === 'string').slice(-500)
