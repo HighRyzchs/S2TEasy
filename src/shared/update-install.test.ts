@@ -42,9 +42,11 @@ describe('persistent Windows updates', () => {
     expect(script).toContain('WaitForExit(180000)')
     expect(script).toContain('$installer.ExitCode')
     expect(script).toContain('FileVersionInfo')
-    expect(script.indexOf('$installedVersion -ne $wanted')).toBeLessThan(
-      script.indexOf("Write-Receipt 'applied'")
-    )
+    const check = script.indexOf('$installedVersion -notin @($wanted')
+    expect(check).toBeGreaterThan(0)
+    expect(check).toBeLessThan(script.indexOf("Write-Receipt 'applied'"))
+    // A pre-release (1.10.0-beta.1) reports a numeric Windows file version (1.10.0.0).
+    expect(script).toContain("$wantedNumber = ($wanted -split '[-+]')[0]")
     expect(script).not.toContain('Copy-Item -LiteralPath $target')
   })
   it('acknowledges verified startup and checks cancellation before modifying the app', () => {

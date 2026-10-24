@@ -89,7 +89,9 @@ try {
   if ($installer.ExitCode -notin @(0, 3010)) { throw ('Installer failed with exit code ' + $installer.ExitCode) }
   if (-not (Test-Path -LiteralPath $target)) { throw 'Installer exited but the original app path is missing.' }
   $installedVersion = [Diagnostics.FileVersionInfo]::GetVersionInfo($target).ProductVersion
-  if ($installedVersion -ne $wanted -and $installedVersion -ne ($wanted + '.0')) { throw ('Installer exited but the app at the original path is still version ' + $installedVersion + '; expected ' + $wanted) }
+  # Windows file versions are numeric only: a 1.10.0-beta.1 build reports 1.10.0.0.
+  $wantedNumber = ($wanted -split '[-+]')[0]
+  if ($installedVersion -notin @($wanted, ($wanted + '.0'), $wantedNumber, ($wantedNumber + '.0'))) { throw ('Installer exited but the app at the original path is still version ' + $installedVersion + '; expected ' + $wanted) }
   `
   }
   Write-Receipt 'applied' 'Update installed.'
