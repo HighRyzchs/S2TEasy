@@ -1,5 +1,7 @@
 # Why S2Teasy exists, and how it works
 
+**Proposed personalization architecture:** [Personal Acoustic Memory](PERSONAL_ACOUSTIC_MEMORY.md) explains how an ordinary correction becomes a portable sound-to-word memory, with diagrams, source integration points, user experience, and evaluation gates. This is future work, distinct from the current implementation below.
+
 Try the [interactive HUD demo](https://highryzchs.github.io/S2TEasy/overlay-demo/). [Expressive transcription](EXPRESSIVE_TRANSCRIPTION.md) describes the current bounded audio-to-tags path and longer-term phrase-level design. [Desktop v1.8.0 workflow and source map](OUTPUT_WORKSPACE.md) cover the unified page and HUD controls.
 
 [Start here](../README.md) · [Try speech cues](#try-emotion-and-delivery-analysis) · [Code map](#follow-the-code) · [Design details](PERSONAL_SPEECH_DESIGN.md) · [Privacy](PRIVACY.md)

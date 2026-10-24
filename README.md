@@ -146,6 +146,8 @@ See [Architecture](docs/ARCHITECTURE.md) and [Windows smoke test](docs/WINDOWS_T
 
 ## Pronunciation personalization
 
+**Our next direction: [Personal Acoustic Memory](docs/PERSONAL_ACOUSTIC_MEMORY.md).** Correct “Gigi no read” to “gg no re” once; bind that correction to its sound and check future speech automatically. The proposal explains the engine-independent memory, streaming matcher, pronunciation adaptation, future expression pathway, and experiments needed to prove it. Acoustic learning is proposed, not shipped.
+
 Personal words are applied to the text as it settles. Each word keeps every heard form you taught it (including multi-word forms such as "as two teasy"), matches whole words and phrases using Unicode boundaries, prefers longer matches, and never cascades replacements. In live typing, trailing words that could still become a learned phrase wait for the next phrase or the end of the session. Use distinctive heard forms: a form that is a common word changes every matching occurrence.
 
 Names, keywords and phrases also become recognition hints for OpenRouter audio chat models and local servers. Dedicated OpenRouter ASR requests omit optional keyterms because support differs by provider. Through router.audio, Deepgram `keyterm` hints are an opt-in experimental setting, because router.audio does not document them. Hints are preferences; model compliance is not guaranteed. No acoustic adaptation or automatic fine-tuning occurs.
