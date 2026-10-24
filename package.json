@@ -1,6 +1,6 @@
 {
   "name": "s2teasy",
-  "version": "1.10.0-beta.5",
+  "version": "1.10.0-beta.6",
   "description": "Open source Windows dictation with live text, recoverable sessions, and a vocabulary you control.",
   "main": "./out/main/index.js",
   "author": "S2Teasy",
@@ -18,7 +18,9 @@
     "typecheck": "tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
     "icons": "node scripts/generate-icon.mjs",
     "build:site": "node scripts/build-site.mjs",
-    "screenshots": "node scripts/capture-screenshots.mjs"
+    "screenshots": "node scripts/capture-screenshots.mjs",
+    "e2e:hud": "electron-vite build && xvfb-run -a node scripts/e2e-hud.mjs",
+    "e2e:hud:clicks": "electron-vite build && xvfb-run -a -s \"-screen 0 1600x1000x24\" node scripts/e2e-hud-real-clicks.mjs"
   },
   "optionalDependencies": {
     "koffi": "^2.11.0",

@@ -142,6 +142,8 @@ export class DictationController {
   private watchedToMs = 0
   private watching = false
   private finishAfterPause = false
+  /** Pause or Done pressed while the engine was still connecting, applied once capture starts. */
+  private afterConnect: 'pause' | 'stop' | null = null
   private handled: { memoryId: string; startMs: number }[] = []
   private liveCuesAbort: AbortController | null = null
   private journalBytes = 0
@@ -214,11 +216,15 @@ export class DictationController {
   pause(): void {
     if (!this.recording || this.pausing) return
     if (!this.captureStarted) {
-      this.cancel()
+      // Still connecting: a session that already has words pauses once the microphone is open;
+      // an empty one is simply cancelled.
+      if (this.hasWords()) this.afterConnect = 'pause'
+      else this.cancel()
       return
     }
     this.pausing = true
     this.finishAfterPause = false
+    this.afterConnect = null
     this.recording = false
     this.clearWatchdog()
     this.setState({ ...this.state, status: 'transcribing', message: 'Pausing', rms: 0, bars: [] })
@@ -230,6 +236,7 @@ export class DictationController {
     const gen = this.generation
     this.clearFinishTimer()
     this.paused = false
+    this.finishHeld = false
     this.recording = true
     this.captureStarted = false
     this.setState({ ...this.state, status: 'listening', message: 'Listening', finishAt: undefined })
@@ -299,6 +306,11 @@ export class DictationController {
       })
       if (outcome === 'typed') this.notice(`Context check put back ${words}.`)
     } else this.notice(`Context check put back ${words}.`)
+  }
+
+  /** Whether this session already holds words, so stopping it early must not throw them away. */
+  private hasWords(): boolean {
+    return this.liveParts.length > 0 || this.segmentStartMs > 0 || !!this.typedText
   }
 
   /** Journal audio recorded so far in this session, in milliseconds (16 kHz mono PCM16). */
@@ -554,6 +566,7 @@ export class DictationController {
     this.paused = false
     this.segmentStartMs = 0
     this.journalBytes = 0
+    this.afterConnect = null
     this.stopLiveCues()
     this.timedWords = []
     this.segmentJournalMs = 0
@@ -635,6 +648,10 @@ export class DictationController {
       this.lastLevelAt = Date.now()
       this.segmentJournalMs = this.journalMs()
       this.command('start')
+      const queued = this.afterConnect
+      this.afterConnect = null
+      if (queued === 'pause') this.pause()
+      else if (queued === 'stop') this.stop()
       this.watchdog = setInterval(() => {
         if (this.recording && Date.now() - this.lastLevelAt > 20_000)
           this.fail(
@@ -648,7 +665,8 @@ export class DictationController {
   stop(): void {
     if (!this.recording) return
     if (!this.captureStarted) {
-      this.cancel()
+      if (this.hasWords()) this.afterConnect = 'stop'
+      else this.cancel()
       return
     }
     this.recording = false

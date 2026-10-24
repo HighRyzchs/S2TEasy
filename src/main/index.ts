@@ -1,6 +1,7 @@
 import { analyzeAutomaticCues } from './automatic-cues'
 import { normalizeOutputPreferences, renderOutput, type OutputPreferences } from '../shared/output'
 import { bringToFront, copyTranscript } from './inject'
+import { e2eEnabled, fakeInjector, FakeStream } from './e2e'
 import { UsageStore } from './usage-store'
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen, session, protocol } from 'electron'
 import { VoiceMemoryService } from './voice-memory/service'
@@ -44,7 +45,7 @@ import { DictationController, LEAVE_MS } from './dictation'
 import { demoFrames } from './hud-demo'
 import { HotkeyManager } from './hotkeys'
 import { fetchTranscriptionModels, testApiKey } from './openrouter'
-import { testRouterAudioKey } from './router-audio'
+import { testRouterAudioKey, type RouterAudioClient } from './router-audio'
 import { Store } from './store'
 import { createTray } from './tray'
 import { UpdateLauncher } from './updater'
@@ -100,8 +101,10 @@ function syncHudClicks(): void {
     const y = cursor.y - bounds.y
     inside = x >= hudArea.x && x < hudArea.x + hudArea.width && y >= hudArea.y && y < hudArea.y + hudArea.height
   }
+  // Re-applying while the mouse is over the HUD could drop a click in progress, so the periodic
+  // refresh only runs while clicks should pass through.
   hudClickTicks = (hudClickTicks + 1) % 15
-  if (inside === hudTakesClicks && hudClickTicks !== 0) return
+  if (inside === hudTakesClicks && (inside || hudClickTicks !== 0)) return
   hudTakesClicks = inside
   window.setIgnoreMouseEvents(!inside, { forward: true })
 }
@@ -298,7 +301,10 @@ async function setup(): Promise<void> {
         )
       )
     },
-    getSettings: () => store.getSettings(),
+    getSettings: () =>
+      e2eEnabled
+        ? { ...store.getSettings(), sttEngine: 'router-audio', routerAudioKey: 'e2e', welcomeCompleted: true }
+        : store.getSettings(),
     onOverlay: (state) => {
       stopHudDemo(false)
       overlayChanged(state)
@@ -328,7 +334,28 @@ async function setup(): Promise<void> {
           y: store.getSettings().overlayOffsetY
         })
     }
-  }, { voiceMemory })
+  }, {
+    voiceMemory,
+    ...(e2eEnabled
+      ? { createStream: () => new FakeStream() as unknown as RouterAudioClient, injector: fakeInjector }
+      : {})
+  })
+  if (e2eEnabled)
+    Object.assign(globalThis, {
+      __s2t: {
+        dictation,
+        overlay: () => overlayWindow,
+        state: () => overlayState,
+        hudArea: () => hudArea,
+        typed: () => fakeInjector.typed,
+        history: () => store.getHistory(),
+        settings: (patch: Partial<AppSettings>) => {
+          store.saveSettings(patch)
+          broadcastSettings()
+          if (overlayWindow) sizeOverlay(overlayWindow, store.getSettings().hud)
+        }
+      }
+    })
 
   recorderWindow.webContents.on('render-process-gone', () => {
     if (dictation.isBusy())
@@ -872,6 +899,13 @@ async function setup(): Promise<void> {
   if (store.getSettings().autoUpdate && updater.getStatus().phase !== 'error') {
     setTimeout(() => void updater.check({ download: true }), 4000)
   }
+}
+
+if (e2eEnabled) {
+  // A synthetic microphone and a separate profile, so tests never touch real devices or data.
+  app.commandLine.appendSwitch('use-fake-device-for-media-stream')
+  app.commandLine.appendSwitch('use-fake-ui-for-media-stream')
+  if (process.env.S2T_E2E_USER_DATA) app.setPath('userData', process.env.S2T_E2E_USER_DATA)
 }
 
 const gotLock = app.requestSingleInstanceLock()

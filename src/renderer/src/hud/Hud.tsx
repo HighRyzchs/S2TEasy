@@ -274,6 +274,23 @@ export function Hud({
     void Promise.resolve(action()).catch(() => undefined)
   }
 
+  // Pause, or two quick taps for Done: the first tap waits a moment to see if a second follows.
+  const tapTimer = useRef(0)
+  useEffect(() => () => window.clearTimeout(tapTimer.current), [])
+  const pauseOrDone = () => {
+    setFix(null)
+    if (tapTimer.current) {
+      window.clearTimeout(tapTimer.current)
+      tapTimer.current = 0
+      void api.hudFinish().catch(() => undefined)
+      return
+    }
+    tapTimer.current = window.setTimeout(() => {
+      tapTimer.current = 0
+      void api.hudPause().catch(() => undefined)
+    }, 300)
+  }
+
   const copy = () => api.copyHistory(stateRef.current.partial)
   const toggleCues = () => void api.hudCues(!cues).catch(() => undefined)
   const block =
@@ -349,8 +366,11 @@ export function Hud({
           {count}
           {cueSwitch}
           <CopyButton onCopy={copy} />
-          <button type="button" className="hud-btn" data-a="pause" onClick={act(api.hudPause)}>
+          <button type="button" className="hud-btn" data-a="pause" onClick={pauseOrDone}>
             Pause
+          </button>
+          <button type="button" className="hud-btn go" data-a="send" onClick={act(api.hudFinish)}>
+            Done
           </button>
         </div>
         {block && (
@@ -392,7 +412,7 @@ export function Hud({
             type="button"
             className="hud-btn"
             data-a={rec ? 'pause' : 'resume'}
-            onClick={act(api.hudPause)}
+            onClick={pauseOrDone}
           >
             {rec ? 'Pause' : 'Resume'}
           </button>
@@ -423,6 +443,12 @@ export function Hud({
         <span className="grow hud-title" role="status">
           {state.message || 'Finishing'}
         </span>
+        {state.partial.trim() && <CopyButton onCopy={copy} />}
+        {state.message === 'Pausing' && (
+          <button type="button" className="hud-btn go" data-a="send" onClick={act(api.hudFinish)}>
+            Done
+          </button>
+        )}
       </div>
     )
   } else if (phase === 'done') {
@@ -505,6 +531,7 @@ export function Hud({
               fix={fix}
               scale={settings.scale}
               preferBelow={settings.style === 'ghost' || anchor.v === 'top'}
+              keepAbove={settings.style === 'caption' && anchor.v !== 'top'}
               onChoose={choose}
               onClip={() => setFix({ ...fix, clip: !fix.clip })}
             />

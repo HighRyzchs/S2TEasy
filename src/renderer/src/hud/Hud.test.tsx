@@ -76,11 +76,26 @@ it('shows the paused editor with cue tags as chips and the controls wired up', a
   expect(host.querySelector('.hud-count')?.textContent).toBe('13')
 
   await act(async () => button('Done').click())
-  await act(async () => button('Resume').click())
+  await act(async () => {
+    button('Resume').click()
+    await new Promise((resolve) => setTimeout(resolve, 350))
+  })
   await act(async () => button('Discard').click())
   expect(mock.hudFinish).toHaveBeenCalled()
   expect(mock.hudPause).toHaveBeenCalled()
   expect(mock.cancelRecording).toHaveBeenCalled()
+})
+
+it('treats two quick taps on Pause/Resume as Done', async () => {
+  const mock = api()
+  await mount(mock)
+  await act(async () => {
+    button('Resume').click()
+    button('Resume').click()
+    await new Promise((resolve) => setTimeout(resolve, 350))
+  })
+  expect(mock.hudFinish).toHaveBeenCalledTimes(1)
+  expect(mock.hudPause).not.toHaveBeenCalled()
 })
 
 it('holds the finish timer while the pointer is on the HUD', async () => {

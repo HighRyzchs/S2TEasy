@@ -133,6 +133,8 @@ type PillProps = {
   scale: number
   /** Ghost text and top-anchored HUDs open the pill downward. */
   preferBelow: boolean
+  /** The controls sit right under the words (Caption): never cover them, open above. */
+  keepAbove?: boolean
   onChoose: (kind: 'name' | 'accent' | null) => void
   onClip: () => void
 }
@@ -141,7 +143,7 @@ type PillProps = {
  * The one-line "Remember this?" pill. It floats over the fixed word (an absolutely positioned child of
  * the HUD), so it never changes the HUD's size, and it only appears once the word is in the text.
  */
-export function RememberPill({ fix, scale, preferBelow, onChoose, onClip }: PillProps) {
+export function RememberPill({ fix, scale, preferBelow, keepAbove = false, onChoose, onClip }: PillProps) {
   const ref = useRef<HTMLDivElement>(null)
 
   useLayoutEffect(() => {
@@ -173,7 +175,7 @@ export function RememberPill({ fix, scale, preferBelow, onChoose, onClip }: Pill
       hudWidth: hud.offsetWidth,
       word,
       pill: { width: pill.offsetWidth, height: pill.offsetHeight },
-      below: preferBelow || firstLine
+      below: !keepAbove && (preferBelow || firstLine)
     })
     pill.style.left = `${place.left}px`
     pill.style.top = `${place.top}px`

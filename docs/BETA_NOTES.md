@@ -1,4 +1,13 @@
-## Voice memory beta — v1.10.0-beta.5
+## Voice memory beta — v1.10.0-beta.6
+
+**Fixed in beta 6** (each checked by clicking the real HUD in the running app, all seven styles, one-line and expanded, on a virtual Linux desktop; Windows-only behaviour such as keyboard focus still needs your test):
+- **Done while you talk.** The HUD had no Done button while recording, only Pause; it is there now in every layout.
+- **Done during "Pausing…".** That moment showed only a spinner; Done is there now, and Copy stays available while it pauses or finishes.
+- **Two quick taps on Pause = Done.**
+- **Pause or Done while the engine is reconnecting** (right after Resume) no longer throws the take away; it waits until the microphone is open.
+- **Caption style:** the "Remember this fix?" pill covered the Copy button; it now opens above the words.
+- The auto-finish countdown could stay on hold after Resume.
+- Clicks could be dropped if the HUD refreshed its click-through state mid-click.
 
 **Fixed in beta 5:**
 - Editing a word on the HUD while a text box in another app (such as a browser) was selected: Windows kept the keyboard in that app, so your typing went there instead of the HUD. The HUD now takes the keyboard explicitly when you click a word, and hands it back when you finish.
