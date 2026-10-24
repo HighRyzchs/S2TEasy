@@ -15,7 +15,7 @@ An open source Windows dictation app with live text, recoverable sessions, and a
 [![License: MIT](https://img.shields.io/badge/License-MIT-a5e6ce.svg)](LICENSE)
 [![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20S2Teasy-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/rozniman)
 
-[Project website](https://highryzchs.github.io/S2TEasy/) · [Interactive HUD demo](https://highryzchs.github.io/S2TEasy/overlay-demo/) · [Desktop workflow](docs/OUTPUT_WORKSPACE.md) · [Concepts & architecture](docs/CONCEPTS.md) · [Getting started](#getting-started) · [Development](#development) · [Privacy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md)
+[Project website](https://highryzchs.github.io/S2TEasy/) · [Interactive HUD demo](https://highryzchs.github.io/S2TEasy/overlay-demo/) · [Desktop workflow](docs/OUTPUT_WORKSPACE.md) · [Concepts & architecture](docs/CONCEPTS.md) · [Voice packs](docs/VOICE_PACK.md) · [Getting started](#getting-started) · [Development](#development) · [Privacy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md)
 
 **New in v1.9.0: your words, fixed before they land.** S2Teasy learns how you are misheard ("as two teasy" → S2Teasy) and fixes it while you talk. One HUD replaces two: the shortcut starts and pauses, you click a word to fix it, and a small pill asks whether to remember it. Seven HUD styles, and a redesigned app with Home, Your voice, History, Usage, HUD and Settings. [Release notes →](docs/RELEASE_NOTES.md) · [Update recovery →](docs/UPDATE_TROUBLESHOOTING.md)
 
@@ -151,6 +151,8 @@ Personal words are applied to the text as it settles. Each word keeps every hear
 Names, keywords and phrases also become recognition hints for OpenRouter audio chat models and local servers. Dedicated OpenRouter ASR requests omit optional keyterms because support differs by provider. Through router.audio, Deepgram `keyterm` hints are an opt-in experimental setting, because router.audio does not document them. Hints are preferences; model compliance is not guaranteed. No acoustic adaptation or automatic fine-tuning occurs.
 
 For pronunciation examples, open **Your voice**, enter a short target phrase, consent to saving that take, and record it. No text is inserted into another application. Review the recognition in Your voice or History, correct the intended text if necessary, and export WAV + JSON. The development build groups raw recognition results by phrase and model, showing matches and retained audio examples; this measures the recognizer, not your accent. Practice takes retain their audio even when successful-take retention is globally off, because each take has its own consent. Exported labels pair the **whole take** with the intended transcript; they are not word-aligned. Text-only historical recordings cannot recover an accent. Real adaptation requires consented audio/text pairs, an engine that supports adaptation, and evaluation on held-out recordings. See the [personal speech design](docs/PERSONAL_SPEECH_DESIGN.md) and [roadmap](docs/ROADMAP.md).
+
+**Where this is heading: [voice packs](docs/VOICE_PACK.md).** Every word you fix on the HUD is a labelled example of your voice. A voice pack turns those examples into sound-alike matching and voice templates that run on your device with any engine, an optional audio referee for unsure moments, and optional personal adapters for a local model. These are design notes; none of it ships yet.
 
 ## Releases and project website
 
