@@ -93,7 +93,7 @@ If the engine gives no word timings, S2Teasy does not invent boundaries. Only la
 
 For a candidate moment, S2Teasy extracts the same features and aligns them against each template with **dynamic time warping (DTW)**. DTW stretches and squeezes time so a fast and a slow "Ryzchs" line up, and returns a distance normalised by path length. The best positive distance is compared with the best negative distance and with a per-word threshold.
 
-Thresholds are set per word from your own examples by leave-one-out: each template is scored against the others, and the threshold is placed to accept them while rejecting the negatives. Words with too few examples stay in "suggest only" mode until they have enough.
+Thresholds are set per word and calibrated on recordings kept separate from the templates, as described in [Personal Acoustic Memory](PERSONAL_ACOUSTIC_MEMORY.md#decide-using-evidence-with-an-abstention-path). Scoring each template against the others (leave-one-out) is useful while developing, but is not an independent test. Words with too little evidence stay in "suggest only" mode.
 
 Cost: a template comparison is a few thousand multiply-adds per frame pair. Runtime on phones must be benchmarked for realistic span lengths, feature dimensions, and template counts; no sub-millisecond result has been established. Bounded acoustic retrieval and textual retrieval both propose candidate spans, followed by selective verification. Text similarity must not be the sole gate into acoustic matching.
 
@@ -112,7 +112,7 @@ There are two kinds, and they answer different questions.
 
 A small instruction-tuned language model running on the device, with no network. Candidates to evaluate include 0.5 to 1.5 billion parameter models (for example Qwen2.5 0.5B/1.5B Instruct, Llama 3.2 1B Instruct, Gemma 3 1B), quantised to 4 bits (roughly 0.4 to 1 GB) and run through llama.cpp or ONNX Runtime. Output is constrained to a validated choice or abstention. Constrained syntax does not establish correctness.
 
-It **cannot hear**. It decides from the sentence alone, which makes it right for context cases ("I'll grab a quick bite" vs "I'll ride my bike") and wrong for sound cases, where the sentence fits both words and only the audio can tell ("ask Ryzchs" vs "ask risks"). The decision step therefore only sends it moments where the text context differs between the two choices; sound cases skip it and go to the cloud referee or the HUD.
+It **cannot hear**. It decides from the sentence alone, which makes it right for context cases ("I'll grab a quick bite" vs "I'll ride my bike") and wrong for sound cases, where the sentence fits both words and only the audio can tell ("ask Ryzchs" vs "ask risks"). It is therefore used for contextual evidence only. Telling context cases from sound cases is itself uncertain, so routing uses the available evidence and abstains when the signals disagree, rather than relying on a perfect split.
 
 It costs nothing per use, keeps the sentence on the device and works on a plane. On weak hardware it is optional: latency and RAM must be measured for each runtime and device; old machines and low-end phones may skip it.
 
@@ -122,9 +122,9 @@ A small audio-input model (the initial candidate is Gemini 2.5 Flash-Lite throug
 
 ### Which referee answers
 
-1. Context case and the local referee is installed: the local referee.
-2. Sound case, or no local referee, and the cloud referee is on: the cloud referee.
-3. Otherwise: the HUD underlines the word and you choose. Your choice becomes a template or a negative, so the same moment is less likely to be unsure next time.
+1. When the sentence is likely to decide and the local referee is installed: the local referee.
+2. When the sound is likely to decide, or there is no local referee, and the cloud referee is on: the cloud referee.
+3. Otherwise, or when a referee answers UNSURE: the HUD underlines the word and you choose. Your choice is a confirmed label, so the same moment is less likely to be unsure next time. Referee answers alone are never stored as confirmed examples.
 
 ## The decision
 
