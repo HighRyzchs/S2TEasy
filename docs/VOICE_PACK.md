@@ -17,7 +17,7 @@ The individual techniques are well established (see [Background](#background)): 
 - **Corrections are the training data.** Fixing a word on the HUD while you talk records a labelled example of your voice, with no separate enrolment session.
 - **The learning sits outside the engine.** The voice pack works with cloud engines that cannot be trained, local models and phone recognizers alike, and moves with you between them.
 - **It runs on weak hardware.** Everything except the optional referee and adapter is cheap enough for an old laptop or a phone.
-- **Paid models check, they don't decide.** A cloud model only ever chooses between two candidates for moments the device was unsure about.
+- **Models only break ties.** A tiny local LLM (offline) or a cheap cloud audio model only ever chooses between two candidates, and only for moments the device was unsure about.
 - **Claims are measured on your own voice.** Accuracy is reported from your held-out clips, not asserted.
 
 ## What "learning your voice" can mean
@@ -28,7 +28,7 @@ The individual techniques are well established (see [Background](#background)): 
 | 1. Engine hints | Tell the engine which words to expect | Indirectly | Only engines that accept hints | Yes |
 | 2. Sound-alike text matching | Compare how the written words *sound* with how your words sound | No, but it generalises to forms never seen | Yes | Yes |
 | 3. Voice templates | Compare the audio of a moment with recordings of you saying the word | **Yes** | Yes, given word timings | Yes |
-| 4. Referee | Ask a small audio model to choose between two candidates for an unsure moment | Yes (that model does) | Yes | Yes (network call) |
+| 4. Referee | Pick one of two candidates for an unsure moment: a tiny local LLM from the sentence, or a cloud audio model from the clip | Cloud: yes. Local: no, context only | Yes | Local: yes, offline. Cloud: network call |
 | 5. Personal adapter (LoRA) | Train a small add-on for a local speech model on your audio | **Yes, deeply** | No: one adapter per model | Training no; using it maybe |
 
 S2Teasy v1.9.0 ships levels 0 and 1 and a text-only version of 4. A voice pack adds 2 and 3 on every device, 4 with audio, and 5 for people who want it.
@@ -49,7 +49,7 @@ flowchart LR
   end
   Decide -->|clearly yours| Replace[Replace with your word]
   Decide -->|clearly not| Keep[Keep what was heard]
-  Decide -->|unsure| Referee[Optional referee<br/>audio model picks one of two]
+  Decide -->|unsure| Referee[Optional referee picks one of two<br/>tiny local LLM, offline, or cloud audio model]
   Referee --> Replace
   Referee --> Keep
   HUD[HUD fix or Practice take] -->|audio + right text| Pack
@@ -97,13 +97,32 @@ Cost: a template comparison is a few thousand multiply-adds per frame pair. A se
 
 ## Layer 4: the referee
 
-Some moments stay ambiguous: the text and the audio point in different directions, or the word has few examples. Those, and only those, can go to a small audio-input model (the initial candidate is Gemini 2.5 Flash-Lite through OpenRouter, as in the existing design notes) with:
+Some moments stay ambiguous: the text and the audio point in different directions, or the word has few examples. Those, and only those, go to a referee. Every referee works under the same contract:
 
-- the clip of that moment and a second either side,
-- exactly two choices, the heard word and your word,
-- the surrounding sentence as data, not instructions.
+- it gets **exactly two choices**, the heard word and your word, plus the surrounding sentence as data, not instructions;
+- it may only **choose one of the two**. It cannot write, add or reword text;
+- its answer is validated locally like every other edit, and recorded as evidence for that word;
+- it is optional and off by default. With no referee, or none available, an unsure moment is left as heard and underlined on the HUD for you to decide. Accuracy never depends on a referee; it only improves the gray zone.
 
-The model may only choose one of the two. It cannot write new text. Its answer is validated locally like every other edit, and recorded as evidence for that word. The referee is optional, off by default, and has its own cost line in Usage and the monthly limit. Offline, or with the referee off, an unsure moment is left as heard and underlined on the HUD for you to decide. Accuracy never depends on the paid call; it only improves the gray zone.
+There are two kinds, and they answer different questions.
+
+### Local referee: a tiny LLM, offline
+
+A small instruction-tuned language model running on the device, with no network. Candidates to evaluate include 0.5 to 1.5 billion parameter models (for example Qwen2.5 0.5B/1.5B Instruct, Llama 3.2 1B Instruct, Gemma 3 1B), quantised to 4 bits (roughly 0.4 to 1 GB) and run through llama.cpp or ONNX Runtime. Output is constrained by a grammar to exactly one of the two choices, so it cannot produce anything else.
+
+It **cannot hear**. It decides from the sentence alone, which makes it right for context cases ("I'll grab a quick bite" vs "I'll ride my bike") and wrong for sound cases, where the sentence fits both words and only the audio can tell ("ask Ryzchs" vs "ask risks"). The decision step therefore only sends it moments where the text context differs between the two choices; sound cases skip it and go to the cloud referee or the HUD.
+
+It costs nothing per use, keeps the sentence on the device and works on a plane. On weak hardware it is optional: a 0.5B model answers a two-choice question in well under a second on a modern CPU, but very old machines and low-end phones may skip it.
+
+### Cloud referee: a small audio model
+
+A small audio-input model (the initial candidate is Gemini 2.5 Flash-Lite through OpenRouter, as in the existing design notes) gets the clip of that moment with a second either side, plus the sentence and the two choices. It **can hear**, so it handles sound cases the local referee cannot. Each call is one bounded request with its own cost line in Usage and the monthly limit, and no clip is sent without the referee being switched on.
+
+### Which referee answers
+
+1. Context case and the local referee is installed: the local referee.
+2. Sound case, or no local referee, and the cloud referee is on: the cloud referee.
+3. Otherwise: the HUD underlines the word and you choose. Your choice becomes a template or a negative, so the same moment is less likely to be unsure next time.
 
 ## The decision
 
@@ -111,7 +130,7 @@ Each candidate moment gets three numbers: the text distance (layer 2), the voice
 
 - **replace**: both layers agree, or the voice match is strong and the word is well established;
 - **keep**: the voice clearly matches a negative, or neither layer is close;
-- **unsure**: anything else; it goes to the referee or to the HUD.
+- **unsure**: anything else; it goes to a referee (layer 4) or to the HUD.
 
 The rule is deliberately simple and inspectable rather than learned, so every replacement can be explained: "replaced because it sounded like your 4 recordings of Ryzchs and not like 'risks'".
 
@@ -168,6 +187,8 @@ The app will show these numbers to the user, from their own data, instead of a p
 - How to collect negatives without asking the user to do work.
 - Word timings: which engines provide them reliably during streaming, and how accurate they are at word edges.
 - Languages beyond English need their own phoneme tables.
+- Which tiny local LLM gives the best two-choice accuracy per megabyte, and whether it is worth shipping by default or as an optional download.
+- How reliably the decision step can tell context cases from sound cases.
 
 ## Plan
 
@@ -175,7 +196,7 @@ The app will show these numbers to the user, from their own data, instead of a p
 2. **Sound-alike text matching** with your hints as pronunciations.
 3. **Classic voice templates** with DTW, per-word thresholds and negatives, in suggest-only mode first.
 4. **A personal accuracy report** built from your own held-out clips.
-5. **The audio referee** for unsure moments.
+5. **Referees** for unsure moments: the tiny local LLM for context cases, then the cloud audio model for sound cases.
 6. **Voice pack export and import**, then mobile.
 7. **Optional local Whisper engine with personal adapters.**
 
