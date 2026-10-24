@@ -154,7 +154,7 @@ For pronunciation examples, open **Your voice**, enter a short target phrase, co
 
 ## Releases and project website
 
-The Windows CI workflow runs tests/type checks and produces build artifacts. Tagged releases build the executables. The updater targets `HighRyzchs/S2TEasy`; automatic updates are off by default and refuse artifacts without a GitHub SHA-256 digest. Run the Windows checklist and arrange code signing before treating development builds as release-ready.
+The Windows CI workflow runs tests/type checks and produces build artifacts. Pushing a `v*` tag, or running the **Release Windows** workflow by hand on `main`, builds the executables and publishes the GitHub Release for the version in `package.json`. The updater targets `HighRyzchs/S2TEasy`; automatic updates are off by default and refuse artifacts without a GitHub SHA-256 digest. Run the Windows checklist and arrange code signing before treating development builds as release-ready.
 
 `docs/index.html` is the project website. `npm run build:site` builds it into `.site/`, including an interactive demo of the real HUD component with simulated speech: seven styles, no microphone, no uploads. The **Publish project website** workflow deploys changes under `docs/` when they reach `main`, and also supports manual deployment. GitHub Pages uses **GitHub Actions** as its source. See [Publishing](docs/PUBLISHING.md) for the website, Windows builds, and release checklist.
 
