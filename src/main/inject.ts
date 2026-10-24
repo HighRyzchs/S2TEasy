@@ -8,6 +8,8 @@ type NativeBridge = {
   sendBackspaces(count: number): void
   /** Full path of the program that owns a window, or null when Windows won't say. */
   processPath(hwnd: unknown): string | null
+  /** Move keyboard focus to one of S2Teasy's own windows even while another app is in front. */
+  bringToFront(handle: Buffer): boolean
 }
 
 function loadNative(): NativeBridge | null {
@@ -32,6 +34,11 @@ function loadNative(): NativeBridge | null {
       'bool __stdcall QueryFullProcessImageNameW(void* process, uint32 flags, _Out_ uint16* name, _Inout_ uint32* size)'
     )
     const CloseHandle = kernel32.func('bool __stdcall CloseHandle(void* handle)')
+    const GetCurrentThreadId = kernel32.func('uint32 __stdcall GetCurrentThreadId()')
+    const AttachThreadInput = user32.func('bool __stdcall AttachThreadInput(uint32 idAttach, uint32 idAttachTo, bool attach)')
+    const SetForegroundByValue = user32.func('bool __stdcall SetForegroundWindow(uintptr hWnd)')
+    const BringWindowToTop = user32.func('bool __stdcall BringWindowToTop(uintptr hWnd)')
+    const SetFocus = user32.func('uintptr __stdcall SetFocus(uintptr hWnd)')
     const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
     const keybd_event = user32.func(
       'void __stdcall keybd_event(uint8 bVk, uint8 bScan, uint32 dwFlags, uintptr dwExtraInfo)'
@@ -43,6 +50,23 @@ function loadNative(): NativeBridge | null {
     return {
       getForegroundWindow: () => GetForegroundWindow(),
       setForegroundWindow: (hwnd) => Boolean(SetForegroundWindow(hwnd)),
+      bringToFront: (handle) => {
+        // Windows refuses to hand the keyboard to a background app. Sharing the foreground app's
+        // input queue for a moment makes the switch allowed, with no synthetic key presses.
+        const hwnd = handle.length >= 8 ? handle.readBigUInt64LE(0) : BigInt(handle.readUInt32LE(0))
+        const front = GetForegroundWindow()
+        const frontThread = front ? GetWindowThreadProcessId(front, [0]) : 0
+        const me = GetCurrentThreadId()
+        const attached = !!frontThread && frontThread !== me && AttachThreadInput(me, frontThread, true)
+        try {
+          BringWindowToTop(hwnd)
+          const ok = Boolean(SetForegroundByValue(hwnd))
+          SetFocus(hwnd)
+          return ok
+        } finally {
+          if (attached) AttachThreadInput(me, frontThread, false)
+        }
+      },
       sendCtrlV: () => {
         keybd_event(VK_CONTROL, 0, 0, 0)
         keybd_event(VK_V, 0, 0, 0)
@@ -82,6 +106,15 @@ const native = loadNative()
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 let clipboardRevision = 0
+/** Give one of S2Teasy's windows the keyboard (Windows only; elsewhere the caller's focus() is enough). */
+export function bringToFront(handle: Buffer): boolean {
+  try {
+    return native?.bringToFront(handle) ?? false
+  } catch {
+    return false
+  }
+}
+
 export function copyTranscript(text: string): boolean {
   clipboardRevision++
   clipboard.writeText(text)

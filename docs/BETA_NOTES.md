@@ -1,4 +1,8 @@
-## Voice memory beta — v1.10.0-beta.4
+## Voice memory beta — v1.10.0-beta.5
+
+**Fixed in beta 5:**
+- Editing a word on the HUD while a text box in another app (such as a browser) was selected: Windows kept the keyboard in that app, so your typing went there instead of the HUD. The HUD now takes the keyboard explicitly when you click a word, and hands it back when you finish.
+- Done did nothing while a pause was still settling the last words. It now finishes as soon as they are in.
 
 **Fixed in beta 4:** after the first edit on the HUD, it could stop taking clicks (Copy, Pause, words) for the rest of the session. Handing the keyboard back to your app reset Windows' click-through state behind S2Teasy's back; the HUD now re-applies the right state continuously and always takes clicks while you edit.
 

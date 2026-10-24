@@ -141,6 +141,7 @@ export class DictationController {
   private segmentJournalMs = 0
   private watchedToMs = 0
   private watching = false
+  private finishAfterPause = false
   private handled: { memoryId: string; startMs: number }[] = []
   private liveCuesAbort: AbortController | null = null
   private journalBytes = 0
@@ -217,6 +218,7 @@ export class DictationController {
       return
     }
     this.pausing = true
+    this.finishAfterPause = false
     this.recording = false
     this.clearWatchdog()
     this.setState({ ...this.state, status: 'transcribing', message: 'Pausing', rms: 0, bars: [] })
@@ -241,6 +243,8 @@ export class DictationController {
   /** Done: finish now. While recording this stops capture first; while paused it completes. */
   finish(): void {
     if (this.paused) void this.completeFromPause()
+    // Done while a pause is still settling the last words: finish as soon as they are in.
+    else if (this.pausing) this.finishAfterPause = true
     else if (this.recording) this.stop()
   }
 
@@ -764,6 +768,14 @@ export class DictationController {
       await this.workChain
       this.segmentStartMs += durationMs
       if (!this.valid(gen) || !this.item || !this.settings) return
+      if (pausing && this.finishAfterPause) {
+        this.pausing = false
+        this.finishAfterPause = false
+        this.item.status = 'processing'
+        this.setState({ ...this.state, status: 'transcribing', message: 'Finishing' })
+        await this.complete(gen)
+        return
+      }
       if (pausing) {
         this.pausing = false
         this.paused = true

@@ -700,6 +700,18 @@ describe('pause, resume and finishing on its own', () => {
     expect(t.paste.mock.calls.map((call) => call[0])).toEqual(['first part', 'second part'])
   })
 
+  it('finishes when Done is pressed while a pause is still settling the last words', async () => {
+    const t = batch()
+    await t.controller.start()
+    const gen = t.controller.currentGeneration()
+    await t.controller.onUtterance('a', gen)
+    t.controller.pause()
+    t.controller.finish()
+    await t.controller.onFinished('', '', 1000, gen)
+    expect(t.controller.isPaused()).toBe(false)
+    expect(t.history[0]?.status).toBe('complete')
+  })
+
   it('holds the finish timer while the HUD is in use and finishes at once on Done', async () => {
     vi.useFakeTimers()
     const t = batch({ finishAfterMs: 4000 })

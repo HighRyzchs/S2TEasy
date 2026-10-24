@@ -1,6 +1,6 @@
 import { analyzeAutomaticCues } from './automatic-cues'
 import { normalizeOutputPreferences, renderOutput, type OutputPreferences } from '../shared/output'
-import { copyTranscript } from './inject'
+import { bringToFront, copyTranscript } from './inject'
 import { UsageStore } from './usage-store'
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen, session, protocol } from 'electron'
 import { VoiceMemoryService } from './voice-memory/service'
@@ -607,7 +607,10 @@ async function setup(): Promise<void> {
       hudEditing = true
       overlayWindow.setFocusable(true)
       syncHudClicks()
+      // focus() alone loses to the app in front on Windows, and typing would go there instead.
+      bringToFront(overlayWindow.getNativeWindowHandle())
       overlayWindow.focus()
+      overlayWindow.webContents.focus()
     } else {
       hudEditing = false
       overlayWindow.setFocusable(false)
