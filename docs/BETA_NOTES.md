@@ -1,4 +1,9 @@
-## Voice memory beta — v1.10.0-beta.6
+## Voice memory beta — v1.10.0-beta.7
+
+**Fixed in beta 7:** on some Windows setups (display scaling, pen or touch) a click on the HUD went to the app underneath, so Done, Pause, Copy and edits did nothing. When a press lands on the HUD while its window was still letting clicks through, S2Teasy now plays that press to the HUD itself. Checked on a Windows test machine with the real mouse, including a run where the pointer is never reported over the HUD.
+
+**New:** HUD → **Copy HUD diagnostics** copies what the HUD did with your recent clicks, for bug reports.
+
 
 **Fixed in beta 6** (each checked by clicking the real HUD in the running app, all seven styles, one-line and expanded, on a virtual Linux desktop; Windows-only behaviour such as keyboard focus still needs your test):
 - **Done while you talk.** The HUD had no Done button while recording, only Pause; it is there now in every layout.
