@@ -1,6 +1,9 @@
-## Voice memory beta — v1.10.0-beta.3
+## Voice memory beta — v1.10.0-beta.4
 
-**New in beta 3:** beta builds now update themselves. While you run a beta, **Check for updates** also looks at newer betas (and the final release); stable builds still only ever see full releases. Install this one directly once; later betas arrive in the app.
+**Fixed in beta 4:** after the first edit on the HUD, it could stop taking clicks (Copy, Pause, words) for the rest of the session. Handing the keyboard back to your app reset Windows' click-through state behind S2Teasy's back; the HUD now re-applies the right state continuously and always takes clicks while you edit.
+
+**From beta 3:**
+beta builds now update themselves. While you run a beta, **Check for updates** also looks at newer betas (and the final release); stable builds still only ever see full releases. Install this one directly once; later betas arrive in the app.
 
 **Fixed in beta 2:** clicks on the HUD (words, Pause, every button) went through to the app underneath on some Windows setups, so live edits were impossible. The HUD window used to wait for Windows to report the pointer over it, which it does not reliably do for a click-through window; S2Teasy now checks the pointer position itself and takes clicks wherever the HUD is drawn.
 

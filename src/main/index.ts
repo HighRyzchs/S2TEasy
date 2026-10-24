@@ -78,21 +78,30 @@ let speechCues: SpeechCueService
 let recoveryBusy = false
 let overlayState = emptyOverlay()
 let hudArea: { x: number; y: number; width: number; height: number } | null = null
-let hudTakesClicks = false
+let hudEditing = false
+let hudTakesClicks: boolean | null = null
+let hudClickTicks = 0
 
-/** Let clicks reach the HUD only while the mouse is over the part that is drawn. */
+/**
+ * Let clicks reach the HUD while the mouse is over the part that is drawn, or while it is being
+ * edited. Windows can reset a window's click-through state (focus changes do), so the wanted state
+ * is applied again every half second instead of trusting what was last set.
+ */
 function syncHudClicks(): void {
   const window = overlayWindow
-  if (!window || window.isDestroyed() || window.isFocused()) return
-  let inside = false
-  if (hudArea && window.isVisible()) {
+  if (!window || window.isDestroyed()) return
+  // A session can end mid-edit; a hidden HUD never holds on to clicks.
+  if (!window.isVisible()) hudEditing = false
+  let inside = hudEditing
+  if (!inside && hudArea && window.isVisible()) {
     const bounds = window.getBounds()
     const cursor = screen.getCursorScreenPoint()
     const x = cursor.x - bounds.x
     const y = cursor.y - bounds.y
     inside = x >= hudArea.x && x < hudArea.x + hudArea.width && y >= hudArea.y && y < hudArea.y + hudArea.height
   }
-  if (inside === hudTakesClicks) return
+  hudClickTicks = (hudClickTicks + 1) % 15
+  if (inside === hudTakesClicks && hudClickTicks !== 0) return
   hudTakesClicks = inside
   window.setIgnoreMouseEvents(!inside, { forward: true })
 }
@@ -595,15 +604,19 @@ async function setup(): Promise<void> {
   ipcMain.handle(IPC.HUD_FOCUS, (_event, focus: unknown) => {
     if (!overlayWindow || overlayWindow.isDestroyed()) return
     if (focus === true) {
+      hudEditing = true
       overlayWindow.setFocusable(true)
-      overlayWindow.setIgnoreMouseEvents(false)
-      hudTakesClicks = true
+      syncHudClicks()
       overlayWindow.focus()
     } else {
+      hudEditing = false
       overlayWindow.setFocusable(false)
       overlayWindow.blur()
       dictation.restoreTarget()
     }
+    // Focus changes can reset click-through on Windows: re-apply the wanted state right away.
+    hudTakesClicks = null
+    syncHudClicks()
   })
   ipcMain.on(IPC.HUD_AREA, (event, area: unknown) => {
     if (!overlayWindow || overlayWindow.isDestroyed() || event.sender !== overlayWindow.webContents) return
