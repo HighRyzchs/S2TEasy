@@ -133,6 +133,22 @@ try {
     click(done.x, done.y)
     check(`${style}/${layout}: real click on Done finishes`, !!(await until(async () => ['success', 'leaving', 'hidden'].includes((await state()).status), 10000)))
   }
+  // The system never reports the pointer over the HUD (pen, touch, display scaling): a real press
+  // on Pause and then on Done must still reach the HUD.
+  await main(() => globalThis.__s2t.blindPointer(true))
+  await main((_, h) => globalThis.__s2t.settings({ hud: h }), { style: 'cyber', accent: '#7fe0c4', scale: 1, whileTalking: 'full', showCues: true, clickToEdit: true, sensitivity: 1 })
+  await until(async () => (await state()).status === 'hidden', 10000)
+  await main(() => globalThis.__s2t.dictation.toggle())
+  await until(async () => (await state()).partial.split(' ').length >= 5, 8000)
+  await wait(400)
+  const blindPause = await screenPoint(overlay, '[data-a="pause"]')
+  click(blindPause.x, blindPause.y)
+  check('blind pointer: a press on Pause still pauses', !!(await until(() => main(() => globalThis.__s2t.dictation.isPaused()), 8000)))
+  await wait(400)
+  const blindDone = await screenPoint(overlay, '[data-a="send"]')
+  click(blindDone.x, blindDone.y)
+  check('blind pointer: a press on Done still finishes', !!(await until(async () => ['success', 'leaving', 'hidden'].includes((await state()).status), 10000)))
+  await main(() => globalThis.__s2t.blindPointer(false))
 } catch (error) {
   check('run', false, error.message.split('\n')[0])
 } finally {

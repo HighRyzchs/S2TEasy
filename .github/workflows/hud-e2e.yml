@@ -32,7 +32,7 @@ jobs:
         timeout-minutes: 10
         run: node scripts/e2e-hud-real-clicks.mjs
         env:
-          STYLES: island,cyber
+          STYLES: island,cyber,caption
       - name: Show the HUD logs
         if: always()
         shell: bash

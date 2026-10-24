@@ -87,8 +87,43 @@ function logHud(line: string): void {
 }
 
 let hudEditing = false
+let hudBlind = false // e2e only
 let hudTakesClicks: boolean | null = null
 let hudClickTicks = 0
+
+/** Whether a screen point (DIP) is over the part of the HUD that is drawn, with a small margin. */
+function overHud(point: { x: number; y: number }, margin = 2): boolean {
+  const window = overlayWindow
+  if (!hudArea || !window || window.isDestroyed()) return false
+  const bounds = window.getBounds()
+  const x = point.x - bounds.x
+  const y = point.y - bounds.y
+  return (
+    x >= hudArea.x - margin &&
+    x < hudArea.x + hudArea.width + margin &&
+    y >= hudArea.y - margin &&
+    y < hudArea.y + hudArea.height + margin
+  )
+}
+
+/**
+ * A press the system delivered to the app under the HUD although it landed on the HUD (pen or touch
+ * with no hover before it, or a pointer check that came too late): play it to the HUD as well.
+ */
+function replayHudClick(point: { x: number; y: number }): void {
+  const window = overlayWindow
+  if (!window || window.isDestroyed()) return
+  const bounds = window.getBounds()
+  const x = Math.round(point.x - bounds.x)
+  const y = Math.round(point.y - bounds.y)
+  hudTakesClicks = true
+  window.setIgnoreMouseEvents(false)
+  const contents = window.webContents
+  contents.sendInputEvent({ type: 'mouseMove', x, y })
+  contents.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 })
+  contents.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 })
+  logHud(`replayed a click the system sent past the HUD at ${x},${y}`)
+}
 
 /**
  * Let clicks reach the HUD while the mouse is over the part that is drawn, or while it is being
@@ -101,12 +136,12 @@ function syncHudClicks(): void {
   // A session can end mid-edit; a hidden HUD never holds on to clicks.
   if (!window.isVisible()) hudEditing = false
   let inside = hudEditing
-  if (!inside && hudArea && window.isVisible()) {
-    const bounds = window.getBounds()
+  if (!inside && hudArea && window.isVisible() && !hudBlind) {
     const cursor = screen.getCursorScreenPoint()
-    const x = cursor.x - bounds.x
-    const y = cursor.y - bounds.y
-    inside = x >= hudArea.x && x < hudArea.x + hudArea.width && y >= hudArea.y && y < hudArea.y + hudArea.height
+    // Cursor and window should share one coordinate space; with display scaling some setups report
+    // the cursor in physical pixels, so accept either reading.
+    const scale = screen.getDisplayNearestPoint(cursor).scaleFactor || 1
+    inside = overHud(cursor) || (scale !== 1 && overHud({ x: cursor.x / scale, y: cursor.y / scale }))
   }
   // Re-applying while the mouse is over the HUD could drop a click in progress, so the periodic
   // refresh only runs while clicks should pass through.
@@ -362,6 +397,10 @@ async function setup(): Promise<void> {
         state: () => overlayState,
         hudArea: () => hudArea,
         hudLog: () => hudLog.join('\n'),
+        // Simulates a system that never reports the pointer over the HUD (pen, touch, scaling).
+        blindPointer: (on: boolean) => {
+          hudBlind = on
+        },
         typed: () => fakeInjector.typed,
         history: () => store.getHistory(),
         settings: (patch: Partial<AppSettings>) => {
@@ -404,6 +443,8 @@ async function setup(): Promise<void> {
           process.platform === 'win32'
             ? screen.screenToDipPoint({ x: input.x, y: input.y })
             : { x: input.x, y: input.y }
+        if (overlayWindow.isVisible() && hudTakesClicks === false && !hudEditing && overHud(point, 0))
+          replayHudClick(point)
         const bounds = overlayWindow.getBounds()
         if (
           overlayWindow.isVisible() &&
