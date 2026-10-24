@@ -15,4 +15,13 @@ describe('version', () => {
     expect(isNewerVersion('1.2.0', '1.1.9')).toBe(true)
     expect(isNewerVersion('1.0.0', '1.0.0')).toBe(false)
   })
+
+  it('orders pre-releases before their release', () => {
+    expect(isNewerVersion('1.10.0', '1.10.0-beta.1')).toBe(true)
+    expect(isNewerVersion('1.10.0-beta.2', '1.10.0-beta.1')).toBe(true)
+    expect(isNewerVersion('1.10.0-beta.10', '1.10.0-beta.9')).toBe(true)
+    expect(isNewerVersion('1.9.0', '1.10.0-beta.1')).toBe(false)
+    expect(isNewerVersion('1.10.0-beta.1', '1.9.0')).toBe(true)
+    expect(compareVersions('v1.10.0-beta.1', '1.10.0-beta.1')).toBe(0)
+  })
 })

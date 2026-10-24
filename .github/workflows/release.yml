@@ -43,8 +43,13 @@ jobs:
         shell: pwsh
         run: |
           $releaseVersion = (Get-Content package.json | ConvertFrom-Json).version
+          $prerelease = $releaseVersion.Contains('-')
           "tag=v$releaseVersion" >> $env:GITHUB_OUTPUT
-          foreach ($artifact in @("release/S2Teasy-$releaseVersion-win-x64.exe", "release/S2Teasy-$releaseVersion-portable.exe")) {
+          "prerelease=$($prerelease.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+          # A pre-release (1.10.0-beta.1) ships only the x64 installer for testers.
+          if ($prerelease) { Remove-Item -Path "release/S2Teasy-$releaseVersion-portable.exe" -ErrorAction SilentlyContinue }
+          $required = if ($prerelease) { @("release/S2Teasy-$releaseVersion-win-x64.exe") } else { @("release/S2Teasy-$releaseVersion-win-x64.exe", "release/S2Teasy-$releaseVersion-portable.exe") }
+          foreach ($artifact in $required) {
             if (-not (Test-Path -LiteralPath $artifact -PathType Leaf)) { throw "Missing required release artifact: $artifact" }
           }
           Get-ChildItem release/*.exe | ForEach-Object {
@@ -52,6 +57,7 @@ jobs:
             "$hash  $($_.Name)"
           } | Set-Content release/SHA256SUMS.txt -Encoding ascii
       - uses: softprops/action-gh-release@v2
+        if: steps.checksums.outputs.prerelease != 'true'
         with:
           # A tag push releases that tag; a manual run releases package.json's version from this commit.
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || steps.checksums.outputs.tag }}
@@ -66,3 +72,16 @@ jobs:
             release/*.blockmap
             release/windows-update-smoke.json
             release/electron-update-handoff.json
+      # Pre-releases are never "latest", so the in-app updater (which reads only full releases) skips them.
+      - uses: softprops/action-gh-release@v2
+        if: steps.checksums.outputs.prerelease == 'true'
+        with:
+          tag_name: ${{ steps.checksums.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          fail_on_unmatched_files: true
+          body_path: docs/BETA_NOTES.md
+          files: |
+            release/*-win-x64.exe
+            release/SHA256SUMS.txt
