@@ -90,6 +90,7 @@ export function usePreviewSession(mode: PreviewMode, cues: boolean) {
       hudCues: async (on) => updateRef.current((s) => ({ ...s, cues: on })),
       hudFocus: async () => undefined,
       hudPointer: () => undefined,
+      hudArea: () => undefined,
       learnWord: async () => defaultSettings(),
       copyHistory: async (text) => {
         try {

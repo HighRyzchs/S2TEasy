@@ -1,4 +1,9 @@
-## Voice memory beta — v1.10.0-beta.1
+## Voice memory beta — v1.10.0-beta.2
+
+**Fixed in beta 2:** clicks on the HUD (words, Pause, every button) went through to the app underneath on some Windows setups, so live edits were impossible. The HUD window used to wait for Windows to report the pointer over it, which it does not reliably do for a click-through window; S2Teasy now checks the pointer position itself and takes clicks wherever the HUD is drawn.
+
+---
+
 
 **A test build, not an update.** The in-app updater never offers beta builds, and this one ships only the Windows x64 installer. Installing it over v1.9.0 keeps your settings and History. When v1.10.0 is released, the beta will offer it like any other update.
 

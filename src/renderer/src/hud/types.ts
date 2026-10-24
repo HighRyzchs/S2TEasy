@@ -8,6 +8,7 @@ export type HudApi = Pick<
   | 'hudCues'
   | 'hudFocus'
   | 'hudPointer'
+  | 'hudArea'
   | 'learnWord'
   | 'copyHistory'
   | 'cancelRecording'

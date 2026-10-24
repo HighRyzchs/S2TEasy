@@ -145,6 +145,48 @@ export function Hud({
   }
   useEffect(() => () => api.hudPointer(false), [api])
 
+  // Where clicks should reach the HUD. The main process compares this with the mouse position,
+  // because Windows does not reliably report the pointer over a click-through window.
+  const visible = state.status !== 'hidden'
+  useEffect(() => {
+    if (embedded) return
+    if (!visible) {
+      api.hudArea(null)
+      return
+    }
+    let frame = 0
+    let last = ''
+    const measure = () => {
+      const el = root.current
+      if (el) {
+        const edge = el.dataset.skin === 'edge' && el.dataset.open !== 'true'
+        const parts = edge
+          ? [...el.querySelectorAll<HTMLElement>('.hud-roll, .hud-btn, .hud-cue, .hud-draft, .hud-pop, .hud-toast')]
+          : [el, ...el.querySelectorAll<HTMLElement>('.hud-pop, .hud-toast')]
+        const rects = parts.map((part) => part.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0)
+        const area = rects.length
+          ? {
+              x: Math.floor(Math.min(...rects.map((r) => r.left))),
+              y: Math.floor(Math.min(...rects.map((r) => r.top))),
+              width: Math.ceil(Math.max(...rects.map((r) => r.right)) - Math.min(...rects.map((r) => r.left))),
+              height: Math.ceil(Math.max(...rects.map((r) => r.bottom)) - Math.min(...rects.map((r) => r.top)))
+            }
+          : null
+        const key = JSON.stringify(area)
+        if (key !== last) {
+          last = key
+          api.hudArea(area)
+        }
+      }
+      frame = requestAnimationFrame(measure)
+    }
+    frame = requestAnimationFrame(measure)
+    return () => {
+      cancelAnimationFrame(frame)
+      api.hudArea(null)
+    }
+  }, [api, embedded, visible])
+
   const held = phase === 'paused' && (hovering || !!editing || !!fix)
   useEffect(() => {
     api.hudHold(held)

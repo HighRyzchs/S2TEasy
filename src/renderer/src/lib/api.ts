@@ -62,6 +62,7 @@ function mockApi(): Window['s2t'] {
     hudCues: async () => undefined,
     hudFocus: async () => undefined,
     hudPointer: () => undefined,
+    hudArea: () => undefined,
     voiceMemory: async () => sampleVoiceMemory(),
     forgetVoiceMemory: async () => undefined,
     onVoiceMemory: () => () => undefined,
@@ -106,7 +107,7 @@ function mockApi(): Window['s2t'] {
     getState: async () => ({
       settings: memory.settings,
       history: memory.history,
-      version: '1.10.0-beta.1',
+      version: '1.10.0-beta.2',
       update: memory.update,
       usage: {
         warning: '',

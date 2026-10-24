@@ -17,6 +17,7 @@ const api = (): { [K in keyof HudApi]: ReturnType<typeof vi.fn> } => ({
   hudCues: vi.fn(async () => undefined),
   hudFocus: vi.fn(async () => undefined),
   hudPointer: vi.fn(),
+  hudArea: vi.fn(),
   learnWord: vi.fn(async () => ({})),
   copyHistory: vi.fn(async () => true),
   cancelRecording: vi.fn(async () => undefined)

@@ -38,6 +38,8 @@ export type S2TApi = {
   hudFocus: (focus: boolean) => Promise<void>
   /** The pointer is over a visible part of the HUD (clicks there go to the HUD, elsewhere through). */
   hudPointer: (inside: boolean) => void
+  /** Where the HUD is drawn inside its window (CSS pixels), or null while hidden. */
+  hudArea: (area: { x: number; y: number; width: number; height: number } | null) => void
   /** Show a short scripted session on the real HUD (main window only). */
   hudDemo: () => Promise<void>
   /** Beta voice memory: what it remembers and what it recently matched. */
@@ -116,6 +118,7 @@ const api: S2TApi = {
   hudCues: (on) => ipcRenderer.invoke(IPC.HUD_CUES, on),
   hudFocus: (focus) => ipcRenderer.invoke(IPC.HUD_FOCUS, focus),
   hudPointer: (inside) => ipcRenderer.send(IPC.HUD_POINTER, inside),
+  hudArea: (area) => ipcRenderer.send(IPC.HUD_AREA, area),
   hudDemo: () => ipcRenderer.invoke(IPC.HUD_DEMO),
   voiceMemory: () => ipcRenderer.invoke(IPC.VOICE_MEMORY_GET),
   forgetVoiceMemory: (kind, id) => ipcRenderer.invoke(IPC.VOICE_MEMORY_FORGET, kind, id),

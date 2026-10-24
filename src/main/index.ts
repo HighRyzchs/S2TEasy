@@ -77,6 +77,25 @@ let journal: SessionJournal
 let speechCues: SpeechCueService
 let recoveryBusy = false
 let overlayState = emptyOverlay()
+let hudArea: { x: number; y: number; width: number; height: number } | null = null
+let hudTakesClicks = false
+
+/** Let clicks reach the HUD only while the mouse is over the part that is drawn. */
+function syncHudClicks(): void {
+  const window = overlayWindow
+  if (!window || window.isDestroyed() || window.isFocused()) return
+  let inside = false
+  if (hudArea && window.isVisible()) {
+    const bounds = window.getBounds()
+    const cursor = screen.getCursorScreenPoint()
+    const x = cursor.x - bounds.x
+    const y = cursor.y - bounds.y
+    inside = x >= hudArea.x && x < hudArea.x + hudArea.width && y >= hudArea.y && y < hudArea.y + hudArea.height
+  }
+  if (inside === hudTakesClicks) return
+  hudTakesClicks = inside
+  window.setIgnoreMouseEvents(!inside, { forward: true })
+}
 let voiceMemory: VoiceMemoryService
 let voiceMemoryEncrypted = false
 const voiceMemoryState = (): VoiceMemoryState => ({ ...voiceMemory.list(), encrypted: voiceMemoryEncrypted })
@@ -578,6 +597,7 @@ async function setup(): Promise<void> {
     if (focus === true) {
       overlayWindow.setFocusable(true)
       overlayWindow.setIgnoreMouseEvents(false)
+      hudTakesClicks = true
       overlayWindow.focus()
     } else {
       overlayWindow.setFocusable(false)
@@ -585,12 +605,16 @@ async function setup(): Promise<void> {
       dictation.restoreTarget()
     }
   })
-  ipcMain.on(IPC.HUD_POINTER, (event, inside: unknown) => {
+  ipcMain.on(IPC.HUD_AREA, (event, area: unknown) => {
     if (!overlayWindow || overlayWindow.isDestroyed() || event.sender !== overlayWindow.webContents) return
-    // Transparent parts of the HUD window let clicks through to the app underneath.
-    if (overlayWindow.isFocused()) return
-    overlayWindow.setIgnoreMouseEvents(inside !== true, { forward: true })
+    const a = area as { x: number; y: number; width: number; height: number } | null
+    hudArea =
+      a && [a.x, a.y, a.width, a.height].every((n) => typeof n === 'number' && Number.isFinite(n)) ? a : null
+    syncHudClicks()
   })
+  // Transparent parts of the HUD window let clicks through to the app underneath. Windows does not
+  // reliably tell a click-through window where the pointer is, so check the cursor position here.
+  setInterval(syncHudClicks, 33)
   ipcMain.handle(IPC.CANCEL_RECORDING, () => dictation.cancel())
   ipcMain.handle(IPC.COPY_HISTORY, (_event, text: string) => {
     return copyTranscript(text)

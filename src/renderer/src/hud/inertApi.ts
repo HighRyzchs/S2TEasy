@@ -10,6 +10,7 @@ export const inertApi: HudApi = {
   hudCues: async () => undefined,
   hudFocus: async () => undefined,
   hudPointer: () => undefined,
+  hudArea: () => undefined,
   learnWord: async () => defaultSettings(),
   copyHistory: async () => true,
   cancelRecording: async () => undefined

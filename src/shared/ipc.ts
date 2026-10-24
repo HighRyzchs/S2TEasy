@@ -9,6 +9,7 @@ export const IPC = {
   HUD_CUES: 's2t:hud-cues',
   HUD_FOCUS: 's2t:hud-focus',
   HUD_POINTER: 's2t:hud-pointer',
+  HUD_AREA: 's2t:hud-area',
   HUD_DEMO: 's2t:hud-demo',
   VOICE_MEMORY_GET: 's2t:voice-memory-get',
   VOICE_MEMORY_FORGET: 's2t:voice-memory-forget',
