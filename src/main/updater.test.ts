@@ -75,6 +75,15 @@ afterEach(() => {
   directories.splice(0).forEach((p) => rmSync(p, { recursive: true, force: true }))
 })
 describe('verified application updates', () => {
+  it('offers a beta build the newest beta, and reads only full releases on a stable build', async () => {
+    vi.spyOn(app, 'getVersion').mockReturnValue('1.4.0-beta.1')
+    const beta = { ...release(), tag_name: 'v1.4.0-beta.2', prerelease: true }
+    beta.assets = beta.assets.map((asset) => ({ ...asset, name: 'S2Teasy-1.4.0-beta.2-win-x64.exe' }))
+    const { updater, fetchMock } = setup([{ ...release(), tag_name: 'v1.3.1' }, beta] as never)
+    expect(await updater.check()).toMatchObject({ phase: 'available', availableVersion: '1.4.0-beta.2' })
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/releases\?per_page=/)
+  })
+
   it('discovers the matching Windows update without downloading until requested', async () => {
     const { updater, fetchMock } = setup()
     expect((await updater.check()).phase).toBe('available')

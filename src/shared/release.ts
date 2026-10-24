@@ -1,9 +1,23 @@
+import { compareVersions, tagToVersion } from './version'
 import { UPDATE_OWNER, UPDATE_REPO } from './constants'
-import { tagToVersion } from './version'
 import type { Packaging } from './types'
 
 export function updateReleasesApi(): string {
   return `https://api.github.com/repos/${UPDATE_OWNER}/${UPDATE_REPO}/releases/latest`
+}
+
+/** Recent releases including pre-releases, for builds that are themselves pre-releases. */
+export function updateReleasesListApi(): string {
+  return `https://api.github.com/repos/${UPDATE_OWNER}/${UPDATE_REPO}/releases?per_page=30`
+}
+
+/** A beta build follows betas too: the newest published release, pre-release or not. */
+export function newestRelease(releases: GithubRelease[]): GithubRelease | null {
+  let best: GithubRelease | null = null
+  for (const release of releases)
+    if (!release.draft && typeof release.tag_name === 'string')
+      if (!best || compareVersions(tagToVersion(release.tag_name), tagToVersion(best.tag_name)) > 0) best = release
+  return best
 }
 
 export function updateReleasesPage(): string {
@@ -40,8 +54,12 @@ export type PickedAsset = {
   digest?: string
 }
 
-export function pickUpdateAsset(release: GithubRelease, packaging: Packaging): PickedAsset | null {
-  if (release.draft || release.prerelease) return null
+export function pickUpdateAsset(
+  release: GithubRelease,
+  packaging: Packaging,
+  options: { prerelease?: boolean } = {}
+): PickedAsset | null {
+  if (release.draft || (release.prerelease && !options.prerelease)) return null
   const assets = release.assets ?? []
   const exe = assets.filter((asset) => /\.exe$/i.test(asset.name))
   const match =

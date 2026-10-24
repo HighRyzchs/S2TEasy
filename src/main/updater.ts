@@ -18,7 +18,9 @@ import {
   downloadUrl,
   githubHeaders,
   missingLatestReleaseMessage,
+  newestRelease,
   pickUpdateAsset,
+  updateReleasesListApi,
   updateReleasesApi,
   type GithubRelease,
   type PickedAsset
@@ -103,7 +105,9 @@ export class UpdateLauncher {
     this.set({ phase: 'checking', message: 'Checking GitHub for a newer build…', percent: 0 })
     try {
       const token = this.getToken()
-      const response = await fetch(updateReleasesApi(), {
+      // A beta build also follows newer betas; stable builds only ever see full releases.
+      const beta = this.status.currentVersion.includes('-')
+      const response = await fetch(beta ? updateReleasesListApi() : updateReleasesApi(), {
         headers: githubHeaders(token),
         signal: AbortSignal.timeout(15_000)
       })
@@ -122,9 +126,15 @@ export class UpdateLauncher {
         )
       }
       if (!response.ok) throw new Error(`GitHub returned HTTP ${response.status}`)
-      const release = (await response.json()) as GithubRelease
+      const body = (await response.json()) as GithubRelease | GithubRelease[]
+      const release = beta ? newestRelease(Array.isArray(body) ? body : []) : (body as GithubRelease)
+      if (!release) {
+        this.asset = null
+        this.set({ phase: 'current', availableVersion: '', message: `You're on ${this.status.currentVersion}.` })
+        return this.getStatus()
+      }
       const packaging = this.status.packaging === 'dev' ? 'portable' : this.status.packaging
-      const asset = pickUpdateAsset(release, packaging)
+      const asset = pickUpdateAsset(release, packaging, { prerelease: beta })
       if (!asset && isNewerVersion(tagToVersion(release.tag_name), this.status.currentVersion))
         throw new Error(
           'This release does not include a compatible Windows installer. Check the release page or try again later.'

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { missingLatestReleaseMessage, pickUpdateAsset, type GithubRelease } from './release'
+import { missingLatestReleaseMessage, newestRelease, pickUpdateAsset, type GithubRelease } from './release'
 
 const release: GithubRelease = {
   tag_name: 'v1.2.0',
@@ -44,5 +44,14 @@ describe('pickUpdateAsset', () => {
 
   it('skips drafts', () => {
     expect(pickUpdateAsset({ ...release, draft: true }, 'portable')).toBeNull()
+  })
+})
+
+describe('beta builds', () => {
+  const rel = (tag: string, prerelease = false, draft = false): GithubRelease => ({ tag_name: tag, prerelease, draft, assets: [] })
+  it('follow the newest published release, beta or not, and skip drafts', () => {
+    expect(newestRelease([rel('v1.9.0'), rel('v1.10.0-beta.2', true), rel('v1.10.0-beta.1', true)])?.tag_name).toBe('v1.10.0-beta.2')
+    expect(newestRelease([rel('v1.10.0-beta.2', true), rel('v1.10.0')])?.tag_name).toBe('v1.10.0')
+    expect(newestRelease([rel('v2.0.0', false, true)])).toBeNull()
   })
 })
