@@ -44,6 +44,8 @@ These are proposed features, not capabilities shipped in v1.9.0.
 
 ## Pronunciation learning
 
+See [Voice packs](VOICE_PACK.md) for the plan to learn your voice from HUD fixes: sound-alike matching, on-device voice templates, an optional audio referee and optional personal adapters, measured on your own held-out clips.
+
 See [Personal words and expressive speech](PERSONAL_SPEECH_DESIGN.md) for the longer-term correction/cue architecture, initial OpenRouter candidate, example costs and evaluation plan. Contextual word correction and acoustic personalization remain future work. Manual and separately opted-in bounded automatic audio cue analysis are implemented experimentally; [follow its code and test it](CONCEPTS.md).
 
 The development build now groups completed practice takes by intended phrase and model, comparing original recognition and showing retained audio examples. It does not score accent quality or establish acoustic adaptation.
