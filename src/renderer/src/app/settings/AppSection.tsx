@@ -41,6 +41,15 @@ export function AppSection() {
             Replay the tour
           </button>
         </div>
+        <div className="line">
+          <span>
+            <span>Support S2Teasy</span>
+            <span className="hint">Free and open source. A coffee keeps it going. Opens in your browser.</span>
+          </span>
+          <a className="btn" href="https://ko-fi.com/rozniman" target="_blank" rel="noreferrer">
+            Support on Ko-fi
+          </a>
+        </div>
       </div>
       <UpdatePanel
         onGetDiagnostics={() => window.s2t.getUpdateDiagnostics()}

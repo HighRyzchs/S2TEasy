@@ -13,6 +13,7 @@ An open source Windows dictation app with live text, recoverable sessions, and a
 [![Build Windows](https://github.com/HighRyzchs/S2TEasy/actions/workflows/build-windows.yml/badge.svg)](https://github.com/HighRyzchs/S2TEasy/actions/workflows/build-windows.yml)
 [![Website](https://github.com/HighRyzchs/S2TEasy/actions/workflows/pages.yml/badge.svg)](https://github.com/HighRyzchs/S2TEasy/actions/workflows/pages.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-a5e6ce.svg)](LICENSE)
+[![Support on Ko-fi](https://img.shields.io/badge/Ko--fi-Support%20S2Teasy-ff5e5b?logo=ko-fi&logoColor=white)](https://ko-fi.com/rozniman)
 
 [Project website](https://highryzchs.github.io/S2TEasy/) · [Interactive HUD demo](https://highryzchs.github.io/S2TEasy/overlay-demo/) · [Desktop workflow](docs/OUTPUT_WORKSPACE.md) · [Concepts & architecture](docs/CONCEPTS.md) · [Getting started](#getting-started) · [Development](#development) · [Privacy](docs/PRIVACY.md) · [Contributing](CONTRIBUTING.md) · [Roadmap](docs/ROADMAP.md)
 
@@ -156,6 +157,10 @@ For pronunciation examples, open **Your voice**, enter a short target phrase, co
 The Windows CI workflow runs tests/type checks and produces build artifacts. Tagged releases build the executables. The updater targets `HighRyzchs/S2TEasy`; automatic updates are off by default and refuse artifacts without a GitHub SHA-256 digest. Run the Windows checklist and arrange code signing before treating development builds as release-ready.
 
 `docs/index.html` is the project website. `npm run build:site` builds it into `.site/`, including an interactive demo of the real HUD component with simulated speech: seven styles, no microphone, no uploads. The **Publish project website** workflow deploys changes under `docs/` when they reach `main`, and also supports manual deployment. GitHub Pages uses **GitHub Actions** as its source. See [Publishing](docs/PUBLISHING.md) for the website, Windows builds, and release checklist.
+
+## Support S2Teasy
+
+S2Teasy is free and open source, with no account and no subscription. If it saves you typing, you can [buy me a coffee on Ko-fi](https://ko-fi.com/rozniman). It helps pay for testing on real Windows machines and the speech models used to try new features. Stars, bug reports and pull requests help just as much.
 
 ## License and attribution
 
