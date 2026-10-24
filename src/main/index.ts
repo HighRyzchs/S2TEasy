@@ -79,6 +79,13 @@ let speechCues: SpeechCueService
 let recoveryBusy = false
 let overlayState = emptyOverlay()
 let hudArea: { x: number; y: number; width: number; height: number } | null = null
+// A short log of what the HUD window did with the mouse and its buttons, for diagnosing clicks.
+const hudLog: string[] = []
+function logHud(line: string): void {
+  hudLog.push(`${new Date().toISOString().slice(11, 23)} ${line}`)
+  if (hudLog.length > 400) hudLog.splice(0, hudLog.length - 400)
+}
+
 let hudEditing = false
 let hudTakesClicks: boolean | null = null
 let hudClickTicks = 0
@@ -105,6 +112,13 @@ function syncHudClicks(): void {
   // refresh only runs while clicks should pass through.
   hudClickTicks = (hudClickTicks + 1) % 15
   if (inside === hudTakesClicks && (inside || hudClickTicks !== 0)) return
+  if (inside !== hudTakesClicks) {
+    const bounds = window.getBounds()
+    const cursor = screen.getCursorScreenPoint()
+    logHud(
+      `${inside ? 'take clicks' : 'pass clicks'} cursor=${cursor.x},${cursor.y} window=${bounds.x},${bounds.y},${bounds.width}x${bounds.height} area=${JSON.stringify(hudArea)} editing=${hudEditing}`
+    )
+  }
   hudTakesClicks = inside
   window.setIgnoreMouseEvents(!inside, { forward: true })
 }
@@ -347,6 +361,7 @@ async function setup(): Promise<void> {
         overlay: () => overlayWindow,
         state: () => overlayState,
         hudArea: () => hudArea,
+        hudLog: () => hudLog.join('\n'),
         typed: () => fakeInjector.typed,
         history: () => store.getHistory(),
         settings: (patch: Partial<AppSettings>) => {
@@ -518,6 +533,16 @@ async function setup(): Promise<void> {
   // Only programs already in History, so this cannot be used to probe arbitrary paths.
   const appIcons = new Map<string, string | null>()
   ipcMain.handle(IPC.VOICE_MEMORY_GET, () => voiceMemoryState())
+  ipcMain.handle(IPC.HUD_DIAGNOSTICS, (event) => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Not allowed.')
+    const settings = store.getSettings()
+    const displays = screen.getAllDisplays().map((d) => `${d.bounds.width}x${d.bounds.height}@${d.scaleFactor}`)
+    return [
+      `S2Teasy ${app.getVersion()} · Windows ${process.getSystemVersion()} · displays ${displays.join(', ')}`,
+      `HUD style=${settings.hud.style} layout=${settings.hud.whileTalking} position=${settings.overlayPosition} scale=${settings.hud.scale}`,
+      ...hudLog
+    ].join('\n')
+  })
   ipcMain.handle(IPC.VOICE_MEMORY_FORGET, (event, kind: unknown, id: unknown) => {
     if (event.sender !== mainWindow?.webContents || typeof id !== 'string') throw new Error('Not allowed.')
     if (kind === 'example') voiceMemory.forgetExample(id)
@@ -613,10 +638,12 @@ async function setup(): Promise<void> {
     return dictation.editText(sessionId, start, end, text)
   })
   ipcMain.handle(IPC.HUD_PAUSE, () => {
+    logHud(`HUD pause (paused=${dictation.isPaused()}, status=${overlayState.status})`)
     if (dictation.isPaused()) return dictation.resume()
     dictation.pause()
   })
   ipcMain.handle(IPC.HUD_FINISH, () => {
+    logHud(`HUD done (status=${overlayState.status}, message=${overlayState.message})`)
     if (demoTimers.length) stopHudDemo(true)
     else dictation.finish()
   })
@@ -629,6 +656,7 @@ async function setup(): Promise<void> {
   })
   ipcMain.handle(IPC.HUD_CUES, (_event, on: unknown) => dictation.setSessionCues(on === true))
   ipcMain.handle(IPC.HUD_FOCUS, (_event, focus: unknown) => {
+    logHud(`HUD focus ${focus === true ? 'take' : 'release'}`)
     if (!overlayWindow || overlayWindow.isDestroyed()) return
     if (focus === true) {
       hudEditing = true
@@ -648,9 +676,13 @@ async function setup(): Promise<void> {
     hudTakesClicks = null
     syncHudClicks()
   })
+  ipcMain.on(IPC.HUD_POINTER, (event, inside: unknown) => {
+    if (event.sender === overlayWindow?.webContents) logHud(`DOM pointer ${inside === true ? 'enter' : 'leave'}`)
+  })
   ipcMain.on(IPC.HUD_AREA, (event, area: unknown) => {
     if (!overlayWindow || overlayWindow.isDestroyed() || event.sender !== overlayWindow.webContents) return
     const a = area as { x: number; y: number; width: number; height: number } | null
+    if (!a !== !hudArea) logHud(`HUD area ${a ? JSON.stringify(a) : 'cleared'}`)
     hudArea =
       a && [a.x, a.y, a.width, a.height].every((n) => typeof n === 'number' && Number.isFinite(n)) ? a : null
     syncHudClicks()
@@ -659,7 +691,8 @@ async function setup(): Promise<void> {
   // reliably tell a click-through window where the pointer is, so check the cursor position here.
   setInterval(syncHudClicks, 33)
   ipcMain.handle(IPC.CANCEL_RECORDING, () => dictation.cancel())
-  ipcMain.handle(IPC.COPY_HISTORY, (_event, text: string) => {
+  ipcMain.handle(IPC.COPY_HISTORY, (event, text: string) => {
+    if (event.sender === overlayWindow?.webContents) logHud(`HUD copy (${String(text).length} chars)`)
     return copyTranscript(text)
   })
   ipcMain.handle(IPC.INSERT_HISTORY, (_event, text: string) => dictation.insertNow(text))

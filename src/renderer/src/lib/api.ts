@@ -66,6 +66,7 @@ function mockApi(): Window['s2t'] {
     voiceMemory: async () => sampleVoiceMemory(),
     forgetVoiceMemory: async () => undefined,
     onVoiceMemory: () => () => undefined,
+    hudDiagnostics: async () => 'Preview: no HUD diagnostics.',
     hudDemo: async () => {
       throw new Error('The desktop app shows the HUD on your screen. This preview shows it above.')
     },

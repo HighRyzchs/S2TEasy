@@ -42,6 +42,8 @@ export type S2TApi = {
   hudArea: (area: { x: number; y: number; width: number; height: number } | null) => void
   /** Show a short scripted session on the real HUD (main window only). */
   hudDemo: () => Promise<void>
+  /** What the HUD did with recent clicks, as text to copy into a bug report. */
+  hudDiagnostics: () => Promise<string>
   /** Beta voice memory: what it remembers and what it recently matched. */
   voiceMemory: () => Promise<VoiceMemoryState>
   forgetVoiceMemory: (kind: 'example' | 'memory' | 'all', id: string) => Promise<void>
@@ -120,6 +122,7 @@ const api: S2TApi = {
   hudPointer: (inside) => ipcRenderer.send(IPC.HUD_POINTER, inside),
   hudArea: (area) => ipcRenderer.send(IPC.HUD_AREA, area),
   hudDemo: () => ipcRenderer.invoke(IPC.HUD_DEMO),
+  hudDiagnostics: () => ipcRenderer.invoke(IPC.HUD_DIAGNOSTICS),
   voiceMemory: () => ipcRenderer.invoke(IPC.VOICE_MEMORY_GET),
   forgetVoiceMemory: (kind, id) => ipcRenderer.invoke(IPC.VOICE_MEMORY_FORGET, kind, id),
   onVoiceMemory: (cb) => {

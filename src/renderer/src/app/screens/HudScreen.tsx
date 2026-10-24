@@ -25,7 +25,7 @@ const SPOTS: { id: (typeof OVERLAY_POSITIONS)[number]; label: string }[] = [
 const HEX = /^#[0-9a-f]{6}$/i
 
 export function HudScreen() {
-  const { settings, save, run, active } = useApp()
+  const { settings, save, run, active, toast } = useApp()
   const hud = settings.hud
   const [view, setView] = useState<PreviewState>('talking')
   const [nonce, setNonce] = useState(0)
@@ -103,6 +103,19 @@ export function HudScreen() {
                 onClick={() => void run(() => window.s2t.hudDemo())}
               >
                 Show it on my screen
+              </button>
+              <button
+                type="button"
+                className="btn"
+                title="Copies what the HUD did with your recent clicks, for a bug report"
+                onClick={() =>
+                  void run(async () => {
+                    await window.s2t.copyHistory(await window.s2t.hudDiagnostics())
+                    toast('HUD diagnostics copied. Paste them into your message.')
+                  })
+                }
+              >
+                Copy HUD diagnostics
               </button>
             </div>
           </div>

@@ -7,7 +7,13 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 
 const require = createRequire(import.meta.url)
-const { _electron: electron } = require('playwright')
+const { _electron: electron } = (() => {
+  try {
+    return require('playwright')
+  } catch {
+    return require('playwright-core')
+  }
+})()
 
 const results = []
 const check = (name, ok, detail = '') => {
@@ -100,6 +106,10 @@ try {
 } catch (error) {
   check('run', false, error.message)
 } finally {
+  // The app's own HUD log shows which step a failed click stopped at.
+  const log = await main(() => globalThis.__s2t.hudLog()).catch(() => '')
+  require('node:fs').mkdirSync('release', { recursive: true })
+  require('node:fs').writeFileSync(`release/${process.argv[1].split(/[\\/]/).pop()}.hud.log`, log)
   await app.close().catch(() => undefined)
   rmSync(userData, { recursive: true, force: true })
 }

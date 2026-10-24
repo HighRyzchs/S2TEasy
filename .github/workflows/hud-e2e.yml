@@ -1,0 +1,38 @@
+name: HUD end-to-end (Windows)
+
+# Runs the real app on a Windows desktop with a scripted speech engine and clicks the HUD:
+# first through the page (every control, every style and layout), then with the real Windows
+# mouse through the click-through overlay window.
+on:
+  push:
+    branches: [dev]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  hud:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save playwright-core@1.63.0
+      - run: npx electron-vite build
+      - name: Click every HUD control through the page
+        run: node scripts/e2e-hud.mjs
+      - name: Click the HUD with the real Windows mouse
+        if: always()
+        run: node scripts/e2e-hud-real-clicks.mjs
+        env:
+          STYLES: island,caption,edge,cyber,pixel,ghost,balloon
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hud-e2e-logs
+          path: release/*.hud.log
