@@ -1,4 +1,4 @@
-import { sampleHistory, sampleUsage, sampleVocabulary } from './sample-data'
+import { sampleHistory, sampleUsage, sampleVocabulary, sampleVoiceMemory } from './sample-data'
 import {
   defaultSettings,
   idleUpdate,
@@ -62,6 +62,9 @@ function mockApi(): Window['s2t'] {
     hudCues: async () => undefined,
     hudFocus: async () => undefined,
     hudPointer: () => undefined,
+    voiceMemory: async () => sampleVoiceMemory(),
+    forgetVoiceMemory: async () => undefined,
+    onVoiceMemory: () => () => undefined,
     hudDemo: async () => {
       throw new Error('The desktop app shows the HUD on your screen. This preview shows it above.')
     },

@@ -7,13 +7,21 @@ import { SessionJournal } from './session-journal'
 import type { CueAnalysis } from '../shared/speech-cues'
 import { defaultSettings, type HistoryItem, type RecordingCommand } from '../shared/types'
 import type { RouterAudioClient } from './router-audio'
+import { VoiceMemoryService } from './voice-memory/service'
+import { VoiceMemoryStore } from './voice-memory/store'
+import { babble, GG_NO_RE, msOf, synth } from './voice-memory/test-audio'
+import type { TranscribeInput } from './openrouter'
 
 const dirs: string[] = []
 afterEach(() => {
   dirs.splice(0).forEach((dir) => rmSync(dir, { recursive: true, force: true }))
   vi.useRealTimers()
 })
-function setup(overrides = {}, injectorExtra: { targetApp?: () => string | null } = {}) {
+function setup(
+  overrides = {},
+  injectorExtra: { targetApp?: () => string | null } = {},
+  extra: { voiceMemory?: VoiceMemoryService } = {}
+) {
   const dir = mkdtempSync(join(tmpdir(), 's2teasy-controller-'))
   dirs.push(dir)
   const journal = new SessionJournal(dir)
@@ -46,7 +54,8 @@ function setup(overrides = {}, injectorExtra: { targetApp?: () => string | null 
   }
   const controller = new DictationController(host, {
     injector: { captureTarget: vi.fn(), paste, pasteBlock: paste, ...injectorExtra },
-    transcribe
+    transcribe,
+    ...extra
   })
   return {
     controller,
@@ -764,5 +773,79 @@ describe('pause, resume and finishing on its own', () => {
     t.controller.toggle()
     expect(t.state()?.status).toBe('transcribing')
     expect(t.controller.isPaused()).toBe(false)
+  })
+})
+
+describe('voice memory (beta)', () => {
+  // Engine words with timings for a synthetic sentence: babble "words", then the phrase, then more.
+  function take(lead: number, seed: number, speed = 1) {
+    const before = babble(lead, seed)
+    const after = babble(4, seed + 1)
+    const pcm = synth([...before, ...GG_NO_RE, ...after], { speed, seed })
+    const t0 = msOf(before, speed)
+    const sylls = GG_NO_RE.map((s) => s.ms * speed)
+    const words = [
+      { word: 'so', start: 0, end: t0 / 1000 },
+      { word: 'Gigi', start: t0 / 1000, end: (t0 + sylls[0] + sylls[1]) / 1000 },
+      { word: 'no', start: (t0 + sylls[0] + sylls[1]) / 1000, end: (t0 + sylls[0] + sylls[1] + sylls[2]) / 1000 },
+      { word: 'read', start: (t0 + sylls[0] + sylls[1] + sylls[2]) / 1000, end: (t0 + msOf(GG_NO_RE, speed)) / 1000 },
+      { word: 'man', start: (t0 + msOf(GG_NO_RE, speed)) / 1000, end: (t0 + msOf(GG_NO_RE, speed) + msOf(after, speed)) / 1000 }
+    ].map((w) => ({ text: w.word, startMs: w.start * 1000, endMs: w.end * 1000 }))
+    return { pcm, words, text: 'so Gigi no read man' }
+  }
+
+  function withMemory(mode: 'suggest' | 'auto') {
+    const dir = mkdtempSync(join(tmpdir(), 's2teasy-voice-'))
+    dirs.push(dir)
+    const memory = new VoiceMemoryService(new VoiceMemoryStore(join(dir, 'voice.bin')))
+    const t = setup({ voiceMemory: { enabled: true, mode, sensitivity: 0.5 } }, {}, { voiceMemory: memory })
+    async function session(audio: ReturnType<typeof take>) {
+      t.transcribe.mockImplementation(async (input: TranscribeInput) => {
+        input.onWords?.(audio.words)
+        return audio.text
+      })
+      await t.controller.start()
+      const gen = t.controller.currentGeneration()
+      t.controller.onPcm(audio.pcm, gen)
+      await t.controller.onUtterance('audio', gen)
+      return gen
+    }
+    return { t, memory, session }
+  }
+
+  const lastState = (t: ReturnType<typeof setup>) => t.host.onOverlay.mock.calls.at(-1)?.[0]
+
+  it('remembers the sound of a HUD fix, then underlines the same phrase in a later session', async () => {
+    const { t, memory, session } = withMemory('suggest')
+    const gen = await session(take(8, 3))
+    const id = t.history[0]!.id
+    await t.controller.editText(id, 3, 3 + 'Gigi no read'.length, 'gg no re')
+    expect(memory.list().memories).toMatchObject([{ intended: 'gg no re', heard: ['Gigi no read'] }])
+    expect(lastState(t)?.notice).toMatch(/^Remembered how you say “gg no re”./)
+    t.controller.stop()
+    await t.controller.onFinished('', '', 1000, gen)
+
+    await session(take(11, 9, 1.15))
+    await vi.waitFor(() => expect(lastState(t)?.memoryHints).toHaveLength(1))
+    expect(lastState(t)?.memoryHints?.[0]).toMatchObject({ text: 'Gigi no read', suggestion: 'gg no re' })
+    expect(memory.list().recent[0]).toMatchObject({ intended: 'gg no re', outcome: 'suggested' })
+  })
+
+  it('in auto mode, fixes the phrase in the text when the evidence is strong', async () => {
+    const { t, session } = withMemory('auto')
+    const gen = await session(take(8, 3))
+    await t.controller.editText(t.history[0]!.id, 3, 3 + 'Gigi no read'.length, 'gg no re')
+    t.controller.stop()
+    await t.controller.onFinished('', '', 1000, gen)
+    await session(take(8, 3))
+    await vi.waitFor(() => expect(t.history.at(-1)?.text).toBe('so gg no re man'))
+  })
+
+  it('learns nothing while voice memory is off', async () => {
+    const { t, memory, session } = withMemory('suggest')
+    t.settings.voiceMemory = { enabled: false, mode: 'suggest', sensitivity: 0.5 }
+    await session(take(8, 3))
+    await t.controller.editText(t.history[0]!.id, 3, 3 + 'Gigi no read'.length, 'gg no re')
+    expect(memory.list().memories).toEqual([])
   })
 })

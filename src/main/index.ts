@@ -2,7 +2,10 @@ import { analyzeAutomaticCues } from './automatic-cues'
 import { normalizeOutputPreferences, renderOutput, type OutputPreferences } from '../shared/output'
 import { copyTranscript } from './inject'
 import { UsageStore } from './usage-store'
-import { app, BrowserWindow, dialog, ipcMain, screen, session, protocol } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen, session, protocol } from 'electron'
+import { VoiceMemoryService } from './voice-memory/service'
+import { VoiceMemoryStore } from './voice-memory/store'
+import type { VoiceMemoryState } from '../shared/voice-memory'
 import { randomUUID } from 'node:crypto'
 import type { WordTiming } from '../shared/word-timing'
 import { audioResponse } from './audio-response'
@@ -74,6 +77,9 @@ let journal: SessionJournal
 let speechCues: SpeechCueService
 let recoveryBusy = false
 let overlayState = emptyOverlay()
+let voiceMemory: VoiceMemoryService
+let voiceMemoryEncrypted = false
+const voiceMemoryState = (): VoiceMemoryState => ({ ...voiceMemory.list(), encrypted: voiceMemoryEncrypted })
 let trayUi: ReturnType<typeof createTray> | null = null
 const hotkeys = new HotkeyManager()
 
@@ -191,6 +197,16 @@ async function setup(): Promise<void> {
     mainWindow?.hide()
   })
 
+  // Beta personal acoustic memory: sound examples from HUD fixes, encrypted when Windows allows.
+  const voiceCipher = safeStorage.isEncryptionAvailable()
+    ? { encrypt: (text: string) => safeStorage.encryptString(text), decrypt: (data: Buffer) => safeStorage.decryptString(data) }
+    : undefined
+  voiceMemoryEncrypted = !!voiceCipher
+  voiceMemory = new VoiceMemoryService(
+    new VoiceMemoryStore(join(app.getPath('userData'), 'voice-memory.bin'), voiceCipher),
+    () => sendMain(IPC.VOICE_MEMORY_CHANGED, voiceMemoryState())
+  )
+
   dictation = new DictationController({
     overlay: overlayWindow,
     journal,
@@ -284,7 +300,7 @@ async function setup(): Promise<void> {
           y: store.getSettings().overlayOffsetY
         })
     }
-  })
+  }, { voiceMemory })
 
   recorderWindow.webContents.on('render-process-gone', () => {
     if (dictation.isBusy())
@@ -446,6 +462,13 @@ async function setup(): Promise<void> {
 
   // Only programs already in History, so this cannot be used to probe arbitrary paths.
   const appIcons = new Map<string, string | null>()
+  ipcMain.handle(IPC.VOICE_MEMORY_GET, () => voiceMemoryState())
+  ipcMain.handle(IPC.VOICE_MEMORY_FORGET, (event, kind: unknown, id: unknown) => {
+    if (event.sender !== mainWindow?.webContents || typeof id !== 'string') throw new Error('Not allowed.')
+    if (kind === 'example') voiceMemory.forgetExample(id)
+    else if (kind === 'memory') voiceMemory.forgetMemory(id)
+    else if (kind === 'all') voiceMemory.clear()
+  })
   ipcMain.handle(IPC.APP_ICON, async (_event, exe: unknown) => {
     if (typeof exe !== 'string' || !store.getHistory().some((row) => row.app?.exe === exe)) return null
     if (!appIcons.has(exe)) {

@@ -1,4 +1,5 @@
 import type { HistoryItem } from '@shared/types'
+import type { VoiceMemoryState } from '@shared/voice-memory'
 import type { UsageRecord } from '@shared/usage'
 import type { VocabularyEntry } from '@shared/vocabulary'
 
@@ -284,4 +285,37 @@ export function sampleUsage(now = Date.now()): UsageRecord[] {
       outcome: 'success'
     })
   return rows.sort((a, b) => b.createdAt - a.createdAt)
+}
+
+/** Voice memory for the preview: two remembered phrases and a few recent matches. */
+export function sampleVoiceMemory(now = Date.now()): VoiceMemoryState {
+  return {
+    encrypted: true,
+    memories: [
+      {
+        id: 'vm-gg',
+        intended: 'gg no re',
+        heard: ['Gigi no read', 'gee gee no ray'],
+        createdAt: now - 3 * DAY,
+        stats: { suggested: 4, applied: 2 },
+        examples: [
+          { id: 'vm-gg-1', heard: 'Gigi no read', createdAt: now - 3 * DAY, ms: 820 },
+          { id: 'vm-gg-2', heard: 'gee gee no ray', createdAt: now - DAY, ms: 760 }
+        ]
+      },
+      {
+        id: 'vm-ryzchs',
+        intended: 'Ryzchs',
+        heard: ['risks'],
+        createdAt: now - 2 * DAY,
+        stats: { suggested: 3, applied: 0 },
+        examples: [{ id: 'vm-ryzchs-1', heard: 'risks', createdAt: now - 2 * DAY, ms: 540 }]
+      }
+    ],
+    recent: [
+      { at: now - 14 * MIN, intended: 'gg no re', heard: 'Gigi no read', score: 0.31, outcome: 'applied' },
+      { at: now - 40 * MIN, intended: 'Ryzchs', heard: 'risks', score: 0.47, outcome: 'suggested' },
+      { at: now - 2 * 60 * MIN, intended: 'gg no re', heard: 'gg no re', score: 0.28, outcome: 'already-right' }
+    ]
+  }
 }

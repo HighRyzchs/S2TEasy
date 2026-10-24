@@ -1,3 +1,4 @@
+import { defaultVoiceMemory, normalizeVoiceMemory, type MemoryHint, type VoiceMemorySettings } from './voice-memory'
 import { normalizeOutputPreferences, type OutputPreferences } from './output'
 import type { WordTiming } from './word-timing'
 import type { UsageState } from './usage'
@@ -118,6 +119,8 @@ export type AppSettings = {
   appCues: Record<string, boolean>
   /** Opt-in: after a session, a small text model checks that accent swaps fit their sentence. */
   accentContextCheck: boolean
+  /** Beta: personal acoustic memory, learned from HUD fixes. */
+  voiceMemory: VoiceMemorySettings
   hud: HudSettings
   /** Your voice suggestions the user chose not to see again (heard→meant keys). */
   dismissedSuggestions: string[]
@@ -211,6 +214,8 @@ export type OverlayState = {
   noticeAt?: number
   /** Speech cues heard so far, each shown before the word it starts at (word index in `partial`). */
   liveCues?: { word: number; label: string }[]
+  /** Beta voice memory: places that sound like something you taught it, for the HUD to underline. */
+  memoryHints?: MemoryHint[]
 }
 
 export type ModelOption = {
@@ -264,6 +269,7 @@ export const defaultSettings = (): AppSettings => ({
   monthlyLimitUsd: 0,
   appCues: {},
   accentContextCheck: false,
+  voiceMemory: defaultVoiceMemory(),
   hud: defaultHudSettings(),
   dismissedSuggestions: []
 })
@@ -365,6 +371,7 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
       .slice(0, 200)
   )
   merged.accentContextCheck = raw?.accentContextCheck === true
+  merged.voiceMemory = normalizeVoiceMemory(raw?.voiceMemory)
   merged.hud = normalizeHudSettings(raw?.hud, raw?.overlayTheme)
   merged.dismissedSuggestions = Array.isArray(raw?.dismissedSuggestions)
     ? raw.dismissedSuggestions.filter((key): key is string => typeof key === 'string').slice(-500)

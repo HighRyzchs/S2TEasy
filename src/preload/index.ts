@@ -15,6 +15,7 @@ import type {
   UpdateStatus
 } from '../shared/types'
 import type { ModelOption } from '../shared/types'
+import type { VoiceMemoryState } from '../shared/voice-memory'
 
 export type S2TApi = {
   saveOutput: (value: OutputPreferences) => Promise<AppSettings>
@@ -39,6 +40,10 @@ export type S2TApi = {
   hudPointer: (inside: boolean) => void
   /** Show a short scripted session on the real HUD (main window only). */
   hudDemo: () => Promise<void>
+  /** Beta voice memory: what it remembers and what it recently matched. */
+  voiceMemory: () => Promise<VoiceMemoryState>
+  forgetVoiceMemory: (kind: 'example' | 'memory' | 'all', id: string) => Promise<void>
+  onVoiceMemory: (cb: (state: VoiceMemoryState) => void) => () => void
 
   getUpdateDiagnostics: () => Promise<string>
   openUpdateInstaller: () => Promise<UpdateStatus>
@@ -112,6 +117,13 @@ const api: S2TApi = {
   hudFocus: (focus) => ipcRenderer.invoke(IPC.HUD_FOCUS, focus),
   hudPointer: (inside) => ipcRenderer.send(IPC.HUD_POINTER, inside),
   hudDemo: () => ipcRenderer.invoke(IPC.HUD_DEMO),
+  voiceMemory: () => ipcRenderer.invoke(IPC.VOICE_MEMORY_GET),
+  forgetVoiceMemory: (kind, id) => ipcRenderer.invoke(IPC.VOICE_MEMORY_FORGET, kind, id),
+  onVoiceMemory: (cb) => {
+    const listener = (_event: unknown, state: VoiceMemoryState) => cb(state)
+    ipcRenderer.on(IPC.VOICE_MEMORY_CHANGED, listener)
+    return () => ipcRenderer.removeListener(IPC.VOICE_MEMORY_CHANGED, listener)
+  },
   getUpdateDiagnostics: () => ipcRenderer.invoke(IPC.GET_UPDATE_DIAGNOSTICS),
   openUpdateInstaller: () => ipcRenderer.invoke(IPC.OPEN_UPDATE_INSTALLER),
   openUpdateDiagnostics: () => ipcRenderer.invoke(IPC.OPEN_UPDATE_DIAGNOSTICS),

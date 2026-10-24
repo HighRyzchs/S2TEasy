@@ -35,6 +35,9 @@ import { RouterAudioClient } from './router-audio'
 import { SessionJournal } from './session-journal'
 import { LiveCues, type CueWindowResult } from './live-cues'
 import { accentSlots, type AccentSlot } from '../shared/accent-check'
+import { applyThreshold, suggestThreshold, type Detection } from './voice-memory/memory'
+import type { VoiceMemoryService } from './voice-memory/service'
+import type { MemoryHint } from '../shared/voice-memory'
 
 type Host = {
   overlay: { showInactive: () => void; hide: () => void; isDestroyed: () => boolean }
@@ -81,6 +84,23 @@ type Dependencies = {
     Partial<Pick<TextInjector, 'replaceTail' | 'restoreTarget' | 'targetApp'>>
   transcribe: (input: TranscribeInput) => Promise<string>
   createStream: () => RouterAudioClient
+  /** Beta personal acoustic memory; absent in tests that do not exercise it. */
+  voiceMemory?: VoiceMemoryService
+}
+
+/** A word the engine timed, on the session journal's clock (milliseconds of recorded audio). */
+type TimedWord = { text: string; startMs: number; endMs: number }
+
+const wordKey = (word: string) => word.toLocaleLowerCase().replace(/[^\p{L}\p{N}']+/gu, '')
+const wordsOf = (text: string) => text.split(/\s+/).map(wordKey).filter(Boolean)
+
+/** The last place in `text` where `keys` (normalised words) appear in a row, as a character span. */
+function findWords(text: string, keys: string[]): { start: number; end: number } | null {
+  const tokens = [...text.matchAll(/\S+/g)].map((m) => ({ key: wordKey(m[0]), start: m.index, end: m.index + m[0].length }))
+  for (let i = tokens.length - keys.length; i >= 0; i--)
+    if (keys.every((key, k) => tokens[i + k].key === key))
+      return { start: tokens[i].start, end: tokens[i + keys.length - 1].end }
+  return null
 }
 
 /** How long the HUD's exit animation gets before its window hides. */
@@ -115,6 +135,13 @@ export class DictationController {
   private pasteAbort = new AbortController()
   private requestAbort: AbortController | null = null
   private liveCues: LiveCues | null = null
+  // Voice memory: engine word timings on the journal clock, where the last check reached, and
+  // detections already handled (by memory and position) so overlapping checks never repeat one.
+  private timedWords: TimedWord[] = []
+  private segmentJournalMs = 0
+  private watchedToMs = 0
+  private watching = false
+  private handled: { memoryId: string; startMs: number }[] = []
   private liveCuesAbort: AbortController | null = null
   private journalBytes = 0
   private lastLevelAt = 0
@@ -293,6 +320,142 @@ export class DictationController {
     })
   }
 
+  private addTimedWords(words: WordTiming[], offsetMs: number): void {
+    if (!this.settings?.voiceMemory.enabled) return
+    for (const word of words)
+      this.timedWords.push({ text: word.text, startMs: word.startMs + offsetMs, endMs: word.endMs + offsetMs })
+    if (this.timedWords.length > 20_000) this.timedWords.splice(0, this.timedWords.length - 20_000)
+  }
+
+  /**
+   * Where the engine said `words` (normalised), on the journal clock. With several occurrences the
+   * one whose position in the session best matches `index` (words before it in the text) wins.
+   */
+  private locateWords(words: string[], index: number): { startMs: number; endMs: number; text: string } | null {
+    if (!words.length) return null
+    const keys = this.timedWords.map((word) => wordKey(word.text))
+    let best = -1
+    for (let i = 0; i + words.length <= keys.length; i++)
+      if (words.every((word, k) => keys[i + k] === word))
+        if (best === -1 || Math.abs(i - index) < Math.abs(best - index)) best = i
+    if (best === -1) return null
+    const run = this.timedWords.slice(best, best + words.length)
+    return { startMs: run[0].startMs, endMs: run[run.length - 1].endMs, text: run.map((word) => word.text).join(' ') }
+  }
+
+  /** A short excerpt of this session's audio around [startMs, endMs), with context for normalisation. */
+  private excerpt(startMs: number, endMs: number, before = 3000, after = 1000): { pcm: Uint8Array; offsetMs: number } | null {
+    if (!this.item) return null
+    const to = Math.min(this.journalMs(), endMs + after)
+    const from = Math.max(0, startMs - before, to - 30_000)
+    if (to - from < 200) return null
+    try {
+      return { pcm: this.host.journal.readPcmExcerpt(this.item.id, { startMs: from, endMs: to }), offsetMs: from }
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Voice memory: a fix of a few words binds the sound the engine heard there to the words you
+   * wanted. Rewrites of longer passages are not pronunciation evidence and are skipped. Returns the
+   * HUD message for the fix, or null when voice memory is not involved.
+   */
+  private learnSound(heard: string, intended: string, index: number): string | null {
+    const memory = this.dependencies.voiceMemory
+    if (!memory || !this.settings?.voiceMemory.enabled || !this.item || !heard || !intended) return null
+    const heardWords = wordsOf(heard)
+    if (heardWords.length > 6 || wordsOf(intended).length > 6) return null
+    const place = this.locateWords(heardWords, index)
+    const clip = place && this.excerpt(place.startMs - 80, place.endMs + 80)
+    const learned =
+      !!place &&
+      !!clip &&
+      memory.remember({
+        pcm: clip.pcm,
+        fromMs: place.startMs - 80 - clip.offsetMs,
+        toMs: place.endMs + 80 - clip.offsetMs,
+        heard: place.text,
+        intended,
+        sessionId: this.item.id,
+        source: 'correction'
+      })
+    return learned
+      ? `Remembered how you say “${intended}”.`
+      : 'Fixed. Its sound could not be found, so only the words were changed.'
+  }
+
+  /**
+   * Voice memory: check the speech recorded since the last check (with overlap, so a phrase split
+   * across checks is still found) for anything you taught it. Runs after typing, never before it.
+   */
+  private async watchVoice(gen: number): Promise<void> {
+    const memory = this.dependencies.voiceMemory
+    const prefs = this.settings?.voiceMemory
+    if (!memory || !prefs?.enabled || this.practiceText || !this.item || this.watching) return
+    const end = this.journalMs()
+    if (!memory.hasMemories() || end - this.watchedToMs < 600) return
+    this.watching = true
+    try {
+      await new Promise((resolve) => setImmediate(resolve))
+      const from = Math.max(0, this.watchedToMs - 1500)
+      const clip = this.excerpt(from, end, 3000, 0)
+      if (!clip || !this.valid(gen)) return
+      const hits = memory.detect(clip.pcm, from - clip.offsetMs, suggestThreshold(prefs.sensitivity))
+      this.watchedToMs = end
+      for (const hit of hits) {
+        const at = { ...hit, startMs: hit.startMs + clip.offsetMs, endMs: hit.endMs + clip.offsetMs }
+        if (this.handled.some((h) => h.memoryId === at.memoryId && Math.abs(h.startMs - at.startMs) < 400)) continue
+        this.handled.push({ memoryId: at.memoryId, startMs: at.startMs })
+        if (!this.valid(gen)) return
+        await this.placeDetection(gen, at)
+      }
+    } catch {
+      // Voice memory is an extra: a failed check never disturbs dictation.
+    } finally {
+      this.watching = false
+    }
+  }
+
+  /** Turn a detection on the audio clock into a suggestion or a fix in the session text. */
+  private async placeDetection(gen: number, hit: Detection): Promise<void> {
+    const memory = this.dependencies.voiceMemory!
+    const prefs = this.settings!.voiceMemory
+    const words = this.timedWords.filter((word) => {
+      const overlap = Math.min(word.endMs, hit.endMs) - Math.max(word.startMs, hit.startMs)
+      return overlap > 0.4 * Math.max(1, word.endMs - word.startMs)
+    })
+    const event = { at: Date.now(), intended: hit.intended, score: Math.round(hit.score * 1000) / 1000 }
+    if (!words.length) {
+      memory.record({ ...event, heard: '', outcome: 'unplaced' })
+      this.notice(`Sounds like you said “${hit.intended}”.`)
+      return
+    }
+    const heard = words.map((word) => word.text).join(' ')
+    const keys = words.map((word) => wordKey(word.text)).filter(Boolean)
+    if (keys.join(' ') === wordsOf(hit.intended).join(' ')) {
+      memory.record({ ...event, heard, outcome: 'already-right' })
+      return
+    }
+    const display = this.displayText()
+    const span = findWords(display, keys)
+    if (!span || wordsOf(display.slice(span.start, span.end)).join(' ') === wordsOf(hit.intended).join(' ')) {
+      memory.record({ ...event, heard, outcome: span ? 'already-right' : 'unplaced' })
+      return
+    }
+    if (!this.valid(gen)) return
+    if (prefs.mode === 'auto' && hit.score <= applyThreshold(prefs.sensitivity) && this.item) {
+      await this.editText(this.item.id, span.start, span.end, hit.intended, false)
+      memory.record({ ...event, heard, outcome: 'applied' }, hit.memoryId)
+      this.notice(`Heard your “${hit.intended}”.`)
+      return
+    }
+    const hint: MemoryHint = { ...span, text: display.slice(span.start, span.end), suggestion: hit.intended }
+    this.setState({ ...this.state, memoryHints: [...(this.state.memoryHints ?? []), hint].slice(-6) })
+    memory.record({ ...event, heard, outcome: 'suggested' }, hit.memoryId)
+    this.notice(`Sounds like “${hit.intended}”. Click it to fix.`)
+  }
+
   private stopLiveCues(): void {
     this.liveCuesAbort?.abort()
     this.liveCuesAbort = null
@@ -309,7 +472,8 @@ export class DictationController {
     sessionId: string,
     start: number,
     end: number,
-    replacement: string
+    replacement: string,
+    learn = true
   ): Promise<'typed' | 'saved' | 'kept-in-history'> {
     if (!this.busy || !this.item || this.item.id !== sessionId || this.practiceText || this.failed)
       throw new Error('This session is no longer open for edits.')
@@ -320,17 +484,24 @@ export class DictationController {
       throw new Error('That part of the text has changed. Try the edit again.')
     const next = normalizeTranscript(text.slice(0, start) + replacement.replace(/\s+/g, ' ') + text.slice(end))
     const from = text.slice(start, end).trim()
+    const learned = learn ? this.learnSound(from, replacement.trim(), wordsOf(text.slice(0, start)).length) : null
     this.typedText = next
     if (from || replacement.trim())
       this.item.edits = [...(this.item.edits ?? []), { from, to: replacement.trim() }].slice(-200)
     this.updateText()
-    if (!this.liveTyping()) return 'saved'
+    if (!this.liveTyping()) {
+      if (learned) this.notice(learned)
+      return 'saved'
+    }
     if (chunk) await this.enqueue(gen, () => this.typeLive(chunk))
     let result: 'typed' | 'kept-in-history' = 'typed'
     await this.enqueue(gen, async () => {
       result = await this.replaceTyped()
     })
-    return result
+    const outcome = result as 'typed' | 'kept-in-history'
+    if (learned)
+      this.notice(outcome === 'kept-in-history' ? `${learned} The app’s text changed since, so it was left alone.` : learned)
+    return outcome
   }
 
   async startPractice(intendedText: string): Promise<void> {
@@ -380,6 +551,10 @@ export class DictationController {
     this.segmentStartMs = 0
     this.journalBytes = 0
     this.stopLiveCues()
+    this.timedWords = []
+    this.segmentJournalMs = 0
+    this.watchedToMs = 0
+    this.handled = []
     this.finishHeld = false
     this.clearFinishTimer()
     this.workChain = Promise.resolve()
@@ -454,6 +629,7 @@ export class DictationController {
       this.setState({ ...this.state, message: 'Listening' })
       this.captureStarted = true
       this.lastLevelAt = Date.now()
+      this.segmentJournalMs = this.journalMs()
       this.command('start')
       this.watchdog = setInterval(() => {
         if (this.recording && Date.now() - this.lastLevelAt > 20_000)
@@ -536,7 +712,8 @@ export class DictationController {
       if (
         this.settings?.recoveryAudio ||
         this.settings?.keepAudioForTraining ||
-        (this.settings?.speechCues.enabled && this.settings.speechCues.automatic)
+        (this.settings?.speechCues.enabled && this.settings.speechCues.automatic) ||
+        this.settings?.voiceMemory.enabled
       ) {
         this.host.journal.append(this.item.id, bytes)
         this.journalBytes += bytes.length
@@ -801,6 +978,8 @@ export class DictationController {
   private transcribe(wavBase64: string, gen: number, startMs: number): Promise<string> {
     const settings = this.settings!
     const sessionId = this.item!.id
+    // The same utterance on the journal clock, fixed now: a later segment may start before it returns.
+    const journalOffset = startMs - this.segmentStartMs + this.segmentJournalMs
     return this.dependencies.transcribe({
       apiKey: settings.apiKey,
       model: settings.sttEngine === 'local' ? settings.localModel : settings.model,
@@ -812,6 +991,7 @@ export class DictationController {
       signal: this.requestAbort?.signal,
       requestWordTimings: settings.requestWordTimings,
       onWords: (words) => {
+        if (this.valid(gen)) this.addTimedWords(words, journalOffset)
         if (this.valid(gen) && this.item)
           this.item.words = [
             ...(this.item.words ?? []),
@@ -848,6 +1028,7 @@ export class DictationController {
     }
     if (this.item) {
       this.item.unconfirmedText = undefined
+      if (words?.length) this.addTimedWords(words, this.segmentJournalMs)
       if (words?.length)
         this.item.words = [
           ...(this.item.words ?? []),
@@ -865,6 +1046,7 @@ export class DictationController {
       const chunk = this.settles() ? this.settle(false) : ''
       this.updateText()
       if (chunk) void this.enqueue(gen, () => this.typeLive(chunk))
+      void this.watchVoice(gen)
     }
   }
 
@@ -875,6 +1057,7 @@ export class DictationController {
     const chunk = this.settles() ? this.settle(false) : ''
     this.updateText()
     await this.typeLive(chunk)
+    void this.watchVoice(gen)
   }
 
   private vocabulary(): VocabularyEntry[] {
