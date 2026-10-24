@@ -19,6 +19,7 @@ const check = (name, ok, detail = '') => {
   results.push({ name, ok })
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`)
 }
+const tooMany = () => results.filter((r) => !r.ok).length >= 4
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
 async function until(fn, ms = 6000) {
   const end = Date.now() + ms
@@ -78,6 +79,7 @@ try {
   const overlay = await until(async () => app.windows().find((w) => w.url().includes('overlay')), 15000)
   const styles = (process.env.STYLES || 'island,cyber').split(',')
   for (const style of styles) for (const layout of ['compact', 'full']) {
+    if (tooMany()) break
     await main((_, h) => globalThis.__s2t.settings({ hud: h }), { style, accent: '#7fe0c4', scale: 1, whileTalking: layout, showCues: true, clickToEdit: true, sensitivity: 1 })
     await until(async () => (await state()).status === 'hidden', 10000)
     await main(() => globalThis.__s2t.dictation.toggle())

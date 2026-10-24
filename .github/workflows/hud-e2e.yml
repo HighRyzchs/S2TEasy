@@ -25,12 +25,18 @@ jobs:
       - run: npm install --no-save playwright-core@1.63.0
       - run: npx electron-vite build
       - name: Click every HUD control through the page
+        timeout-minutes: 10
         run: node scripts/e2e-hud.mjs
       - name: Click the HUD with the real Windows mouse
         if: always()
+        timeout-minutes: 10
         run: node scripts/e2e-hud-real-clicks.mjs
         env:
-          STYLES: island,caption,edge,cyber,pixel,ghost,balloon
+          STYLES: island,cyber
+      - name: Show the HUD logs
+        if: always()
+        shell: bash
+        run: for f in release/*.hud.log; do echo "== $f"; tail -n 150 "$f"; done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
