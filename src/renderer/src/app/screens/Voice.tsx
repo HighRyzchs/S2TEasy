@@ -2,16 +2,18 @@ import { useEffect, useState } from 'react'
 import { useApp } from '../context'
 import { ExpressionTab } from '../voice/ExpressionTab'
 import { PracticeTab } from '../voice/PracticeTab'
+import { VoiceMemoryTab } from '../voice/VoiceMemoryTab'
 import { WordsTab } from '../voice/WordsTab'
 import '../voice/voice.css'
 
-type Tab = 'words' | 'practice' | 'expression'
+type Tab = 'words' | 'practice' | 'memory' | 'expression'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'words', label: 'Words' },
   { id: 'practice', label: 'Practice' },
+  { id: 'memory', label: 'Voice memory' },
   { id: 'expression', label: 'Expression' }
 ]
-const isTab = (value: string | undefined): value is Tab => value === 'words' || value === 'practice' || value === 'expression'
+const isTab = (value: string | undefined): value is Tab => TABS.some((tab) => tab.id === value)
 
 export function Voice() {
   const { target, settings } = useApp()
@@ -57,6 +59,7 @@ export function Voice() {
         />
       )}
       {tab === 'practice' && <PracticeTab requested={practice} onPick={setPractice} />}
+      {tab === 'memory' && <VoiceMemoryTab />}
       {tab === 'expression' && <ExpressionTab />}
     </div>
   )

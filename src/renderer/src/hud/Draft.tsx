@@ -19,6 +19,8 @@ type WordListProps = {
   field?: ReactNode
   /** Words just fixed by the person (while the remember pill is open). */
   marked?: Span | null
+  /** Voice memory (beta): words that sound like something you taught it. Clicking one offers the fix. */
+  hints?: Span[]
   /** Token index range under the pointer while dragging. */
   selection?: [number, number] | null
   /** In live typing, words after the typed part are still provisional. */
@@ -37,6 +39,7 @@ export function WordList({
   editRange = null,
   field,
   marked = null,
+  hints = [],
   selection = null,
   dimUntyped = false,
   highlightNewest = false
@@ -69,6 +72,7 @@ export function WordList({
     const classes = [
       dimUntyped && !token.typed ? 'prov' : '',
       inside(marked, token) ? 'edited fresh' : '',
+      hints.some((hint) => inside(hint, token)) ? 'hint' : '',
       selection && index >= selection[0] && index <= selection[1] ? 'sel' : '',
       highlightNewest && index === lastWord ? 'newest' : ''
     ]

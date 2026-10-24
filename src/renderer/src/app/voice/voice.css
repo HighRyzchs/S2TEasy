@@ -78,3 +78,14 @@ div.queue button.queue-chip[aria-pressed='true'] { background: var(--accent); bo
 .accent-sentence { font-size: 15px; }
 .accent-result { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .accent-swap { display: inline-flex; align-items: center; gap: 6px; background: var(--raised); border-radius: 8px; padding: 3px 4px 3px 9px; }
+.vm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.vm-list li { display: flex; flex-direction: column; gap: 8px; padding: 12px 0; border-top: 1px solid var(--divider); }
+.vm-list li:first-child { border-top: 0; padding-top: 0; }
+.vm-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.vm-row .hint { flex: 1 1 auto; }
+.vm-examples { display: flex; flex-wrap: wrap; gap: 6px; }
+.vm-x { background: none; border: 0; color: var(--faint); padding: 0 2px; font-size: 14px; line-height: 1; }
+.vm-x:hover { color: var(--danger); }
+.vm-log { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.vm-log th { text-align: left; font-weight: 500; color: var(--faint); font-size: 12px; padding: 4px 6px; }
+.vm-log td { padding: 7px 6px; border-top: 1px solid var(--divider); }

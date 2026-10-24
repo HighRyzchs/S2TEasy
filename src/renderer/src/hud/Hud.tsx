@@ -93,7 +93,7 @@ export function Hud({
 
   const [open, setOpen] = useState(defaultOpen)
   const [hovering, setHovering] = useState(false)
-  const [editing, setEditing] = useState<(Span & { text: string }) | null>(null)
+  const [editing, setEditing] = useState<(Span & { text: string; suggested?: string }) | null>(null)
   const [fix, setFix] = useState<Fix | null>(null)
   const [toast, setToast] = useState('')
   const toastTimer = useRef(0)
@@ -105,6 +105,15 @@ export function Hud({
     [state.partial, state.typedLength, state.liveCues, cues]
   )
   const words = wordCount(tokens)
+  // Voice memory suggestions, found again in the current text (it changes while you talk).
+  const hints = useMemo(
+    () =>
+      (state.memoryHints ?? []).flatMap((hint) => {
+        const span = relocateSpan(state.partial, hint)
+        return span ? [{ ...span, suggestion: hint.suggestion }] : []
+      }),
+    [state.memoryHints, state.partial]
+  )
   const cue = cues ? latestCue(tokens) : undefined
   const editor = phase === 'paused' || (phase === 'rec' && open)
   const editRange = useMemo(
@@ -172,10 +181,13 @@ export function Hud({
   }, [settings.sensitivity, still])
 
   const beginEdit = (first: number, last: number) => {
-    const range = spanRange(tokens, first, last)
-    if (!range) return
+    const picked = spanRange(tokens, first, last)
+    if (!picked) return
     setFix(null) // starting another fix answers the open prompt with "once"
-    setEditing({ ...range, text: state.partial.slice(range.start, range.end) })
+    // Clicking an underlined voice-memory match edits the whole match, prefilled with the fix.
+    const hint = hints.find((h) => picked.start < h.end && h.start < picked.end)
+    const range = hint ? { start: Math.min(hint.start, picked.start), end: Math.max(hint.end, picked.end) } : picked
+    setEditing({ ...range, text: state.partial.slice(range.start, range.end), suggested: hint?.suggestion })
   }
 
   const finishEdit = (value: string | null) => {
@@ -239,7 +251,7 @@ export function Hud({
 
   const field = editing && (
     <EditField
-      initial={editing.text}
+      initial={editing.suggested ?? editing.text}
       focusWindow={() => api.hudFocus(true)}
       onDone={finishEdit}
     />
@@ -252,6 +264,7 @@ export function Hud({
       editRange={editRange}
       field={field}
       marked={fixed}
+      hints={hints}
       dimUntyped={dim}
       highlightNewest={phase === 'rec'}
       follow={phase === 'rec' && !editing && !fix}
@@ -263,7 +276,7 @@ export function Hud({
   let body
   if (phase === 'rec' && !editor) {
     const text = (
-      <WordList tokens={tokens} dimUntyped={dim} highlightNewest />
+      <WordList tokens={tokens} dimUntyped={dim} hints={hints} highlightNewest />
     )
     const listening = <span className="hud-empty">Listening…</span>
     body = (

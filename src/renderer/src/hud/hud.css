@@ -146,6 +146,7 @@
 .hud-w:hover { background: rgba(255,255,255,.1); }
 .hud-w.prov, .hud-wd.prov { opacity: .62; }
 .hud-w.edited { color: var(--mint); text-decoration: underline dotted var(--mint); text-underline-offset: 4px; }
+.hud-w.hint, .hud-wd.hint { text-decoration: underline wavy var(--mint); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
 .hud-edit { font: inherit; color: var(--hud-fg); background: rgba(255,255,255,.12); border: 1px solid var(--mint); border-radius: 5px; padding: 0 4px; outline: none; }
 .hud-foot { display: flex; align-items: center; gap: 10px; font-size: 11.5px; color: var(--hud-dim); }
 .hud-foot .hud-timer { flex: 1; margin: 0; }
