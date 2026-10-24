@@ -63,10 +63,19 @@ const click = (x, y, action = 'click') => {
 
 /** Screen point at the centre of the first element matching `selector` in the overlay. */
 async function screenPoint(overlay, selector) {
-  const rect = await overlay.locator(selector).first().evaluate((el) => {
-    const r = el.getBoundingClientRect()
-    return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
-  })
+  const rect = await overlay
+    .locator(selector)
+    .first()
+    .evaluate(
+      (el) => {
+        const r = el.getBoundingClientRect()
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+      },
+      undefined,
+      { timeout: 5000 }
+    )
+    .catch(() => null)
+  if (!rect) throw new Error(`Nothing on the HUD matches ${selector}`)
   const { bounds, scale } = await main(({ screen }) => ({
     bounds: globalThis.__s2t.overlay().getBounds(),
     scale: screen.getPrimaryDisplay().scaleFactor
@@ -95,7 +104,7 @@ try {
 
     // Real click on the text opens the editor, then on a word opens the edit box.
     const target = (await state()).partial.split(' ')[3]
-    const textPoint = await screenPoint(overlay, layout === 'full' ? `.hud-wd:text-is("${target}")` : '.hud-roll')
+    const textPoint = await screenPoint(overlay, `.hud-wd:text-is("${target}")`)
     click(textPoint.x, textPoint.y)
     await wait(400)
     check(`${style}/${layout}: real click on the text opens the editor`, (await overlay.locator('.hud-w').count()) > 0)
@@ -156,7 +165,7 @@ try {
   const log = await main(() => globalThis.__s2t.hudLog()).catch(() => '')
   require('node:fs').mkdirSync('release', { recursive: true })
   require('node:fs').writeFileSync(`release/${process.argv[1].split(/[\\/]/).pop()}.hud.log`, log)
-  await app.close().catch(() => undefined)
+  await Promise.race([app.close().catch(() => undefined), wait(10000)])
   rmSync(userData, { recursive: true, force: true })
 }
 const failed = results.filter((r) => !r.ok).length
