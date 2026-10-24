@@ -1,5 +1,7 @@
 # Architecture
 
+**Proposed personalization architecture:** [Personal Acoustic Memory](PERSONAL_ACOUSTIC_MEMORY.md) explains how an ordinary correction becomes a portable sound-to-word memory, with diagrams, source integration points, user experience, and evaluation gates. This is future work, distinct from the current implementation below.
+
 S2Teasy is Electron + React + TypeScript. The Electron main process owns credentials, network requests, storage, shortcut registration, and Windows text insertion. A hidden renderer captures the microphone. The main window and recording HUD receive state through a typed preload bridge with context isolation and sandboxing.
 
 ## Capture and processing

@@ -2,6 +2,8 @@
 
 **Status:** design notes, not shipped. Nothing here is implemented beyond what [Personal words and expressive speech](PERSONAL_SPEECH_DESIGN.md) and the v1.9.0 release notes describe. Numbers are targets to measure, not results.
 
+**Detailed architecture:** [Personal Acoustic Memory](PERSONAL_ACOUSTIC_MEMORY.md) develops and supersedes the decision, evidence, streaming, and retention choices in these initial notes. One correction activates acoustic retrieval immediately when audio is usable; the user does not need mandatory drills.
+
 ## The problem
 
 Speech engines are trained on everyone, so they are good at everyone's words and bad at yours. Your name, your friends, your product, your slang and the way your accent bends certain sounds come out as whatever common words sound closest. "Ryzchs" becomes "risks", "S2Teasy" becomes "as two teasy", and for some speakers "bite" becomes "bike".
@@ -12,7 +14,7 @@ S2Teasy already has the ingredient those approaches lack. Every time you click a
 
 ## What is new here
 
-The individual techniques are well established (see [Background](#background)): template matching with DTW, sound-alike matching, constrained model checks and LoRA adapters. What S2Teasy puts together, as far as we know for the first time in an open-source dictation app:
+The individual techniques are well established (see [Background](#background)): template matching with DTW, sound-alike matching, constrained model checks and LoRA adapters. The combination S2Teasy proposes to evaluate in an open-source dictation app (novelty is not yet established):
 
 - **Corrections are the training data.** Fixing a word on the HUD while you talk records a labelled example of your voice, with no separate enrolment session.
 - **The learning sits outside the engine.** The voice pack works with cloud engines that cannot be trained, local models and phone recognizers alike, and moves with you between them.
@@ -83,7 +85,7 @@ A word's **template set** is its three to eight best examples plus a few **negat
 
 - **HUD fixes.** With word timings from the engine, the moment of the fixed words is known; S2Teasy cuts that span from the session audio with a little padding, extracts features and adds them to the word's templates. Today a fix only stores text and an optional clip reference (`WordClip` in `src/shared/vocabulary.ts`).
 - **Practice takes**, where the target is known in advance.
-- **Confirmations.** When the pack replaces a word and you leave it, that is weak positive evidence; when you undo it, that moment becomes a negative.
+- **Confirmations.** Explicit user confirmations provide labels. Leaving a replacement unchanged is unreviewed, not training truth. An undo rejects that candidate but does not identify another word unless the user supplies it.
 
 If the engine gives no word timings, S2Teasy does not invent boundaries. Only layer 2 applies.
 
@@ -93,26 +95,26 @@ For a candidate moment, S2Teasy extracts the same features and aligns them again
 
 Thresholds are set per word from your own examples by leave-one-out: each template is scored against the others, and the threshold is placed to accept them while rejecting the negatives. Words with too few examples stay in "suggest only" mode until they have enough.
 
-Cost: a template comparison is a few thousand multiply-adds per frame pair. A sentence with two candidate moments and twenty personal words is well under a millisecond of work on a phone. Only candidate moments are checked (spans that layer 2 flagged, or that sit where a personal word is plausible), never the whole stream against every template.
+Cost: a template comparison is a few thousand multiply-adds per frame pair. Runtime on phones must be benchmarked for realistic span lengths, feature dimensions, and template counts; no sub-millisecond result has been established. Bounded acoustic retrieval and textual retrieval both propose candidate spans, followed by selective verification. Text similarity must not be the sole gate into acoustic matching.
 
 ## Layer 4: the referee
 
 Some moments stay ambiguous: the text and the audio point in different directions, or the word has few examples. Those, and only those, go to a referee. Every referee works under the same contract:
 
 - it gets **exactly two choices**, the heard word and your word, plus the surrounding sentence as data, not instructions;
-- it may only **choose one of the two**. It cannot write, add or reword text;
-- its answer is validated locally like every other edit, and recorded as evidence for that word;
-- it is optional and off by default. With no referee, or none available, an unsure moment is left as heard and underlined on the HUD for you to decide. Accuracy never depends on a referee; it only improves the gray zone.
+- it returns **KEEP_HEARD, USE_PERSONAL, or UNSURE**. It cannot write, add or reword text;
+- its answer is validated locally and recorded as a model observation; only user-confirmed labels become trusted acoustic examples;
+- it is optional and off by default. With no referee, or none available, an unsure moment is left as heard and underlined on the HUD for you to decide. The system works without a referee; any accuracy improvement from one must be measured.
 
 There are two kinds, and they answer different questions.
 
 ### Local referee: a tiny LLM, offline
 
-A small instruction-tuned language model running on the device, with no network. Candidates to evaluate include 0.5 to 1.5 billion parameter models (for example Qwen2.5 0.5B/1.5B Instruct, Llama 3.2 1B Instruct, Gemma 3 1B), quantised to 4 bits (roughly 0.4 to 1 GB) and run through llama.cpp or ONNX Runtime. Output is constrained by a grammar to exactly one of the two choices, so it cannot produce anything else.
+A small instruction-tuned language model running on the device, with no network. Candidates to evaluate include 0.5 to 1.5 billion parameter models (for example Qwen2.5 0.5B/1.5B Instruct, Llama 3.2 1B Instruct, Gemma 3 1B), quantised to 4 bits (roughly 0.4 to 1 GB) and run through llama.cpp or ONNX Runtime. Output is constrained to a validated choice or abstention. Constrained syntax does not establish correctness.
 
 It **cannot hear**. It decides from the sentence alone, which makes it right for context cases ("I'll grab a quick bite" vs "I'll ride my bike") and wrong for sound cases, where the sentence fits both words and only the audio can tell ("ask Ryzchs" vs "ask risks"). The decision step therefore only sends it moments where the text context differs between the two choices; sound cases skip it and go to the cloud referee or the HUD.
 
-It costs nothing per use, keeps the sentence on the device and works on a plane. On weak hardware it is optional: a 0.5B model answers a two-choice question in well under a second on a modern CPU, but very old machines and low-end phones may skip it.
+It costs nothing per use, keeps the sentence on the device and works on a plane. On weak hardware it is optional: latency and RAM must be measured for each runtime and device; old machines and low-end phones may skip it.
 
 ### Cloud referee: a small audio model
 
