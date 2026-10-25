@@ -109,7 +109,7 @@ function mockApi(): Window['s2t'] {
     getState: async () => ({
       settings: memory.settings,
       history: memory.history,
-      version: '1.10.0-beta.7',
+      version: '1.10.0-beta.8',
       update: memory.update,
       usage: {
         warning: '',

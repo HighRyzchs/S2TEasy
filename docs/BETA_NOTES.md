@@ -1,3 +1,25 @@
+## Voice memory beta — v1.10.0-beta.8
+
+**The HUD's clicks, rebuilt from the ground up.** Earlier betas made the HUD's big transparent window let clicks through, then tried to guess when the pointer was over the HUD so it could take them back. That guess depended on hover, display scaling and timing, and kept failing on real machines. Now the window's own shape is the HUD: Windows itself sends a mouse click, a finger tap or a pen press on the HUD to the HUD, and everywhere else to the app underneath. Nothing is guessed anymore.
+
+Also fixed:
+- **Clicking text while you talk:** new words scrolled the text under your pointer, so the word you aimed at moved before you let go. The text now holds still while the mouse is over it, and a press that ends on a word picks that word.
+- **After an edit, the keyboard went to the wrong window** (Windows hands it to the next window in line when the HUD lets go). It now goes straight back to the app you are dictating into.
+- **Touch and pen:** dragging across words works, and the editor stays open after a tap (there is no hover to keep it open).
+- The cyberpunk HUD's "VOICE.LINK" tab is no longer cut off.
+
+Checked on a Windows test machine with the real mouse, keyboard and finger touch while another app is in front, at 100% and 150% display scaling, three HUD styles, one-line and expanded: clicking the text, editing words (twice in a row), dragging across words, Copy, Pause, editing while paused, Done, and two quick taps on Pause. 259 of 259 checks passed, and none of the typing leaked into the app in front.
+
+**New: Speech tidy.** It takes the stumbles out of what you said and keeps your own words. It does not reword or polish. Settings → **Speech tidy** has a switch for each kind, and a box to try it on your own sentences:
+- **Stutters:** "I I want", "I, I want", "th- the", "b-b-but", "to the, to the store".
+- **Fillers:** um, uh, erm.
+- **Corrections:** "the store, I mean the mall" becomes "the mall". It also handles "sorry", "no wait", "scratch that", and a short start you say again ("I want to, I want to go").
+- **Pause breaks:** a full stop and capital the engine put in where you paused mid-thought. "I went to the. Store" becomes "I went to the store". Names keep their capitals.
+
+It runs by itself on every take: piece by piece while live typing, and over the whole take at the end. The HUD's editor (click the words, or pause) also has a **Tidy** button that rewrites the take in your app.
+
+---
+
 ## Voice memory beta — v1.10.0-beta.7
 
 **Fixed in beta 7:** on some Windows setups (display scaling, pen or touch) a click on the HUD went to the app underneath, so Done, Pause, Copy and edits did nothing. When a press lands on the HUD while its window was still letting clicks through, S2Teasy now plays that press to the HUD itself. Checked on a Windows test machine with the real mouse, including a run where the pointer is never reported over the HUD.
