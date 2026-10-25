@@ -204,13 +204,12 @@ async function launch(extraArgs = []) {
   })
   const main = (fn, arg) => app.evaluate(fn, arg)
   const overlay = await until(async () => app.windows().find((p) => p.url().includes('overlay')), 15000)
-  // Without a window manager (xvfb) nothing keeps the HUD above S2Teasy's own window; on Windows it is pinned.
-  if (!isWin) {
-    await wait(1500)
-    await main(({ BrowserWindow }) => {
-      for (const win of BrowserWindow.getAllWindows()) if (win !== globalThis.__s2t.overlay()) win.hide()
-    })
-  }
+  // S2Teasy's own window out of the way (in use it sits in the tray), so the app being dictated into
+  // is what is in front. On xvfb nothing would keep the HUD above it either.
+  await wait(1500)
+  await main(({ BrowserWindow }) => {
+    for (const win of BrowserWindow.getAllWindows()) if (win !== globalThis.__s2t.overlay()) win.hide()
+  })
   const hwnd = isWin
     ? BigInt(await main(() => globalThis.__s2t.overlay().getNativeWindowHandle().readBigUInt64LE(0).toString()))
     : null
@@ -351,7 +350,10 @@ async function session(ctx, label, hud, how = 'mouse') {
   })
   await until(async () => (await state()).status === 'hidden', 10000)
   // Dictating into the app in front, as in real use.
-  if (isWin) input.click(300, 300)
+  if (isWin) {
+    input.click(300, 300)
+    check(`${label}: the app being dictated into is in front`, !!(await until(() => BigInt(w.GetForegroundWindow()) === targetWindow(), 2000)))
+  }
   await main(() => globalThis.__s2t.dictation.toggle())
   await until(async () => (await words()).length >= 6, 8000)
   await wait(500)
