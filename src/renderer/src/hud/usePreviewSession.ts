@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { defaultTidySettings, tidySpeech } from '@shared/tidy'
 import { defaultSettings, type OverlayState } from '@shared/types'
 import type { HudApi } from './types'
 import { replaceRange } from './tokens'
@@ -75,6 +76,10 @@ export function usePreviewSession(mode: PreviewMode, cues: boolean) {
     () => ({
       hudEdit: async (_id, start, end, text) => {
         updateRef.current((s) => ({ ...s, partial: replaceRange(s.partial, { start, end }, text) }))
+        return 'typed'
+      },
+      hudTidy: async () => {
+        updateRef.current((s) => ({ ...s, partial: tidySpeech(s.partial, defaultTidySettings()).text }))
         return 'typed'
       },
       hudPause: async () =>

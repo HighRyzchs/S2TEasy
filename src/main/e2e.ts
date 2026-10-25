@@ -1,3 +1,4 @@
+import { withTrailingSpace } from '../shared/transcript'
 import { TextInjector } from './inject'
 import type { ListenOptions, RouterTranscript } from './router-audio'
 
@@ -9,8 +10,15 @@ import type { ListenOptions, RouterTranscript } from './router-audio'
 export const e2eEnabled = process.env.S2T_E2E === '1'
 
 const SCRIPT = ['so I talked to risks today', 'and Gigi no read was the call', 'see you at nine tonight then']
+let script = SCRIPT
 
 let segment = 0
+
+/** What the scripted engine says next (tests of what happens to the words); no lines restores the default. */
+export function setScript(lines: string[]): void {
+  script = lines.length ? lines : SCRIPT
+  segment = 0
+}
 
 type Handlers = { onTranscript: (event: RouterTranscript) => void; onError: (message: string) => void }
 
@@ -19,7 +27,7 @@ export class FakeStream {
   private timers: NodeJS.Timeout[] = []
   private handlers: Handlers | null = null
   private finalSent = false
-  private line = SCRIPT[segment++ % SCRIPT.length]!
+  private line = script[segment++ % script.length]!
   private words = this.line.split(' ')
 
   async connect(_options: ListenOptions, handlers: Handlers): Promise<void> {
@@ -73,7 +81,7 @@ export class FakeInjector {
     this.typed += text
   }
   async pasteBlock(text: string): Promise<void> {
-    this.typed += text
+    this.typed += withTrailingSpace(text)
   }
   async replaceTail(erase: number, text: string): Promise<void> {
     this.typed = this.typed.slice(0, Math.max(0, this.typed.length - erase)) + text

@@ -30,6 +30,8 @@ export type S2TApi = {
     end: number,
     text: string
   ) => Promise<'typed' | 'saved' | 'kept-in-history'>
+  /** Take the stumbles out of everything said so far (Speech tidy). */
+  hudTidy: (sessionId: string) => Promise<'typed' | 'saved' | 'kept-in-history' | 'unchanged'>
   hudPause: () => Promise<void>
   hudFinish: () => Promise<void>
   hudHold: (held: boolean) => void
@@ -114,6 +116,7 @@ const api: S2TApi = {
   appIcon: (exe) => ipcRenderer.invoke(IPC.APP_ICON, exe),
   hudEdit: (sessionId, start, end, text) =>
     ipcRenderer.invoke(IPC.HUD_EDIT, sessionId, start, end, text),
+  hudTidy: (sessionId) => ipcRenderer.invoke(IPC.HUD_TIDY, sessionId),
   hudPause: () => ipcRenderer.invoke(IPC.HUD_PAUSE),
   hudFinish: () => ipcRenderer.invoke(IPC.HUD_FINISH),
   hudHold: (held) => ipcRenderer.send(IPC.HUD_HOLD, held),

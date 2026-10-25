@@ -304,6 +304,17 @@ export function Hud({
   }
 
   const copy = () => api.copyHistory(stateRef.current.partial)
+  // Speech tidy: take the stumbles out of everything said so far, here and in the app.
+  const tidyUp = () => {
+    setFix(null)
+    const id = stateRef.current.sessionId
+    if (id) void api.hudTidy(id).catch(() => showToast('Could not tidy that'))
+  }
+  const tidyButton = (
+    <button type="button" className="hud-btn" data-a="tidy" title="Take out stutters, fillers and restarts" onClick={tidyUp}>
+      Tidy
+    </button>
+  )
   const toggleCues = () => void api.hudCues(!cues).catch(() => undefined)
   const block =
     settings.whileTalking === 'full' || settings.style === 'caption' || settings.style === 'ghost'
@@ -378,6 +389,8 @@ export function Hud({
           {count}
           {cueSwitch}
           <CopyButton onCopy={copy} />
+          {/* The one-line strip needs its width for the words; Tidy is in the editor it opens. */}
+          {block && tokens.length > 0 && tidyButton}
           <button type="button" className="hud-btn" data-a="pause" onClick={pauseOrDone}>
             Pause
           </button>
@@ -420,6 +433,7 @@ export function Hud({
               Discard
             </button>
           )}
+          {tokens.length > 0 && tidyButton}
           <button
             type="button"
             className="hud-btn"

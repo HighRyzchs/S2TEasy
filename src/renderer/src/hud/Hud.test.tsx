@@ -11,6 +11,7 @@ const TEXT = 'Yeah, I talked to Ryzchs about the stream. [excited] He wants to d
 
 const api = (): { [K in keyof HudApi]: ReturnType<typeof vi.fn> } => ({
   hudEdit: vi.fn(async () => 'typed'),
+  hudTidy: vi.fn(async () => 'typed'),
   hudPause: vi.fn(async () => undefined),
   hudFinish: vi.fn(async () => undefined),
   hudHold: vi.fn(),

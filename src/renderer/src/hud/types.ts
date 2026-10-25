@@ -2,6 +2,7 @@
 export type HudApi = Pick<
   Window['s2t'],
   | 'hudEdit'
+  | 'hudTidy'
   | 'hudPause'
   | 'hudFinish'
   | 'hudHold'

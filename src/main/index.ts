@@ -1,7 +1,7 @@
 import { analyzeAutomaticCues } from './automatic-cues'
 import { normalizeOutputPreferences, renderOutput, type OutputPreferences } from '../shared/output'
 import { bringToFront, copyTranscript, foregroundProgram } from './inject'
-import { e2eEnabled, fakeInjector, FakeStream } from './e2e'
+import { e2eEnabled, fakeInjector, FakeStream, setScript } from './e2e'
 import { UsageStore } from './usage-store'
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen, session, protocol } from 'electron'
 import { VoiceMemoryService } from './voice-memory/service'
@@ -391,6 +391,7 @@ async function setup(): Promise<void> {
         hudRects: () => hudRects,
         hudLog: () => hudLog.join('\n'),
         typed: () => fakeInjector.typed,
+        script: setScript,
         history: () => store.getHistory(),
         settings: (patch: Partial<AppSettings>) => {
           store.saveSettings(patch)
@@ -663,6 +664,10 @@ async function setup(): Promise<void> {
     if (typeof sessionId !== 'string' || typeof text !== 'string' || text.length > 400)
       throw new Error('That edit could not be applied.')
     return dictation.editText(sessionId, start, end, text)
+  })
+  ipcMain.handle(IPC.HUD_TIDY, (_event, sessionId: string) => {
+    logHud('HUD tidy')
+    return dictation.tidyNow(sessionId)
   })
   ipcMain.handle(IPC.HUD_PAUSE, () => {
     logHud(`HUD pause (paused=${dictation.isPaused()}, status=${overlayState.status})`)

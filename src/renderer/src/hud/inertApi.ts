@@ -4,6 +4,7 @@ import type { HudApi } from './types'
 /** A HUD api that does nothing, for frozen thumbnails that never touch the main process. */
 export const inertApi: HudApi = {
   hudEdit: async () => 'typed',
+  hudTidy: async () => 'unchanged',
   hudPause: async () => undefined,
   hudFinish: async () => undefined,
   hudHold: () => undefined,

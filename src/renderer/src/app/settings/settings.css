@@ -218,3 +218,25 @@
     flex-wrap: wrap;
   }
 }
+
+/* Speech tidy */
+.set-tidy-try {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+.set-tidy-try textarea {
+  width: 100%;
+  resize: vertical;
+}
+.set-tidy-out {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+}
+.set-tidy-out p {
+  margin: 0;
+  line-height: 1.5;
+}

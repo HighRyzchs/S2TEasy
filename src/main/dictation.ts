@@ -38,6 +38,7 @@ import { accentSlots, type AccentSlot } from '../shared/accent-check'
 import { applyThreshold, suggestThreshold, type Detection } from './voice-memory/memory'
 import type { VoiceMemoryService } from './voice-memory/service'
 import type { MemoryHint } from '../shared/voice-memory'
+import { describeTidy, tidyNext, tidySpeech } from '../shared/tidy'
 
 type Host = {
   overlay: { showInactive: () => void; hide: () => void; isDestroyed: () => boolean }
@@ -832,6 +833,8 @@ export class DictationController {
       this.updateText()
       if (chunk) await this.enqueue(gen, () => this.typeLive(chunk))
       if (!this.valid(gen)) return
+      if (this.settings.tidy.auto) await this.applyTidy(gen, false)
+      if (!this.valid(gen) || !this.item) return
     }
     if (this.item.unconfirmedText?.trim()) {
       this.fail(
@@ -1126,12 +1129,59 @@ export class DictationController {
     const hold = final ? 0 : heldTailWords(pending.join(' '), this.vocabulary())
     const take = pending.length - hold
     if (take <= 0) return ''
-    const { text, hits } = applyVocabularyDetailed(pending.slice(0, take).join(' '), this.vocabulary())
+    const applied = applyVocabularyDetailed(pending.slice(0, take).join(' '), this.vocabulary())
+    const hits = applied.hits
+    // Speech tidy, piece by piece: what is typed can't easily be taken back, the end of the take
+    // tidies the whole text once more.
+    const text = this.settings?.tidy.auto
+      ? tidyNext(this.typedText, applied.text, this.settings.tidy, this.tidyNames()).text
+      : applied.text
     this.liveCues?.phrase(this.typedText.split(/\s+/).filter(Boolean).length, this.journalMs())
     this.typedRawWords += take
     this.typedText = joinUtterances([this.typedText, text])
     this.hits.push(...hits)
     return text
+  }
+
+  /** Words that keep their capital when tidy lowers one after a pause. */
+  private tidyNames(): string[] {
+    return this.vocabulary()
+      .filter((entry) => entry.enabled)
+      .flatMap((entry) => entry.meant.split(/\s+/))
+  }
+
+  /** Tidy the whole take's text (and the app's copy when live typing still can). */
+  private async applyTidy(gen: number, asked: boolean): Promise<'typed' | 'saved' | 'kept-in-history' | 'unchanged'> {
+    if (!this.settings || !this.item) return 'unchanged'
+    const { text, changes } = tidySpeech(this.typedText, this.settings.tidy, this.tidyNames())
+    if (!changes.length || text === this.typedText) {
+      if (asked) this.notice('Nothing to tidy.')
+      return 'unchanged'
+    }
+    this.typedText = text
+    this.updateText()
+    const done = `Tidied: ${describeTidy(changes)}.`
+    if (!this.liveTyping()) {
+      if (asked) this.notice(done)
+      return 'saved'
+    }
+    let result: 'typed' | 'kept-in-history' = 'typed'
+    await this.enqueue(gen, async () => {
+      result = await this.replaceTyped()
+    })
+    if ((result as string) === 'typed') this.notice(done)
+    return result
+  }
+
+  /** The HUD's Tidy button: tidy everything said so far, in the HUD and in the app. */
+  async tidyNow(sessionId: string): Promise<'typed' | 'saved' | 'kept-in-history' | 'unchanged'> {
+    if (!this.busy || !this.item || this.item.id !== sessionId || this.practiceText || this.failed)
+      throw new Error('This session is no longer open for edits.')
+    const gen = this.generation
+    const chunk = this.settle(true)
+    this.updateText()
+    if (chunk) await this.enqueue(gen, () => this.typeLive(chunk))
+    return this.applyTidy(gen, true)
   }
 
   private async typeLive(text: string): Promise<void> {

@@ -8,7 +8,7 @@ const tops = (values: Partial<Record<SectionId, number>>) =>
   >
 
 it('keeps the section ids other screens link to', () => {
-  expect(SECTIONS.map((s) => s.id)).toEqual(['engine', 'mic', 'shortcut', 'privacy', 'app'])
+  expect(SECTIONS.map((s) => s.id)).toEqual(['engine', 'mic', 'shortcut', 'tidy', 'privacy', 'app'])
 })
 
 it('resolves a navigation target to a known section only', () => {
