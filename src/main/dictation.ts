@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 import { appFromPath, cuesForApp } from '../shared/apps'
 import { startError } from '../shared/engine'
 import {
+  droppedTail,
   joinUtterances,
   normalizeTranscript,
   streamingAdvance,
@@ -121,6 +122,9 @@ export class DictationController {
   private hits: VocabularyHit[] = []
   // Live mode: exactly what S2Teasy has typed into the target app, and when it last typed.
   private targetText = ''
+  // The live preview's latest full text, and words it heard at the end that the final left out.
+  private lastHeard = ''
+  private heardTail = ''
   private lastTypedAt = 0
   // Pause/resume: a session is one or more recorded segments in the same History item.
   private pausing = false
@@ -564,6 +568,8 @@ export class DictationController {
     this.typedRawWords = 0
     this.hits = []
     this.targetText = ''
+    this.lastHeard = ''
+    this.heardTail = ''
     this.lastTypedAt = 0
     this.pausing = false
     this.paused = false
@@ -829,6 +835,9 @@ export class DictationController {
   /** Everything after the last audio is in: type held words, analyze, insert (draft mode), save. */
   private async complete(gen: number): Promise<void> {
     if (!this.valid(gen) || !this.item || !this.settings) return
+    // The end of the take: words the preview heard but the engine never finalised (often a soft,
+    // trailing last word) are kept rather than lost or sending the take to review.
+    this.rescueTail()
     // Type any words held back as a possible phrase start; no more speech can complete them.
     if (!this.practiceText) {
       const chunk = this.settle(true)
@@ -1054,6 +1063,10 @@ export class DictationController {
     if (!this.valid(gen)) return
     const committed = joinUtterances(this.liveParts)
     if (partial) {
+      const heard = streamingPartial(committed, text)
+      this.lastHeard = heard
+      // New words are being heard: an earlier dropped tail is part of what comes next.
+      if (heard.length > committed.length) this.heardTail = ''
       if (this.item) {
         this.item.unconfirmedText = streamingAdvance(
           committed,
@@ -1079,8 +1092,11 @@ export class DictationController {
     }
     const { delta } = streamingAdvance(committed, text)
     // Update committed text synchronously; consecutive WebSocket finals must see the latest prefix.
+    if (delta) this.liveParts.push(delta)
+    // A soft last word can be in the preview and missing from the final; keep it in case nothing follows.
+    this.heardTail = droppedTail(this.lastHeard, joinUtterances(this.liveParts))
+    this.lastHeard = ''
     if (delta) {
-      this.liveParts.push(delta)
       const chunk = this.settles() ? this.settle(false) : ''
       this.updateText()
       if (chunk) void this.enqueue(gen, () => this.typeLive(chunk))
@@ -1145,6 +1161,17 @@ export class DictationController {
     this.typedText = joinUtterances([this.typedText, text])
     this.hits.push(...hits)
     return text
+  }
+
+  private rescueTail(): void {
+    if (!this.item) return
+    const unconfirmed = normalizeTranscript(this.item.unconfirmedText ?? '')
+    const tail = unconfirmed && unconfirmed.split(' ').length <= 4 ? unconfirmed : this.heardTail
+    this.heardTail = ''
+    if (!tail) return
+    this.item.unconfirmedText = undefined
+    this.liveParts.push(tail)
+    this.updateText()
   }
 
   /** Words that keep their capital when tidy lowers one after a pause. */

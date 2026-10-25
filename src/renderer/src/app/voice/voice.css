@@ -178,3 +178,19 @@ div.queue button.queue-chip[aria-pressed='true'] { background: var(--accent); bo
     padding-left: 0;
   }
 }
+.habit-list {
+  padding-left: 0;
+}
+.cmd-chip.suggest {
+  font: inherit;
+  font-size: 13px;
+  padding: 3px 10px;
+  color: var(--dim);
+  background: none;
+  border-style: dashed;
+  cursor: pointer;
+}
+.cmd-chip.suggest:hover {
+  color: var(--fg);
+  border-color: var(--accent-line);
+}

@@ -1,6 +1,6 @@
 {
   "name": "s2teasy",
-  "version": "1.10.0-beta.9",
+  "version": "1.10.0-beta.10",
   "description": "Open source Windows dictation with live text, recoverable sessions, and a vocabulary you control.",
   "main": "./out/main/index.js",
   "author": "S2Teasy",

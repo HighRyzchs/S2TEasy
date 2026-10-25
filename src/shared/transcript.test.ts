@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  droppedTail,
   joinUtterances,
   looksLikeApiKey,
   normalizeTranscript,
@@ -57,5 +58,18 @@ describe('transcript', () => {
   it('adds a trailing space so live inserts do not glue sentences', () => {
     expect(withTrailingSpace('Hello.')).toBe('Hello. ')
     expect(withTrailingSpace('Hello ')).toBe('Hello ')
+  })
+})
+
+describe('droppedTail', () => {
+  it('finds a soft last word the final left out', () => {
+    expect(droppedTail('something I wanna see done', 'something I wanna see')).toBe('done')
+    expect(droppedTail('see you at nine tonight', 'See you at nine.')).toBe('tonight')
+  })
+  it('is empty when the final has everything, changed words, or a long tail', () => {
+    expect(droppedTail('see you at nine', 'see you at nine.')).toBe('')
+    expect(droppedTail('see you at mine tonight', 'see you at nine')).toBe('')
+    expect(droppedTail('a b c d e f', 'a b')).toBe('')
+    expect(droppedTail('hello', '')).toBe('')
   })
 })

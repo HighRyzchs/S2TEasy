@@ -84,3 +84,20 @@ export function maskKey(key: string): string {
   if (trimmed.length < 12) return trimmed ? '••••' : ''
   return `${trimmed.slice(0, 7)}…${trimmed.slice(-4)}`
 }
+
+const wordKey = (w: string) => w.toLocaleLowerCase().replace(/[^\p{L}\p{N}']+/gu, '')
+
+/**
+ * The words the live preview heard at the very end that the engine's final text left out: a soft,
+ * trailing last word is often in the last interim result and missing from the final. Only a short
+ * tail (1–3 words) right after an exact match of everything before it counts.
+ */
+export function droppedTail(heard: string, committed: string): string {
+  const said = normalizeTranscript(heard).split(' ').filter(Boolean)
+  const kept = normalizeTranscript(committed).split(' ').filter(Boolean)
+  const extra = said.length - kept.length
+  if (extra < 1 || extra > 3 || !kept.length) return ''
+  if (!kept.every((w, i) => wordKey(w) === wordKey(said[i]))) return ''
+  const tail = said.slice(kept.length)
+  return tail.some((w) => wordKey(w)) ? tail.join(' ') : ''
+}

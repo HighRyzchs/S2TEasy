@@ -356,6 +356,41 @@ it('finishes into review without inserting late text into the now-focused editor
   expect(t.paste).not.toHaveBeenCalled()
 })
 
+it('keeps the last few words the preview heard when the engine never finalised them, or a soft last word it dropped', async () => {
+  const t = setup({ sttEngine: 'router-audio', routerAudioKey: 'stream-key' })
+  let handlers!: Parameters<RouterAudioClient['connect']>[1]
+  const client = {
+    connect: vi.fn(async (_options, callbacks) => {
+      handlers = callbacks
+    }),
+    sendPcm: vi.fn(),
+    close: vi.fn(),
+    finish: vi.fn().mockResolvedValue(undefined)
+  }
+  const controller = new DictationController(t.host, {
+    injector: { captureTarget: vi.fn(), paste: t.paste, pasteBlock: t.paste },
+    createStream: () => client as unknown as RouterAudioClient
+  })
+  await controller.start()
+  let gen = controller.currentGeneration()
+  controller.onPcm(new Uint8Array([1, 2, 3, 4]), gen)
+  handlers.onTranscript({ kind: 'transcript', text: 'hello', isPartial: false })
+  handlers.onTranscript({ kind: 'transcript', text: 'hello last words', isPartial: true })
+  controller.stop()
+  await controller.onFinished('', '', 1200, gen)
+  expect(t.history[0]).toMatchObject({ status: 'complete' })
+  expect(t.history[0].text).toMatch(/hello last words/i)
+
+  await controller.start()
+  gen = controller.currentGeneration()
+  controller.onPcm(new Uint8Array([1, 2, 3, 4]), gen)
+  handlers.onTranscript({ kind: 'transcript', text: 'something I wanna see done', isPartial: true })
+  handlers.onTranscript({ kind: 'transcript', text: 'something I wanna see', isPartial: false })
+  controller.stop()
+  await controller.onFinished('', '', 1200, gen)
+  expect(t.history[t.history.length - 1].text).toMatch(/see done/i)
+})
+
 it('retains unfinalized stream words and audio instead of deleting them on a seemingly successful stop', async () => {
   const t = setup({ sttEngine: 'router-audio', routerAudioKey: 'stream-key' })
   let handlers!: Parameters<RouterAudioClient['connect']>[1]
@@ -377,16 +412,16 @@ it('retains unfinalized stream words and audio instead of deleting them on a see
   const gen = controller.currentGeneration()
   controller.onPcm(new Uint8Array([1, 2, 3, 4]), gen)
   handlers.onTranscript({ kind: 'transcript', text: 'hello', isPartial: false })
-  handlers.onTranscript({ kind: 'transcript', text: 'hello last words', isPartial: true })
+  handlers.onTranscript({ kind: 'transcript', text: 'hello and then a lot more words', isPartial: true })
   controller.stop()
   await controller.onFinished('', '', 1200, gen)
   expect(t.history[0]).toMatchObject({
     text: 'hello',
-    unconfirmedText: 'last words',
+    unconfirmedText: 'and then a lot more words',
     status: 'error',
     hasAudio: true
   })
-  expect(t.journal.list(7)[0].unconfirmedText).toBe('last words')
+  expect(t.journal.list(7)[0].unconfirmedText).toBe('and then a lot more words')
   expect(onUsage).toHaveBeenCalledOnce()
   expect(onUsage).toHaveBeenCalledWith(
     expect.objectContaining({ costUsd: null, outcome: 'error', engine: 'router-audio' })

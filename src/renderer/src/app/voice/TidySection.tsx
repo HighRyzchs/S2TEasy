@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { describeTidy, MIXED_LANGUAGES, tidySpeech, type LanguageCode, type TidySettings } from '@shared/tidy'
+import { describeTidy, HABIT_SUGGESTIONS, MIXED_LANGUAGES, tidySpeech, type LanguageCode, type TidySettings } from '@shared/tidy'
 import { useApp } from '../context'
 import { Section, Toggle, useSave } from '../settings/controls'
 import '../settings/settings.css'
 
 const SAMPLE =
-  'Um, I I want to go to the store, I mean the mall. That would, that would be great because I went to the. Screen was frozen.'
+  'Um, yeah so I I want to go to the store, I mean the mall. That would, that would be great because I went to the. Screen was frozen.'
 
 /** Speech tidy: what it takes out, whether it runs by itself, and a box to try it on your own words. */
 export function TidySection() {
@@ -15,6 +15,7 @@ export function TidySection() {
   const set = (patch: Partial<TidySettings>) => quickSave({ tidy: { ...tidy, ...patch } })
   const [sample, setSample] = useState(SAMPLE)
   const [doubles, setDoubles] = useState(tidy.keepDoubles.join(', '))
+  const [habit, setHabit] = useState('')
   const language = (code: LanguageCode) => tidy.languages.find((l) => l.code === code)
   const setLanguage = (code: LanguageCode, on: boolean, script: 'latin' | 'native' = 'latin') =>
     set({
@@ -47,6 +48,51 @@ export function TidySection() {
         onChange={(stutters) => set({ stutters })}
       />
       <Toggle label="Fillers" hint="um, uh, erm" checked={tidy.fillers} onChange={(fillers) => set({ fillers })} />
+      <div className="set-tidy-langs" role="group" aria-labelledby="tidy-habits-h">
+        <span id="tidy-habits-h">Your habit words</span>
+        <span className="hint">
+          Words you say to fill a gap while you think (“yeah”, “like”, “you know”). They go only where they fill
+          a gap: opening a sentence, between commas, or after a pause. “I like it” stays.
+        </span>
+        <div className="cmd-phrases habit-list">
+          {tidy.habits.map((habit) => (
+            <span className="cmd-chip" key={habit}>
+              “{habit}”
+              <button
+                type="button"
+                aria-label={`Remove “${habit}”`}
+                onClick={() => set({ habits: tidy.habits.filter((h) => h !== habit) })}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          {HABIT_SUGGESTIONS.filter((h) => !tidy.habits.includes(h.toLowerCase())).map((habit) => (
+            <button
+              type="button"
+              className="cmd-chip suggest"
+              key={habit}
+              onClick={() => set({ habits: [...tidy.habits, habit.toLowerCase()] })}
+            >
+              + {habit}
+            </button>
+          ))}
+          <span className="cmd-add">
+            <input
+              className="input"
+              value={habit}
+              placeholder="Your own"
+              aria-label="Add a habit word"
+              onChange={(event) => setHabit(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter' || !habit.trim()) return
+                set({ habits: [...new Set([...tidy.habits, habit.trim().toLowerCase()])] })
+                setHabit('')
+              }}
+            />
+          </span>
+        </div>
+      </div>
       <Toggle
         label="Corrections"
         hint="“the store, I mean the mall” → “the mall”. Also “no wait”, “sorry”, “scratch that”, and a short start you say again."
@@ -55,7 +101,7 @@ export function TidySection() {
       />
       <Toggle
         label="Pause breaks"
-        hint="A full stop and capital put in where you paused mid-thought: “I went to the. Store” → “I went to the store”."
+        hint="A full stop or capital the engine put in where you paused mid-thought: “I went to the. Store” → “I went to the store”, “I’m Facing it” → “I’m facing it”. Names keep their capitals."
         checked={tidy.pauseBreaks}
         onChange={(pauseBreaks) => set({ pauseBreaks })}
       />

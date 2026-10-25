@@ -33,6 +33,8 @@ export type TidySettings = {
   languages: MixedLanguage[]
   /** The person's own words said twice on purpose ("Bora Bora", a nickname). */
   keepDoubles: string[]
+  /** Your own habit words ("yeah", "like", "you know"), taken out where they only fill a gap. */
+  habits: string[]
 }
 
 export const defaultTidySettings = (): TidySettings => ({
@@ -42,7 +44,8 @@ export const defaultTidySettings = (): TidySettings => ({
   corrections: true,
   pauseBreaks: true,
   languages: [],
-  keepDoubles: []
+  keepDoubles: [],
+  habits: []
 })
 
 export function normalizeTidy(value: unknown): TidySettings {
@@ -69,11 +72,21 @@ export function normalizeTidy(value: unknown): TidySettings {
     corrections: flag('corrections'),
     pauseBreaks: flag('pauseBreaks'),
     languages: languages.filter((l, i) => languages.findIndex((x) => x.code === l.code) === i),
-    keepDoubles
+    keepDoubles,
+    habits: Array.isArray(v.habits)
+      ? [
+          ...new Set(
+            (v.habits as unknown[])
+              .filter((w): w is string => typeof w === 'string')
+              .map((w) => w.toLocaleLowerCase().replace(/[^\p{L}\p{N}' ]+/gu, ' ').replace(/\s+/g, ' ').trim())
+              .filter(Boolean)
+          )
+        ].slice(0, 40)
+      : []
   }
 }
 
-export type TidyChange = { kind: 'stutter' | 'filler' | 'correction' | 'pause' | 'script'; removed: string }
+export type TidyChange = { kind: 'stutter' | 'filler' | 'habit' | 'correction' | 'pause' | 'script'; removed: string }
 export type TidyResult = { text: string; changes: TidyChange[] }
 
 type Tok = { text: string; key: string }
@@ -194,6 +207,30 @@ const LOWERCASE = new Set([
   'about', 'into', 'typing', 'talking', 'speaking', 'writing', 'output', 'input', 'text', 'word', 'words',
   'button', 'box', 'field', 'file', 'screen', 'issue', 'issues', 'problem', 'idea', 'today', 'tomorrow'
 ])
+// Everyday words that are never names: a capital on one of these mid-sentence was put there by a
+// pause. Words that are also names (Will, Mark, Rose, May, Bill) are left out on purpose.
+const EVERYDAY = new Set(
+  (
+    'actually also always another any anything around as ask asked back bad because become been before ' +
+    'begin being believe better between big both bring build call came can cannot change check close come ' +
+    'coming could day did different do does doing done down during each early easy else end enough even ' +
+    'ever every everything example face facing fact feel few find fine first follow for found from full ' +
+    'gave get getting give given go goes going gone good got great group had happen happened hard has have ' +
+    'having head hear heard help her here high him his hold how however idea if important in inside instead ' +
+    'into is issue it its just keep kind knew know known large last later learn least leave left less let ' +
+    'life light little live long look looking lot made make making many maybe me mean means might mind more ' +
+    'most move much must my need never new next nice no not nothing now number of off often old on once one ' +
+    'only open or order other our out over own part people pitch place play point pretty probably problem ' +
+    'pull put quite raise rather real really reason recording render right run said same saw say saying ' +
+    'see seem seems seen set should show side simple since small so some something sometimes soon sound ' +
+    'speak speaking start started still stop such sure take taking talk talking tell than thank that ' +
+    "that's the their them then there these they thing things think this those though thought through " +
+    'time to together too took toward towards try trying turn under understand until up upon us use used ' +
+    'using very voice want wanted was way we well went were what when where whether which while who whole ' +
+    'why with within without word words work working would write wrong yet you your'
+  ).split(' ')
+)
+
 const PREFIXES = new Set(['re', 'pre', 'de', 'un', 'co', 'non', 'sub', 'bi', 'tri', 'multi', 'anti', 'semi', 'mid', 'over'])
 
 /** What the rules need from the settings beyond the switches. */
@@ -252,6 +289,76 @@ function fillers(list: Tok[], changes: TidyChange[]): Tok[] {
   }
   // A take that was nothing but "hmm" stays what it was.
   return out.length ? out : list
+}
+
+// ---- habit words -----------------------------------------------------------------------------
+
+/** Suggestions for the habit word list; the person picks their own. */
+export const HABIT_SUGGESTIONS = ['yeah', 'ya', 'like', 'you know', 'okay so', 'so yeah', 'basically', 'literally', 'anyways', 'kind of', 'sort of', 'right', 'I mean', 'actually']
+// Habit words that, capitalised mid-sentence after a pause ("so Yeah something"), only fill the gap.
+const PAUSE_HABITS = new Set(['yeah', 'ya', 'yah', 'yep', 'okay', 'ok', 'anyways', 'anyway', 'so', 'right', 'alright', 'well'])
+
+/**
+ * Habit words: the person's own gap-fillers ("yeah", "like", "you know"). Taken out only where they
+ * carry nothing: at the start of a sentence ("Yeah so I had an idea" → "I had an idea"), set off by
+ * commas ("it was, like, great"), at a sentence end after a comma ("…done, yeah."), or capitalised
+ * mid-sentence after a pause ("so Yeah something"). "I like it" and "you know what I mean" stay.
+ */
+function habits(list: Tok[], changes: TidyChange[], phrases: string[]): Tok[] {
+  const patterns = phrases.map((p) => p.split(' ')).sort((a, b) => b.length - a.length)
+  const matchAt = (words: Tok[], i: number) => patterns.find((p) => p.every((w, k) => words[i + k]?.key === w))?.length ?? 0
+  const out: Tok[] = []
+  for (let i = 0; i < list.length; i++) {
+    const prev = out[out.length - 1]
+    const atStart = !prev || endsSentence(prev)
+    let len = matchAt(list, i)
+    if (!len) {
+      out.push(list[i])
+      continue
+    }
+    if (atStart) {
+      // A run of habit words opening a sentence, with at least two real words after it in the same
+      // sentence. A sentence that is only habit words ("Yeah." as an answer) stays.
+      // Gap words ("yeah", "okay", "so") go as they are; anything else ("you know", "like") only when
+      // a comma sets it off, so "You know what I mean?" stays.
+      const gap = (at: number, n: number) => (n === 1 && PAUSE_HABITS.has(list[at].key)) || /,$/.test(list[at + n - 1].text)
+      let end = i
+      while (len && gap(end, len) && !endsSentence(list[end + len - 1])) {
+        end += len
+        len = matchAt(list, end)
+      }
+      if (len && !gap(end, len)) len = 0
+      let rest = 0
+      for (let k = end; k < list.length; k++) {
+        rest++
+        if (endsSentence(list[k])) break
+      }
+      if (!len && end > i && rest >= 2) {
+        changes.push({ kind: 'habit', removed: join(list.slice(i, end)) })
+        if (isCapital(list[i].text) || !prev) list[end] = { ...list[end], text: capital(list[end].text) }
+        i = end - 1
+        continue
+      }
+      out.push(list[i])
+      continue
+    }
+    const last = list[i + len - 1]
+    const span = join(list.slice(i, i + len))
+    // ", like," / ", you know," in the middle, or ", yeah." at the end of a sentence.
+    if (/,$/.test(prev.text) && breaksAfter(last)) {
+      changes.push({ kind: 'habit', removed: span })
+      out[out.length - 1] = withEnding(prev, endsSentence(last) ? trailing(last.text) : '')
+      i += len - 1
+      continue
+    }
+    // "so Yeah something": a capital mid-sentence marks a pause filled by a habit word.
+    if (len === 1 && PAUSE_HABITS.has(list[i].key) && isCapital(list[i].text) && list[i + 1] && !endsSentence(list[i])) {
+      changes.push({ kind: 'habit', removed: span })
+      continue
+    }
+    out.push(list[i])
+  }
+  return out
 }
 
 // ---- stutters --------------------------------------------------------------------------------
@@ -411,6 +518,17 @@ function pauseBreaks(list: Tok[], changes: TidyChange[], ctx: Context): Tok[] {
     out[i] = withEnding(out[i], '')
     out[i + 1] = { ...out[i + 1], text: lowerUnlessName(out[i + 1].text, ctx.names, seenLower) }
   }
+  // A capital mid-sentence on an everyday word ("I'm Facing here", "to Actually render") is the
+  // engine starting a sentence after a pause. Names, I, and words after a colon or quote keep theirs.
+  for (let i = 1; i < out.length; i++) {
+    const t = out[i]
+    const before = out[i - 1]
+    if (endsSentence(before) || /[:"“(]$/.test(before.text) || leading(t.text)) continue
+    if (!/^\p{Lu}[\p{Ll}']+$/u.test(bare(t.text)) || ctx.names.has(bare(t.text))) continue
+    if (!EVERYDAY.has(t.key) && !seenLower.has(t.key)) continue
+    changes.push({ kind: 'pause', removed: t.text })
+    out[i] = { ...t, text: lower(t.text) }
+  }
   return out
 }
 
@@ -450,6 +568,7 @@ function tidyLine(line: string, settings: TidySettings, ctx: Context, changes: T
       if (/^\[[^\]]*\]$/.test(part) || !part.trim()) return part
       let list = toks(part)
       if (settings.fillers) list = fillers(list, changes)
+      if (settings.habits.length) list = habits(list, changes, settings.habits)
       if (settings.pauseBreaks) list = pauseBreaks(list, changes, ctx)
       if (settings.stutters) list = stutters(list, changes, ctx)
       if (settings.corrections) list = corrections(list, changes)
@@ -551,6 +670,7 @@ export function describeTidy(changes: TidyChange[]): string {
   const add = (n: number, one: string, many: string) => n && parts.push(`${n} ${n === 1 ? one : many}`)
   add(count('stutter'), 'stutter', 'stutters')
   add(count('filler'), 'filler', 'fillers')
+  add(count('habit'), 'habit word', 'habit words')
   add(count('correction'), 'correction', 'corrections')
   add(count('pause'), 'pause break', 'pause breaks')
   add(count('script'), 'word in its own script', 'words in their own script')

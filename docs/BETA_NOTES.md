@@ -1,3 +1,24 @@
+## Voice memory beta — v1.10.0-beta.10
+
+**Your last word is kept.** When a take ends softly (quieter, a little higher), the engine often drops the last word. S2Teasy now:
+- sends the engine half a second of silence before asking it to finish, so it hears that you stopped and commits the last word;
+- keeps the last one to three words if the live preview heard them but the engine's final text left them out;
+- keeps up to four last words the engine never finished, instead of sending the whole take to History for review.
+
+**New in Speech tidy: your habit words** (Your voice → Structure). Pick the words you say to fill a gap while you think, such as "yeah", "like", "you know" or "okay so", or add your own. They go only where they fill a gap:
+- opening a sentence ("Yeah so I had an idea" → "I had an idea");
+- between commas ("it was, like, great" → "it was great");
+- at the end after a comma ("…done, yeah." → "…done.");
+- capitalised after a pause ("so Yeah something" → "so something").
+
+"I like it" and "You know what I mean?" stay as they are. Nothing is taken out until you pick your words.
+
+**Pause breaks now also fix capitals in the middle of a sentence.** After a pause, the engine often starts the next word with a capital: "the issue I'm Facing", "to Actually render", "And That's". Everyday words are lowered. Names you've taught S2Teasy, and words that are often names (Mark, Will, May), keep their capitals.
+
+**About voice commands:** a command needs a short pause before and after it, the way you found yourself. Without one, "next line" in flowing speech can't be told apart from a sentence about a next line.
+
+---
+
 ## Voice memory beta — v1.10.0-beta.9
 
 **New: voice commands for structure** (Your voice → **Structure**). Say a command on its own, between sentences, and it shapes the text instead of being typed:

@@ -97,6 +97,8 @@ type StreamHandlers = {
   onError: (message: string) => void
 }
 
+const TRAILING_SILENCE_S = 0.5
+
 export class RouterAudioClient {
   private ws: WebSocket | null = null
   private closed = false
@@ -104,9 +106,11 @@ export class RouterAudioClient {
   private handlers: StreamHandlers | null = null
   private cancelConnect: (() => void) | null = null
   private finishWait: (() => void) | null = null
+  private sampleRate = SAMPLE_RATE
 
   async connect(options: ListenOptions, handlers: StreamHandlers): Promise<void> {
     this.close()
+    this.sampleRate = options.sampleRate ?? SAMPLE_RATE
     this.closed = false
     this.finishing = false
     this.handlers = handlers
@@ -195,6 +199,9 @@ export class RouterAudioClient {
     const ws = this.ws
     if (ws && ws.readyState === WebSocket.OPEN) {
       try {
+        // Half a second of silence first: speech models often hold back the last word until they
+        // hear the speaker has stopped, and a soft last word is then dropped at finalize.
+        ws.send(new Uint8Array(Math.round(this.sampleRate * TRAILING_SILENCE_S) * 2))
         ws.send(JSON.stringify({ type: 'finalize' }))
       } catch {
         // some providers ignore finalize
