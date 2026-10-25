@@ -8,6 +8,8 @@ const only = (patch: Partial<TidySettings>): TidySettings => ({
   fillers: false,
   corrections: false,
   pauseBreaks: false,
+  languages: [],
+  keepDoubles: [],
   ...patch
 })
 const tidy = (text: string, settings = all, names: string[] = []) => tidySpeech(text, settings, names).text
@@ -66,7 +68,7 @@ describe('corrections', () => {
 
 describe('pause breaks', () => {
   it('joins a sentence cut after a word no sentence ends on', () => {
-    expect(tidy('I went to the. Store was closed.')).toBe('I went to the store was closed.')
+    expect(tidy('I went to the. Screen was frozen.')).toBe('I went to the screen was frozen.')
     expect(tidy('Talking is faster than. Typing for me.')).toBe('Talking is faster than typing for me.')
   })
   it('keeps real sentence ends and names', () => {
@@ -91,7 +93,7 @@ it('leaves speech cue tags alone', () => {
 })
 
 it('does only what is switched on', () => {
-  expect(tidy('Um I I went to the. Store', only({ stutters: true }))).toBe('Um I went to the. Store')
+  expect(tidy('Um I I went to the. Screen', only({ stutters: true }))).toBe('Um I went to the. Screen')
   expect(tidy('Um I I went', only({ fillers: true }))).toBe('I I went')
 })
 
@@ -101,12 +103,100 @@ describe('while typing live', () => {
     expect(tidyNext('going to the,', 'to the store', all).text).toBe('store')
   })
   it('lowers a capital the engine put after a pause, but not names', () => {
-    expect(tidyNext('I went to the', 'Store was closed.', all).text).toBe('store was closed.')
+    expect(tidyNext('I went to the', 'Screen was frozen.', all).text).toBe('screen was frozen.')
     expect(tidyNext('I went to the', 'Microsoft office.', all).text).toBe('Microsoft office.')
     expect(tidyNext('It works.', 'Then we ship.', all).text).toBe('Then we ship.')
   })
   it('drops a full stop the engine put after a word no sentence ends on', () => {
     expect(tidyNext('', 'I went to the.', all).text).toBe('I went to the')
     expect(tidyNext('', 'It was me.', all).text).toBe('It was me.')
+  })
+})
+
+describe('leaves meant text alone (review cases)', () => {
+  const kept = [
+    'I love that. It is great.',
+    'I told her. She left.',
+    'Thank you. Next topic is pricing.',
+    'It is what it is. Moving on.',
+    'Turn it on. Then wait.',
+    'Who did you go with. Then we left.',
+    'I need milk, I need eggs, I need bread.',
+    'Add a title, add a body, add a footer.',
+    'We can try, we can fail, we can learn.',
+    'I am sorry, I did not know.',
+    'I said sorry, I said it twice.',
+    'Call 10 10 now.',
+    'Dial 9 9 9.',
+    'Version 2.0 2.0 is out.',
+    '#launch #launch',
+    'Go, go, go!',
+    'Yes, yes, yes!',
+    'Thank you, thank you.',
+    'Come on, come on.',
+    'very very good',
+    'Bye bye.',
+    'Uh huh, sure.',
+    'Mm hmm.',
+    'We went to Bora Bora.',
+    'Please re-read this.'
+  ]
+  for (const text of kept) it(text, () => expect(tidy(text)).toBe(text))
+})
+
+describe('review fixes', () => {
+  it('a stutter split by a pause break is still a stutter', () => {
+    expect(tidy('I went to the. The store was closed.')).toBe('I went to the store was closed.')
+    expect(tidy('I went to the. To the store.')).toBe('I went to the store.')
+  })
+  it('keeps the opening quote and capital of a repeated word', () => {
+    expect(tidy('"Hello hello," he said.')).toBe('"Hello," he said.')
+    expect(tidy('He said: "I I mean it."')).toBe('He said: "I mean it."')
+    expect(tidy('(I I) think so')).toBe('(I) think so')
+  })
+  it('keeps line breaks', () => {
+    expect(tidy('First point.\n\nSecond point.\n- item one\n- item two')).toBe('First point.\n\nSecond point.\n- item one\n- item two')
+    expect(tidy('I I said\nthe the end')).toBe('I said\nthe end')
+  })
+  it('moves a sentence end off a trailing filler', () => {
+    expect(tidy('Okay, um.')).toBe('Okay.')
+    expect(tidy('This is good, um. Really.')).toBe('This is good. Really.')
+  })
+  it('a restart that gives up on an open word or a pronoun', () => {
+    expect(tidy('That would how I, that would be, you know, really amazing.')).toBe('That would be, you know, really amazing.')
+    expect(tidy('I think, I think we should go')).toBe('I think we should go')
+  })
+  it('stutters across a comma are not saved by being real doubles', () => {
+    expect(tidy('Um, I, I think, uh, that, that we, we should go')).toBe('I think, that we should go')
+  })
+  it('a one-word piece that repeats the last typed word goes', () => {
+    expect(tidyNext('Hello', 'Hello', all).text).toBe('')
+  })
+})
+
+describe('languages you mix in', () => {
+  const withLang = (code: 'tl' | 'ar' | 'hi', script: 'latin' | 'native' = 'latin'): TidySettings => ({
+    ...all,
+    languages: [{ code, script }]
+  })
+  it('their doubles are meant once the language is set', () => {
+    expect(tidy('Araw araw akong nagtatrabaho.')).toBe('Araw akong nagtatrabaho.')
+    expect(tidy('Araw araw akong nagtatrabaho.', withLang('tl'))).toBe('Araw araw akong nagtatrabaho.')
+    expect(tidy('Dahan dahan lang.', withLang('tl'))).toBe('Dahan dahan lang.')
+    expect(tidy('Okay na okay na.', withLang('tl'))).toBe('Okay na okay na.')
+    expect(tidy('Yalla yalla, let us go.', withLang('ar'))).toBe('Yalla yalla, let us go.')
+    expect(tidy('Jaldi jaldi karo.', withLang('hi'))).toBe('Jaldi jaldi karo.')
+  })
+  it('stutters are still caught in those languages', () => {
+    expect(tidy('Ano, ano ba yung sinabi mo?', withLang('tl'))).toBe('Ano ba yung sinabi mo?')
+  })
+  it('writes their words in their own script when asked', () => {
+    expect(tidy('Yalla, we ship tomorrow inshallah.', withLang('ar', 'native'))).toBe('يلا, we ship tomorrow إن شاء الله.')
+    expect(tidy('We made it, insha allah.', withLang('ar', 'native'))).toBe('We made it, إن شاء الله.')
+    expect(tidy('Yalla, we ship.', withLang('ar', 'latin'))).toBe('Yalla, we ship.')
+    expect(tidy('Accha, theek hai.', withLang('hi', 'native'))).toBe('अच्छा, ठीक है.')
+  })
+  it('your own words said twice on purpose', () => {
+    expect(tidy('Meet Kiki Kiki tomorrow.', { ...all, keepDoubles: ['Kiki'] })).toBe('Meet Kiki Kiki tomorrow.')
   })
 })

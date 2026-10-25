@@ -38,7 +38,7 @@ import { accentSlots, type AccentSlot } from '../shared/accent-check'
 import { applyThreshold, suggestThreshold, type Detection } from './voice-memory/memory'
 import type { VoiceMemoryService } from './voice-memory/service'
 import type { MemoryHint } from '../shared/voice-memory'
-import { describeTidy, tidyNext, tidySpeech } from '../shared/tidy'
+import { describeTidy, mixedLanguageHint, scriptOnly, tidyAlways, tidyNext, tidySpeech, type TidySettings } from '../shared/tidy'
 
 type Host = {
   overlay: { showInactive: () => void; hide: () => void; isDestroyed: () => boolean }
@@ -630,7 +630,8 @@ export class DictationController {
             apiKey: resolveStreamingKey(settings),
             provider: settings.routerProvider,
             language: settings.language,
-            keyterms: settings.streamKeyterms ? engineHintTerms(settings.vocabulary, 50) : undefined
+            keyterms: settings.streamKeyterms ? engineHintTerms(settings.vocabulary, 50) : undefined,
+            mixedLanguages: settings.streamMixedLanguages ? settings.tidy.languages.map((l) => l.code) : undefined
           },
           {
             onTranscript: (event) => {
@@ -833,7 +834,8 @@ export class DictationController {
       this.updateText()
       if (chunk) await this.enqueue(gen, () => this.typeLive(chunk))
       if (!this.valid(gen)) return
-      if (this.settings.tidy.auto) await this.applyTidy(gen, false)
+      const tidy = this.autoTidy()
+      if (tidy) await this.applyTidy(gen, false, tidy)
       if (!this.valid(gen) || !this.item) return
     }
     if (this.item.unconfirmedText?.trim()) {
@@ -1018,6 +1020,7 @@ export class DictationController {
       apiKey: settings.apiKey,
       model: settings.sttEngine === 'local' ? settings.localModel : settings.model,
       language: settings.language,
+      mixedLanguages: mixedLanguageHint(settings.tidy),
       wavBase64,
       engine: settings.sttEngine === 'local' ? 'local' : 'openrouter',
       localEndpoint: settings.localEndpoint,
@@ -1133,9 +1136,8 @@ export class DictationController {
     const hits = applied.hits
     // Speech tidy, piece by piece: what is typed can't easily be taken back, the end of the take
     // tidies the whole text once more.
-    const text = this.settings?.tidy.auto
-      ? tidyNext(this.typedText, applied.text, this.settings.tidy, this.tidyNames()).text
-      : applied.text
+    const tidy = this.autoTidy()
+    const text = tidy ? tidyNext(this.typedText, applied.text, tidy, this.tidyNames()).text : applied.text
     this.liveCues?.phrase(this.typedText.split(/\s+/).filter(Boolean).length, this.journalMs())
     this.typedRawWords += take
     this.typedText = joinUtterances([this.typedText, text])
@@ -1150,10 +1152,25 @@ export class DictationController {
       .flatMap((entry) => entry.meant.split(/\s+/))
   }
 
+  /**
+   * What tidies every take by itself: everything switched on when "Tidy every take" is on; otherwise
+   * only writing a mixed-in language in its own script, if that was asked for.
+   */
+  private autoTidy(): TidySettings | null {
+    const tidy = this.settings?.tidy
+    if (!tidy) return null
+    if (tidy.auto) return tidy
+    return tidyAlways(tidy) ? scriptOnly(tidy) : null
+  }
+
   /** Tidy the whole take's text (and the app's copy when live typing still can). */
-  private async applyTidy(gen: number, asked: boolean): Promise<'typed' | 'saved' | 'kept-in-history' | 'unchanged'> {
-    if (!this.settings || !this.item) return 'unchanged'
-    const { text, changes } = tidySpeech(this.typedText, this.settings.tidy, this.tidyNames())
+  private async applyTidy(
+    gen: number,
+    asked: boolean,
+    settings: TidySettings | null = this.settings?.tidy ?? null
+  ): Promise<'typed' | 'saved' | 'kept-in-history' | 'unchanged'> {
+    if (!this.settings || !this.item || !settings) return 'unchanged'
+    const { text, changes } = tidySpeech(this.typedText, settings, this.tidyNames())
     if (!changes.length || text === this.typedText) {
       if (asked) this.notice('Nothing to tidy.')
       return 'unchanged'

@@ -66,3 +66,13 @@ describe('closeReason', () => {
     expect(closeReason(4401, '')).toMatch(/rejected/i)
   })
 })
+
+it('asks Deepgram for code-switching only when mixed languages are set', () => {
+  const plain = new URL(buildListenUrl({ apiKey: 'k', provider: 'deepgram', language: 'en' }).url)
+  expect(plain.searchParams.get('language')).toBe('en')
+  const mixed = new URL(buildListenUrl({ apiKey: 'k', provider: 'deepgram', language: 'en', mixedLanguages: ['tl', 'ar'] }).url)
+  expect(mixed.searchParams.get('language')).toBe('multi')
+  expect(mixed.searchParams.getAll('language_hint')).toEqual(['en', 'tl', 'ar'])
+  const other = new URL(buildListenUrl({ apiKey: 'k', provider: 'auto', language: 'en', mixedLanguages: ['tl'] }).url)
+  expect(other.searchParams.get('language')).toBe('en')
+})

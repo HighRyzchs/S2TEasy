@@ -18,6 +18,18 @@ Checked on a Windows test machine with the real mouse, keyboard and finger touch
 
 It runs by itself on every take: piece by piece while live typing, and over the whole take at the end. The HUD's editor (click the words, or pause) also has a **Tidy** button that rewrites the take in your app.
 
+It leans towards leaving text alone. Lists ("I need milk, I need eggs"), apologies ("I am sorry, I…"), numbers ("dial 9 9 9"), words said twice on purpose ("very very", "bye bye", "go, go, go") and real sentence ends are kept.
+
+**Other languages you mix in** (Settings → Speech tidy): Tagalog, Arabic, Hindi/Urdu.
+- Their doubles ("araw araw", "dahan dahan", "yalla yalla", "jaldi jaldi") are never taken for stutters.
+- For Arabic and Hindi you choose how the words are written: in English letters as heard ("yalla", "inshallah"), or in their own script ("يلا", "إن شاء الله"). The script uses a built-in list of common words for now.
+- You can also list your own words said twice on purpose.
+
+What the speech engines are told about your languages:
+- **OpenRouter audio models** (chat-style) get a written note: which languages you mix in, and how to write them.
+- **Whisper-style models on OpenRouter** (for example Whisper on Groq) get it as Whisper's prompt, together with your personal words. This only applies when Groq or OpenAI is the provider serving the request.
+- **The live engine (router.audio)** takes no written note. With Deepgram as its provider there is an experimental switch, **Live engine: listen for them too**, that turns on Deepgram's mixed-language mode. router.audio may ignore or reject it; turn it off if dictation stops working.
+
 ---
 
 ## Voice memory beta — v1.10.0-beta.7

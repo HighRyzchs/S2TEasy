@@ -12,6 +12,11 @@ export type ListenOptions = {
    * document key terms, so they are only sent when the user picks the Deepgram provider and asks.
    */
   keyterms?: string[]
+  /**
+   * Experimental, opt-in: listen for English mixed with these languages (ISO codes) with Deepgram's
+   * code-switching (`language=multi` and a `language_hint` per language).
+   */
+  mixedLanguages?: string[]
 }
 
 export type RouterTranscript = {
@@ -32,8 +37,13 @@ export function buildListenUrl(options: ListenOptions): { url: string; redacted:
     api_key: options.apiKey.trim()
   })
   if (options.language?.trim()) params.set('language', options.language.trim())
-  if (options.provider === 'deepgram')
+  if (options.provider === 'deepgram') {
     for (const term of (options.keyterms ?? []).slice(0, 50)) params.append('keyterm', term)
+    if (options.mixedLanguages?.length) {
+      params.set('language', 'multi')
+      for (const code of ['en', ...options.mixedLanguages]) params.append('language_hint', code)
+    }
+  }
   const query = params.toString()
   const url = `${ROUTER_AUDIO_LISTEN}?${query}`
   const redactedParams = new URLSearchParams(params)

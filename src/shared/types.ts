@@ -112,6 +112,8 @@ export type AppSettings = {
   vocabulary: VocabularyEntry[]
   /** Experimental: pass personal words to the streaming provider as Deepgram key terms. */
   streamKeyterms: boolean
+  /** Experimental: ask Deepgram streaming to listen for the languages set in Speech tidy too. */
+  streamMixedLanguages: boolean
   /** After a pause, the session finishes by itself this long after the last HUD interaction. */
   finishAfterMs: number
   /** Monthly spend limit for paid extras in US dollars; 0 means no limit. Speech is never stopped. */
@@ -268,6 +270,7 @@ export const defaultSettings = (): AppSettings => ({
   audioRetentionDays: 7,
   vocabulary: [],
   streamKeyterms: false,
+  streamMixedLanguages: false,
   finishAfterMs: 7000,
   monthlyLimitUsd: 0,
   appCues: {},
@@ -362,6 +365,7 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
     : 7
   merged.vocabulary = normalizeVocabulary(raw?.vocabulary)
   merged.streamKeyterms = raw?.streamKeyterms === true
+  merged.streamMixedLanguages = raw?.streamMixedLanguages === true
   merged.finishAfterMs = Number.isFinite(raw?.finishAfterMs)
     ? Math.min(30_000, Math.max(2000, Math.round(raw!.finishAfterMs! / 500) * 500))
     : 7000

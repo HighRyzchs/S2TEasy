@@ -64,6 +64,8 @@ try {
   await until(async () => (await state()).partial.includes('mall'))
   await wait(400)
   check('off: the stumbles are typed as said', (await typed()).slice(before).includes('I I want'), (await typed()).slice(before))
+  // On the one-line HUD, Tidy is in the editor that clicking the words opens.
+  if (!(await overlay.locator('[data-a="tidy"]').count())) await overlay.locator('.hud-roll, .hud-draft').first().click({ timeout: 4000 })
   await overlay.locator('[data-a="tidy"]').first().click({ timeout: 4000 })
   check(
     'Tidy button: the HUD text is tidied',
