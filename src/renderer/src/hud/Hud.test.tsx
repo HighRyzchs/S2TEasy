@@ -43,6 +43,7 @@ afterEach(async () => {
   await act(async () => root.unmount())
   host.remove()
   vi.unstubAllGlobals()
+  Reflect.deleteProperty(document, 'elementFromPoint')
 })
 
 const mount = async (mock: ReturnType<typeof api>, state = session()) => {
@@ -166,12 +167,36 @@ it('does not start an edit across a cue tag', async () => {
   const words = [...host.querySelectorAll<HTMLElement>('.hud-w')]
   const before = words.find((w) => w.textContent === 'stream.')!
   const after = words.find((w) => w.textContent === 'He')!
+  document.elementFromPoint = () => after
   await fire(before, 'pointerdown')
-  await act(async () => {
-    after.dispatchEvent(new MouseEvent('pointerover', { bubbles: true }))
-  })
+  await fire(before, 'pointermove')
   await fire(document, 'pointerup')
   expect(host.querySelector<HTMLInputElement>('.hud-edit')!.value).toBe('stream.')
+})
+
+it('drags across neighbouring words with the pointer held on the first one (touch, pen)', async () => {
+  const mock = api()
+  await mount(mock)
+  const words = [...host.querySelectorAll<HTMLElement>('.hud-w')]
+  const first = words.find((w) => w.textContent === 'Ryzchs')!
+  const last = words.find((w) => w.textContent === 'the')!
+  document.elementFromPoint = () => last
+  await fire(first, 'pointerdown')
+  await fire(first, 'pointermove')
+  await fire(document, 'pointercancel')
+  expect(host.querySelector<HTMLInputElement>('.hud-edit')!.value).toBe('Ryzchs about the')
+})
+
+it('a press that starts between words and ends on one edits that word, once', async () => {
+  const mock = api()
+  await mount(mock)
+  const word = [...host.querySelectorAll<HTMLElement>('.hud-w')].find((w) => w.textContent === 'talked')!
+  document.elementFromPoint = () => word
+  await fire(host.querySelector('.hud-draft')!, 'pointerdown')
+  await fire(document, 'pointerup')
+  await fire(word, 'click')
+  expect(host.querySelector<HTMLInputElement>('.hud-edit')!.value).toBe('talked')
+  expect(mock.hudFocus).toHaveBeenCalledTimes(1)
 })
 
 it('shows the leaving state with the layout it had, and a short saved line afterwards', async () => {
