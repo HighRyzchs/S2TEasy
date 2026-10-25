@@ -150,6 +150,12 @@ export function Hud({
     api.hudPointer(false)
   }
   useEffect(() => () => api.hudPointer(false), [api])
+  // A hidden HUD gets no pointer leave; start the next session fresh.
+  useEffect(() => {
+    if (state.status !== 'hidden') return
+    setHovering(false)
+    setPokedAt(0)
+  }, [state.status])
 
   // The parts of the HUD that are drawn. The main process makes exactly these take clicks (window
   // shape), so clicks, touch and pen reach the HUD there and the app underneath everywhere else.
@@ -332,8 +338,7 @@ export function Hud({
       hints={hints}
       dimUntyped={dim}
       highlightNewest={phase === 'rec'}
-      // New words would scroll the word under the pointer away from it, so a hovered draft holds still.
-      follow={phase === 'rec' && !editing && !fix && !hovering}
+      follow={phase === 'rec' && !editing && !fix}
       onSelect={beginEdit}
       empty="Nothing heard yet."
     />

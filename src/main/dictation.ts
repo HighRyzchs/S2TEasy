@@ -209,8 +209,9 @@ export class DictationController {
   }
 
   /** Give focus back to the app the session types into, after editing in the HUD. */
-  restoreTarget(): void {
-    this.dependencies.injector.restoreTarget?.()
+  /** Give the keyboard back to the app being dictated into. False when there is none or Windows refused. */
+  restoreTarget(): boolean {
+    return this.dependencies.injector.restoreTarget?.() ?? false
   }
 
   pause(): void {

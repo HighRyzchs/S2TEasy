@@ -1,3 +1,4 @@
+import { TextInjector } from './inject'
 import type { ListenOptions, RouterTranscript } from './router-audio'
 
 /**
@@ -58,10 +59,16 @@ export class FakeStream {
   }
 }
 
-/** Stands in for the Windows text injector: records what would be typed into the target app. */
+/**
+ * Stands in for the Windows text injector: records what would be typed into the target app. Which
+ * app that is, and handing the keyboard back to it after a HUD edit, are the real thing.
+ */
 export class FakeInjector {
   typed = ''
-  captureTarget(): void {}
+  private readonly real = new TextInjector()
+  captureTarget(): void {
+    this.real.captureTarget()
+  }
   async paste(text: string): Promise<void> {
     this.typed += text
   }
@@ -72,7 +79,7 @@ export class FakeInjector {
     this.typed = this.typed.slice(0, Math.max(0, this.typed.length - erase)) + text
   }
   restoreTarget(): boolean {
-    return true
+    return process.platform === 'win32' ? this.real.restoreTarget() : true
   }
   targetApp(): string | null {
     return null

@@ -63,8 +63,8 @@ const button = (text: string) =>
   [...host.querySelectorAll('button')].find((node) => node.textContent === text)!
 const fire = async (target: Element | Document, type: string) =>
   act(async () => {
-    const event = new MouseEvent(type, { bubbles: true, cancelable: true })
-    if (type.startsWith('pointer')) Object.assign(event, { pointerType: 'mouse', pointerId: 1 })
+    const event = new MouseEvent(type, { bubbles: true, cancelable: true, detail: 1 })
+    if (type.startsWith('pointer')) Object.assign(event, { pointerType: 'mouse', pointerId: 1, isPrimary: true })
     target.dispatchEvent(event)
   })
 

@@ -97,8 +97,10 @@ const HUD_SHAPE_MARGIN = 6
  * shape is set to the drawn parts, so Windows itself sends clicks, touch and pen there to the HUD and
  * everywhere else to the app underneath. Nothing depends on where the pointer is or was.
  */
-function shapeHud(rects: Rect[]): void {
+let hudRaw: Rect[] = []
+function shapeHud(rects: Rect[], force = false): void {
   const window = overlayWindow
+  hudRaw = rects
   if (!window || window.isDestroyed()) return
   const { width, height } = window.getContentBounds()
   const shape = rects
@@ -114,7 +116,9 @@ function shapeHud(rects: Rect[]): void {
     })
     .filter((r) => r.width > 0 && r.height > 0)
   const key = JSON.stringify(shape)
-  if (key === JSON.stringify(hudRects)) return
+  // Windows keeps the shape in physical pixels: a move to a display with another scale, or a resize,
+  // needs it set again even though the HUD's own rects did not change (force).
+  if (!force && key === JSON.stringify(hudRects)) return
   const had = hudRects.length > 0
   hudRects = shape
   hudArea = shape.length
@@ -250,6 +254,11 @@ async function setup(): Promise<void> {
 
   mainWindow = createMainWindow()
   overlayWindow = createOverlayWindow()
+  const reshape = (): void => shapeHud(hudRaw, true)
+  overlayWindow.on('move', reshape)
+  overlayWindow.on('resize', reshape)
+  overlayWindow.on('show', reshape)
+  screen.on('display-metrics-changed', reshape)
   sizeOverlay(overlayWindow, store.getSettings().hud)
   recorderWindow = createRecorderWindow()
 
@@ -683,11 +692,13 @@ async function setup(): Promise<void> {
       overlayWindow.webContents.focus()
       logHud(`HUD keyboard: foreground=${front} focused=${overlayWindow.isFocused()}`)
     } else {
-      // No blur(): it hands the keyboard to whatever window is next and can lower the HUD under it.
-      // Give the keyboard back to the app being dictated into and keep the HUD on top.
+      // Still holding the keyboard (Enter, Escape): hand it back to the app being dictated into. If the
+      // person clicked into another window instead, leave them there. blur() is only the fallback: it
+      // gives the keyboard to whatever window is next.
+      const holding = overlayWindow.isFocused()
       overlayWindow.setFocusable(false)
-      dictation.restoreTarget()
-      overlayWindow.moveTop()
+      if (holding && !dictation.restoreTarget()) overlayWindow.blur()
+      logHud(`HUD keyboard released (held=${holding})`)
       pinOverlayTopmost(overlayWindow)
     }
   })

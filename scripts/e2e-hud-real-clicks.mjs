@@ -430,10 +430,11 @@ async function doubleTap(ctx, label, hud) {
 
 async function pass(tag, args, runs) {
   let ctx
+  const before = results.filter((r) => !r.ok).length
   try {
     ctx = await launch(args)
     for (const run of runs) {
-      if (results.filter((r) => !r.ok).length >= 12) break
+      if (results.filter((r) => !r.ok).length - before >= 12) break
       try {
         await run(ctx)
       } catch (error) {
