@@ -7,6 +7,7 @@
   flex-direction: column;
   gap: 22px;
   overflow-y: auto;
+  overflow-x: hidden;
   /* The frameless window is dragged by its sidebar; controls inside opt out. */
   -webkit-app-region: drag;
 }
@@ -135,14 +136,30 @@
 .sidebar-foot .mono {
   font-size: 11px;
 }
-@media (max-width: 760px) {
+/* Narrow windows (half a laptop screen): an icon rail; each icon names itself on hover. */
+@media (max-width: 880px) {
   .sidebar {
-    flex-basis: 64px;
-    padding: 16px 8px;
+    flex-basis: 68px;
+    padding: 16px 10px;
+    align-items: center;
+  }
+  .sidebar-nav button {
+    justify-content: center;
+    padding: 10px;
+    width: 48px;
+    position: relative;
+  }
+  .sidebar-nav .sidebar-badge {
+    position: absolute;
+    top: 4px;
+    right: 2px;
+    display: inline;
+    font-size: 10px;
+    padding: 0 5px;
   }
   .sidebar-brand span,
   .sidebar-status,
-  .sidebar-nav button span,
+  .sidebar-nav button span:not(.sidebar-badge),
   .sidebar-foot {
     display: none;
   }

@@ -82,6 +82,7 @@ export function Sidebar({
             key={item.id}
             type="button"
             aria-current={screen === item.id ? 'page' : undefined}
+            title={item.label}
             onClick={() => onNavigate(item.id)}
           >
             {item.icon}

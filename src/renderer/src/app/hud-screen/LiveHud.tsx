@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { HudSettings } from '@shared/hud'
 import { Hud } from '../../hud/Hud'
 import { useBars } from '../../hud/useBars'
 import { usePreviewSession, type PreviewMode } from '../../hud/usePreviewSession'
 import type { PreviewState } from './styles'
 import './hud-screen.css'
+
+// About how wide the widest HUD style is at scale 1.
+const HUD_WIDTH = 640
 
 const MODES: Record<PreviewState, PreviewMode> = { talking: 'listening', editing: 'open', paused: 'paused' }
 
@@ -58,8 +61,19 @@ export function LiveHud({
 }) {
   const [round, setRound] = useState(0)
   useEffect(() => setRound(0), [state, nonce])
+  // In a narrow window the preview shrinks to fit instead of being cut off.
+  const stage = useRef<HTMLDivElement>(null)
+  const [fit, setFit] = useState(1)
+  useEffect(() => {
+    const el = stage.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => setFit(Math.min(1, (el.clientWidth - 24) / HUD_WIDTH)))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+  const shown = fit < 1 ? { ...hud, scale: Math.max(0.5, hud.scale * fit) } : hud
   return (
-    <div className={`hudsc-stage ${className}`}>
+    <div className={`hudsc-stage ${className}`} ref={stage}>
       <div className="hudsc-desk" aria-hidden="true">
         <i />
         <i />
@@ -68,7 +82,7 @@ export function LiveHud({
       <Session
         key={`${state}-${nonce}-${round}`}
         mode={MODES[state]}
-        hud={hud}
+        hud={shown}
         position={position}
         onEnded={() => setRound((n) => n + 1)}
       />

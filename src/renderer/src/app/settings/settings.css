@@ -201,16 +201,34 @@
   }
   .set-index {
     flex-direction: row;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 4px;
     z-index: 2;
     background: var(--bg);
     padding: 6px 0;
+    margin: 0 -4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+  }
+  .set-index::-webkit-scrollbar {
+    display: none;
+  }
+  .set-index a {
+    white-space: nowrap;
+    flex: none;
+  }
+  .set-index a:last-child {
+    margin-right: 32px;
   }
   .set-section {
     scroll-margin-top: 64px;
   }
 }
 @media (max-width: 700px) {
+  .set-section {
+    padding: 18px 16px;
+  }
   .set-range input {
     width: 130px;
   }

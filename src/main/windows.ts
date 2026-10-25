@@ -20,8 +20,9 @@ export function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 980,
     height: 680,
-    minWidth: 820,
-    minHeight: 560,
+    // Half of a small laptop screen (Windows snap) still fits.
+    minWidth: 540,
+    minHeight: 480,
     show: false,
     autoHideMenuBar: true,
     backgroundColor: '#0e1113',

@@ -103,6 +103,7 @@ export function TidySection() {
       <label className="set-tidy-try">
         <span>Your own words said twice on purpose</span>
         <input
+          className="input"
           type="text"
           value={doubles}
           placeholder="Bora Bora, Kiki"
