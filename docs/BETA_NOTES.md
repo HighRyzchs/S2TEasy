@@ -1,3 +1,16 @@
+## Voice memory beta — v1.10.0-beta.11
+
+**New: S2Teasy Cloud (test mode).** Settings → Speech engine → **S2Teasy Cloud**. No accounts with speech providers and no keys:
+- Sign in with Google in your browser. You get 30 free minutes.
+- Top up with a credit pack: 20 hours for $5, 60 hours for $12, 150 hours for $25.
+- Redeem a promo code if you have one.
+
+Each recording uses its length in seconds. Speech goes to Groq's Whisper and is not stored by S2Teasy. Your words arrive after each pause, as with OpenRouter.
+
+**Payments are in test mode for this beta.** No real money moves. To try a top-up, use Stripe's test card `4242 4242 4242 4242`, any future date and any CVC.
+
+---
+
 ## Voice memory beta — v1.10.0-beta.10
 
 **Your last word is kept.** When a take ends softly (quieter, a little higher), the engine often drops the last word. S2Teasy now:
