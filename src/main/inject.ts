@@ -115,6 +115,17 @@ export function bringToFront(handle: Buffer): boolean {
   }
 }
 
+/** The program in front (file name only, never a window title), for HUD diagnostics. */
+export function foregroundProgram(): string {
+  try {
+    const hwnd = native?.getForegroundWindow()
+    if (!native || !hwnd) return 'none'
+    return native.processPath(hwnd)?.split(/[\\/]/).pop() ?? 'unknown'
+  } catch {
+    return 'unknown'
+  }
+}
+
 export function copyTranscript(text: string): boolean {
   clipboardRevision++
   clipboard.writeText(text)

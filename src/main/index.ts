@@ -1,6 +1,6 @@
 import { analyzeAutomaticCues } from './automatic-cues'
 import { normalizeOutputPreferences, renderOutput, type OutputPreferences } from '../shared/output'
-import { bringToFront, copyTranscript } from './inject'
+import { bringToFront, copyTranscript, foregroundProgram } from './inject'
 import { e2eEnabled, fakeInjector, FakeStream } from './e2e'
 import { UsageStore } from './usage-store'
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen, session, protocol } from 'electron'
@@ -690,15 +690,19 @@ async function setup(): Promise<void> {
       const front = bringToFront(overlayWindow.getNativeWindowHandle())
       overlayWindow.focus()
       overlayWindow.webContents.focus()
-      logHud(`HUD keyboard: foreground=${front} focused=${overlayWindow.isFocused()}`)
+      logHud(`HUD keyboard: foreground=${front} focused=${overlayWindow.isFocused()} front=${foregroundProgram()}`)
     } else {
       // Still holding the keyboard (Enter, Escape): hand it back to the app being dictated into. If the
       // person clicked into another window instead, leave them there. blur() is only the fallback: it
       // gives the keyboard to whatever window is next.
+      // On Windows setFocusable(false) itself hands the keyboard to the next window in line, so the
+      // app gets it back first (while S2Teasy still may give it away) and once more afterwards.
       const holding = overlayWindow.isFocused()
+      const first = holding && dictation.restoreTarget()
       overlayWindow.setFocusable(false)
-      if (holding && !dictation.restoreTarget()) overlayWindow.blur()
-      logHud(`HUD keyboard released (held=${holding})`)
+      const again = holding && dictation.restoreTarget()
+      if (holding && !first && !again) overlayWindow.blur()
+      logHud(`HUD keyboard released (held=${holding} restored=${first}/${again} front=${foregroundProgram()})`)
       pinOverlayTopmost(overlayWindow)
     }
   })

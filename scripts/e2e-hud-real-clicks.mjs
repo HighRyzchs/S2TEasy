@@ -336,9 +336,12 @@ async function session(ctx, label, hud, how = 'mouse') {
     )
     if (isWin) {
       check(`${label}: ${step}: nothing typed leaked into the app in front`, targetText() === before)
+      const back = !!(await until(() => BigInt(w.GetForegroundWindow()) === targetWindow(), 2000))
+      const front = BigInt(w.GetForegroundWindow())
       check(
         `${label}: ${step}: the app in front gets the keyboard back`,
-        !!(await until(() => BigInt(w.GetForegroundWindow()) === targetWindow(), 2000))
+        back,
+        back ? '' : `front=${front.toString(16)} target=${targetWindow().toString(16)} hud=${hwnd.toString(16)} main=${(await main(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((x) => x.getNativeWindowHandle().readBigUInt64LE(0).toString(16)).join(',')))}`
       )
     }
   }
