@@ -2,7 +2,7 @@ name: HUD end-to-end (Windows)
 
 # Runs the real app on a Windows desktop with a scripted speech engine and clicks the HUD:
 # first through the page (every control, every style and layout), then with the real Windows
-# mouse through the click-through overlay window.
+# mouse, keyboard and touch while another app is in front.
 on:
   push:
     branches: [dev]
@@ -14,7 +14,7 @@ permissions:
 jobs:
   hud:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -27,12 +27,10 @@ jobs:
       - name: Click every HUD control through the page
         timeout-minutes: 10
         run: node scripts/e2e-hud.mjs
-      - name: Click the HUD with the real Windows mouse
+      - name: Use the HUD with the real mouse, keyboard and touch (another app in front, 100% and 150%)
         if: always()
-        timeout-minutes: 10
+        timeout-minutes: 25
         run: node scripts/e2e-hud-real-clicks.mjs
-        env:
-          STYLES: island,cyber,caption
       - name: Show the HUD logs
         if: always()
         shell: bash
@@ -41,4 +39,6 @@ jobs:
         if: always()
         with:
           name: hud-e2e-logs
-          path: release/*.hud.log
+          path: |
+            release/*.hud.log
+            release/*.png

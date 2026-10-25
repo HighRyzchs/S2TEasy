@@ -92,8 +92,9 @@ export function createOverlayWindow(): BrowserWindow {
   })
   window.setAlwaysOnTop(true, 'screen-saver')
   window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-  // Transparent stage: clicks pass through until the pointer is over the HUD itself.
-  window.setIgnoreMouseEvents(true, { forward: true })
+  // Transparent stage: nothing takes clicks until the HUD reports the parts it draws (see shapeHud).
+  window.setShape([{ x: 0, y: 0, width: 1, height: 1 }])
+  window.setIgnoreMouseEvents(true)
   attachOverlayTopmost(window)
   if (isDev && process.env.ELECTRON_RENDERER_URL) {
     window.loadURL(`${process.env.ELECTRON_RENDERER_URL}/overlay.html`)

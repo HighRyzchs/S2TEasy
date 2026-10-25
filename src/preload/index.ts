@@ -38,8 +38,8 @@ export type S2TApi = {
   hudFocus: (focus: boolean) => Promise<void>
   /** The pointer is over a visible part of the HUD (clicks there go to the HUD, elsewhere through). */
   hudPointer: (inside: boolean) => void
-  /** Where the HUD is drawn inside its window (CSS pixels), or null while hidden. */
-  hudArea: (area: { x: number; y: number; width: number; height: number } | null) => void
+  /** The parts of the HUD that are drawn, in window CSS pixels (empty while hidden). Only they take clicks. */
+  hudArea: (rects: { x: number; y: number; width: number; height: number }[]) => void
   /** Show a short scripted session on the real HUD (main window only). */
   hudDemo: () => Promise<void>
   /** What the HUD did with recent clicks, as text to copy into a bug report. */
@@ -120,7 +120,7 @@ const api: S2TApi = {
   hudCues: (on) => ipcRenderer.invoke(IPC.HUD_CUES, on),
   hudFocus: (focus) => ipcRenderer.invoke(IPC.HUD_FOCUS, focus),
   hudPointer: (inside) => ipcRenderer.send(IPC.HUD_POINTER, inside),
-  hudArea: (area) => ipcRenderer.send(IPC.HUD_AREA, area),
+  hudArea: (rects) => ipcRenderer.send(IPC.HUD_AREA, rects),
   hudDemo: () => ipcRenderer.invoke(IPC.HUD_DEMO),
   hudDiagnostics: () => ipcRenderer.invoke(IPC.HUD_DIAGNOSTICS),
   voiceMemory: () => ipcRenderer.invoke(IPC.VOICE_MEMORY_GET),

@@ -56,6 +56,7 @@ import {
   placeOverlay,
   sizeOverlay
 } from './windows'
+import { pinOverlayTopmost } from './overlay-topmost'
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -78,85 +79,66 @@ let journal: SessionJournal
 let speechCues: SpeechCueService
 let recoveryBusy = false
 let overlayState = emptyOverlay()
-let hudArea: { x: number; y: number; width: number; height: number } | null = null
+type Rect = { x: number; y: number; width: number; height: number }
+// The drawn parts of the HUD (window coordinates), and their bounding box for tests.
+let hudRects: Rect[] = []
+let hudArea: Rect | null = null
 // A short log of what the HUD window did with the mouse and its buttons, for diagnosing clicks.
 const hudLog: string[] = []
 function logHud(line: string): void {
   hudLog.push(`${new Date().toISOString().slice(11, 23)} ${line}`)
   if (hudLog.length > 400) hudLog.splice(0, hudLog.length - 400)
 }
-
-let hudEditing = false
-let hudBlind = false // e2e only
-let hudTakesClicks: boolean | null = null
-let hudClickTicks = 0
-
-/** Whether a screen point (DIP) is over the part of the HUD that is drawn, with a small margin. */
-function overHud(point: { x: number; y: number }, margin = 2): boolean {
-  const window = overlayWindow
-  if (!hudArea || !window || window.isDestroyed()) return false
-  const bounds = window.getBounds()
-  const x = point.x - bounds.x
-  const y = point.y - bounds.y
-  return (
-    x >= hudArea.x - margin &&
-    x < hudArea.x + hudArea.width + margin &&
-    y >= hudArea.y - margin &&
-    y < hudArea.y + hudArea.height + margin
-  )
-}
+// Room around each part for glows and shadows; it also takes clicks.
+const HUD_SHAPE_MARGIN = 6
 
 /**
- * A press the system delivered to the app under the HUD although it landed on the HUD (pen or touch
- * with no hover before it, or a pointer check that came too late): play it to the HUD as well.
+ * The HUD window covers more of the screen than the HUD draws (the editor grows into it). Its window
+ * shape is set to the drawn parts, so Windows itself sends clicks, touch and pen there to the HUD and
+ * everywhere else to the app underneath. Nothing depends on where the pointer is or was.
  */
-function replayHudClick(point: { x: number; y: number }): void {
+function shapeHud(rects: Rect[]): void {
   const window = overlayWindow
   if (!window || window.isDestroyed()) return
-  const bounds = window.getBounds()
-  const x = Math.round(point.x - bounds.x)
-  const y = Math.round(point.y - bounds.y)
-  hudTakesClicks = true
-  window.setIgnoreMouseEvents(false)
-  const contents = window.webContents
-  contents.sendInputEvent({ type: 'mouseMove', x, y })
-  contents.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 })
-  contents.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 })
-  logHud(`replayed a click the system sent past the HUD at ${x},${y}`)
+  const { width, height } = window.getContentBounds()
+  const shape = rects
+    .map((r) => {
+      const x = Math.max(0, Math.floor(r.x - HUD_SHAPE_MARGIN))
+      const y = Math.max(0, Math.floor(r.y - HUD_SHAPE_MARGIN))
+      return {
+        x,
+        y,
+        width: Math.min(width, Math.ceil(r.x + r.width + HUD_SHAPE_MARGIN)) - x,
+        height: Math.min(height, Math.ceil(r.y + r.height + HUD_SHAPE_MARGIN)) - y
+      }
+    })
+    .filter((r) => r.width > 0 && r.height > 0)
+  const key = JSON.stringify(shape)
+  if (key === JSON.stringify(hudRects)) return
+  const had = hudRects.length > 0
+  hudRects = shape
+  hudArea = shape.length
+    ? (() => {
+        const left = Math.min(...shape.map((r) => r.x))
+        const top = Math.min(...shape.map((r) => r.y))
+        return {
+          x: left,
+          y: top,
+          width: Math.max(...shape.map((r) => r.x + r.width)) - left,
+          height: Math.max(...shape.map((r) => r.y + r.height)) - top
+        }
+      })()
+    : null
+  if (had !== shape.length > 0) logHud(shape.length ? `HUD shape ${key}` : 'HUD shape cleared')
+  try {
+    // An empty shape would mean "the whole window", so a hidden HUD keeps one pixel and lets clicks through.
+    window.setShape(shape.length ? shape : [{ x: 0, y: 0, width: 1, height: 1 }])
+  } catch (error) {
+    logHud(`setShape failed: ${error instanceof Error ? error.message : String(error)}`)
+  }
+  window.setIgnoreMouseEvents(shape.length === 0)
 }
 
-/**
- * Let clicks reach the HUD while the mouse is over the part that is drawn, or while it is being
- * edited. Windows can reset a window's click-through state (focus changes do), so the wanted state
- * is applied again every half second instead of trusting what was last set.
- */
-function syncHudClicks(): void {
-  const window = overlayWindow
-  if (!window || window.isDestroyed()) return
-  // A session can end mid-edit; a hidden HUD never holds on to clicks.
-  if (!window.isVisible()) hudEditing = false
-  let inside = hudEditing
-  if (!inside && hudArea && window.isVisible() && !hudBlind) {
-    const cursor = screen.getCursorScreenPoint()
-    // Cursor and window should share one coordinate space; with display scaling some setups report
-    // the cursor in physical pixels, so accept either reading.
-    const scale = screen.getDisplayNearestPoint(cursor).scaleFactor || 1
-    inside = overHud(cursor) || (scale !== 1 && overHud({ x: cursor.x / scale, y: cursor.y / scale }))
-  }
-  // Re-applying while the mouse is over the HUD could drop a click in progress, so the periodic
-  // refresh only runs while clicks should pass through.
-  hudClickTicks = (hudClickTicks + 1) % 15
-  if (inside === hudTakesClicks && (inside || hudClickTicks !== 0)) return
-  if (inside !== hudTakesClicks) {
-    const bounds = window.getBounds()
-    const cursor = screen.getCursorScreenPoint()
-    logHud(
-      `${inside ? 'take clicks' : 'pass clicks'} cursor=${cursor.x},${cursor.y} window=${bounds.x},${bounds.y},${bounds.width}x${bounds.height} area=${JSON.stringify(hudArea)} editing=${hudEditing}`
-    )
-  }
-  hudTakesClicks = inside
-  window.setIgnoreMouseEvents(!inside, { forward: true })
-}
 let voiceMemory: VoiceMemoryService
 let voiceMemoryEncrypted = false
 const voiceMemoryState = (): VoiceMemoryState => ({ ...voiceMemory.list(), encrypted: voiceMemoryEncrypted })
@@ -396,11 +378,8 @@ async function setup(): Promise<void> {
         overlay: () => overlayWindow,
         state: () => overlayState,
         hudArea: () => hudArea,
+        hudRects: () => hudRects,
         hudLog: () => hudLog.join('\n'),
-        // Simulates a system that never reports the pointer over the HUD (pen, touch, scaling).
-        blindPointer: (on: boolean) => {
-          hudBlind = on
-        },
         typed: () => fakeInjector.typed,
         history: () => store.getHistory(),
         settings: (patch: Partial<AppSettings>) => {
@@ -443,15 +422,12 @@ async function setup(): Promise<void> {
           process.platform === 'win32'
             ? screen.screenToDipPoint({ x: input.x, y: input.y })
             : { x: input.x, y: input.y }
-        if (overlayWindow.isVisible() && hudTakesClicks === false && !hudEditing && overHud(point, 0))
-          replayHudClick(point)
         const bounds = overlayWindow.getBounds()
+        const x = point.x - bounds.x
+        const y = point.y - bounds.y
         if (
           overlayWindow.isVisible() &&
-          point.x >= bounds.x &&
-          point.x < bounds.x + bounds.width &&
-          point.y >= bounds.y &&
-          point.y < bounds.y + bounds.height
+          hudRects.some((r) => x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height)
         )
           return
       }
@@ -700,37 +676,33 @@ async function setup(): Promise<void> {
     logHud(`HUD focus ${focus === true ? 'take' : 'release'}`)
     if (!overlayWindow || overlayWindow.isDestroyed()) return
     if (focus === true) {
-      hudEditing = true
       overlayWindow.setFocusable(true)
-      syncHudClicks()
       // focus() alone loses to the app in front on Windows, and typing would go there instead.
-      bringToFront(overlayWindow.getNativeWindowHandle())
+      const front = bringToFront(overlayWindow.getNativeWindowHandle())
       overlayWindow.focus()
       overlayWindow.webContents.focus()
+      logHud(`HUD keyboard: foreground=${front} focused=${overlayWindow.isFocused()}`)
     } else {
-      hudEditing = false
+      // No blur(): it hands the keyboard to whatever window is next and can lower the HUD under it.
+      // Give the keyboard back to the app being dictated into and keep the HUD on top.
       overlayWindow.setFocusable(false)
-      overlayWindow.blur()
       dictation.restoreTarget()
+      overlayWindow.moveTop()
+      pinOverlayTopmost(overlayWindow)
     }
-    // Focus changes can reset click-through on Windows: re-apply the wanted state right away.
-    hudTakesClicks = null
-    syncHudClicks()
   })
   ipcMain.on(IPC.HUD_POINTER, (event, inside: unknown) => {
     if (event.sender === overlayWindow?.webContents) logHud(`DOM pointer ${inside === true ? 'enter' : 'leave'}`)
   })
-  ipcMain.on(IPC.HUD_AREA, (event, area: unknown) => {
+  ipcMain.on(IPC.HUD_AREA, (event, rects: unknown) => {
     if (!overlayWindow || overlayWindow.isDestroyed() || event.sender !== overlayWindow.webContents) return
-    const a = area as { x: number; y: number; width: number; height: number } | null
-    if (!a !== !hudArea) logHud(`HUD area ${a ? JSON.stringify(a) : 'cleared'}`)
-    hudArea =
-      a && [a.x, a.y, a.width, a.height].every((n) => typeof n === 'number' && Number.isFinite(n)) ? a : null
-    syncHudClicks()
+    const list = Array.isArray(rects) ? (rects as Rect[]) : []
+    shapeHud(
+      list.filter(
+        (r) => r && [r.x, r.y, r.width, r.height].every((n) => typeof n === 'number' && Number.isFinite(n))
+      )
+    )
   })
-  // Transparent parts of the HUD window let clicks through to the app underneath. Windows does not
-  // reliably tell a click-through window where the pointer is, so check the cursor position here.
-  setInterval(syncHudClicks, 33)
   ipcMain.handle(IPC.CANCEL_RECORDING, () => dictation.cancel())
   ipcMain.handle(IPC.COPY_HISTORY, (event, text: string) => {
     if (event.sender === overlayWindow?.webContents) logHud(`HUD copy (${String(text).length} chars)`)

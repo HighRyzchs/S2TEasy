@@ -62,7 +62,9 @@ const button = (text: string) =>
   [...host.querySelectorAll('button')].find((node) => node.textContent === text)!
 const fire = async (target: Element | Document, type: string) =>
   act(async () => {
-    target.dispatchEvent(new MouseEvent(type, { bubbles: true, cancelable: true }))
+    const event = new MouseEvent(type, { bubbles: true, cancelable: true })
+    if (type.startsWith('pointer')) Object.assign(event, { pointerType: 'mouse', pointerId: 1 })
+    target.dispatchEvent(event)
   })
 
 it('shows the paused editor with cue tags as chips and the controls wired up', async () => {

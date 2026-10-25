@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type MouseEvent,
   type PointerEvent,
   type ReactNode
 } from 'react'
@@ -128,32 +129,52 @@ export function Draft({ className = '', follow, onSelect, onOpen, empty, ...list
     if (el && follow && !drag) el.scrollTop = el.scrollHeight
   }, [follow, drag, list.tokens.length])
 
+  // When a press picked words (pointer up), the click that follows is the same press.
+  const pickedAt = useRef(0)
   useEffect(() => {
     if (!drag) return
     const release = () => {
       const current = dragRef.current
       setDrag(null)
-      if (current) selectRef.current?.(Math.min(...current), Math.max(...current))
+      if (!current) return
+      pickedAt.current = Date.now()
+      selectRef.current?.(Math.min(...current), Math.max(...current))
     }
+    // A touch or pen the browser takes over (cancel) still ends the selection where it was.
     document.addEventListener('pointerup', release)
-    return () => document.removeEventListener('pointerup', release)
+    document.addEventListener('pointercancel', release)
+    return () => {
+      document.removeEventListener('pointerup', release)
+      document.removeEventListener('pointercancel', release)
+    }
   }, [drag === null])
 
-  const wordAt = (event: { target: EventTarget }): number | null => {
-    const el = (event.target as HTMLElement).closest?.('[data-i]')
+  const wordIn = (target: EventTarget | null): number | null => {
+    const el = (target as HTMLElement | null)?.closest?.('[data-i]')
     return el ? Number(el.getAttribute('data-i')) : null
   }
+  const wordAt = (event: { target: EventTarget }): number | null => wordIn(event.target)
   const down = (event: PointerEvent) => {
     const index = wordAt(event)
     if (index === null || !list.editable || list.editRange) return
     event.preventDefault()
+    // Touch and pen hold on to the word they pressed; let go so the drag can reach its neighbours.
+    const target = event.target as Element
+    if (target.hasPointerCapture?.(event.pointerId)) target.releasePointerCapture(event.pointerId)
     setDrag([index, index])
   }
   const over = (event: PointerEvent) => {
-    const index = wordAt(event)
-    if (!dragRef.current || index === null) return
+    if (!dragRef.current) return
+    const index = wordIn(document.elementFromPoint(event.clientX, event.clientY))
+    if (index === null) return
     const anchor = dragRef.current[0]
     setDrag([anchor, extendSelection(list.tokens, anchor, index)])
+  }
+  // A press that started between words (or on a word that then moved) and ended on a word: that word.
+  const click = (event: MouseEvent) => {
+    const index = wordIn(document.elementFromPoint(event.clientX, event.clientY))
+    if (index === null || !list.editable || list.editRange || Date.now() - pickedAt.current < 500) return
+    onSelect?.(index, index)
   }
   const key = (event: KeyboardEvent) => {
     // Enter on a focused word edits that word alone. Mouse clicks go through the drag path.
@@ -190,7 +211,8 @@ export function Draft({ className = '', follow, onSelect, onOpen, empty, ...list
       ref={ref}
       className={`hud-draft ${live ? 'live' : ''} ${className}`}
       onPointerDown={down}
-      onPointerOver={over}
+      onPointerMove={over}
+      onClick={click}
       onKeyDown={key}
     >
       {body}

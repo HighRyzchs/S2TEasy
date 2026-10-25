@@ -142,7 +142,7 @@
 .hud-btn:hover { background: rgba(255,255,255,.14); }
 .hud-btn.go { background: var(--mint); color: #0f1d18; border-color: var(--mint); }
 .hud-draft { position: relative; font-size: 15.5px; line-height: 1.9; padding: 6px 2px 2px; max-height: 150px; overflow: auto; }
-.hud-w { font: inherit; color: inherit; background: none; border: 0; padding: 0 1px; margin: 0 1px; border-radius: 4px; cursor: text; }
+.hud-w { font: inherit; color: inherit; background: none; border: 0; padding: 0 1px; margin: 0 1px; border-radius: 4px; cursor: text; touch-action: none; }
 .hud-w:hover { background: rgba(255,255,255,.1); }
 .hud-w.prov, .hud-wd.prov { opacity: .62; }
 .hud-w.edited { color: var(--mint); text-decoration: underline dotted var(--mint); text-underline-offset: 4px; }

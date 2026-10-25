@@ -5,7 +5,8 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type MutableRefObject
+  type MutableRefObject,
+  type PointerEvent as ReactPointerEvent
 } from 'react'
 import type { HudSettings } from '@shared/hud'
 import type { OverlayState, OverlayStatus } from '@shared/types'
@@ -63,6 +64,7 @@ const PHASES: Partial<Record<OverlayStatus, Phase>> = {
 }
 
 const COLLAPSE_MS = 2500
+const TOUCH_COLLAPSE_MS = 6000
 const NOTICE_MS = 4000
 
 export function Hud({
@@ -134,24 +136,28 @@ export function Hud({
     if (left > 0) showToast(state.notice, left)
   }, [state.notice, state.noticeAt, showToast])
 
-  // The pointer over the HUD: clicks reach it only where it is drawn, and a paused session waits.
-  const enter = () => {
+  // The mouse over the HUD keeps a paused session waiting and an open editor open. Touch and pen
+  // have no hover (they "leave" as soon as they lift), so for them each press restarts the timers.
+  const [pokedAt, setPokedAt] = useState(0)
+  const enter = (event: ReactPointerEvent) => {
+    if (event.pointerType !== 'mouse') return
     setHovering(true)
     api.hudPointer(true)
   }
-  const leave = () => {
+  const leave = (event: ReactPointerEvent) => {
+    if (event.pointerType !== 'mouse') return
     setHovering(false)
     api.hudPointer(false)
   }
   useEffect(() => () => api.hudPointer(false), [api])
 
-  // Where clicks should reach the HUD. The main process compares this with the mouse position,
-  // because Windows does not reliably report the pointer over a click-through window.
+  // The parts of the HUD that are drawn. The main process makes exactly these take clicks (window
+  // shape), so clicks, touch and pen reach the HUD there and the app underneath everywhere else.
   const visible = state.status !== 'hidden'
   useEffect(() => {
     if (embedded) return
     if (!visible) {
-      api.hudArea(null)
+      api.hudArea([])
       return
     }
     let frame = 0
@@ -163,19 +169,19 @@ export function Hud({
         const parts = edge
           ? [...el.querySelectorAll<HTMLElement>('.hud-roll, .hud-btn, .hud-cue, .hud-draft, .hud-pop, .hud-toast')]
           : [el, ...el.querySelectorAll<HTMLElement>('.hud-pop, .hud-toast')]
-        const rects = parts.map((part) => part.getBoundingClientRect()).filter((r) => r.width > 0 && r.height > 0)
-        const area = rects.length
-          ? {
-              x: Math.floor(Math.min(...rects.map((r) => r.left))),
-              y: Math.floor(Math.min(...rects.map((r) => r.top))),
-              width: Math.ceil(Math.max(...rects.map((r) => r.right)) - Math.min(...rects.map((r) => r.left))),
-              height: Math.ceil(Math.max(...rects.map((r) => r.bottom)) - Math.min(...rects.map((r) => r.top)))
-            }
-          : null
-        const key = JSON.stringify(area)
+        const rects = parts
+          .map((part) => part.getBoundingClientRect())
+          .filter((r) => r.width > 0 && r.height > 0)
+          .map((r) => ({
+            x: Math.floor(r.left),
+            y: Math.floor(r.top),
+            width: Math.ceil(r.right) - Math.floor(r.left),
+            height: Math.ceil(r.bottom) - Math.floor(r.top)
+          }))
+        const key = JSON.stringify(rects)
         if (key !== last) {
           last = key
-          api.hudArea(area)
+          api.hudArea(rects)
         }
       }
       frame = requestAnimationFrame(measure)
@@ -183,7 +189,7 @@ export function Hud({
     frame = requestAnimationFrame(measure)
     return () => {
       cancelAnimationFrame(frame)
-      api.hudArea(null)
+      api.hudArea([])
     }
   }, [api, embedded, visible])
 
@@ -196,9 +202,9 @@ export function Hud({
   // An editor opened while talking folds back once the pointer has left and nothing is being fixed.
   useEffect(() => {
     if (keepOpen || phase !== 'rec' || !open || hovering || editing || fix) return
-    const timer = window.setTimeout(() => setOpen(false), COLLAPSE_MS)
+    const timer = window.setTimeout(() => setOpen(false), pokedAt ? TOUCH_COLLAPSE_MS : COLLAPSE_MS)
     return () => window.clearTimeout(timer)
-  }, [keepOpen, phase, open, hovering, editing, fix])
+  }, [keepOpen, phase, open, hovering, editing, fix, pokedAt])
 
   // A pending "remember?" pill belongs to the editor it was raised in.
   useEffect(() => {
@@ -326,7 +332,8 @@ export function Hud({
       hints={hints}
       dimUntyped={dim}
       highlightNewest={phase === 'rec'}
-      follow={phase === 'rec' && !editing && !fix}
+      // New words would scroll the word under the pointer away from it, so a hovered draft holds still.
+      follow={phase === 'rec' && !editing && !fix && !hovering}
       onSelect={beginEdit}
       empty="Nothing heard yet."
     />
@@ -518,6 +525,9 @@ export function Hud({
           style={style}
           onPointerEnter={enter}
           onPointerLeave={leave}
+          onPointerDown={(event) => {
+            if (event.pointerType !== 'mouse') setPokedAt(Date.now())
+          }}
           onKeyDown={(event) => {
             if (event.key === 'Escape' && fix) {
               event.preventDefault()
