@@ -1,3 +1,4 @@
+import type { CloudStatus } from '@shared/cloud'
 import { sampleHistory, sampleUsage, sampleVocabulary, sampleVoiceMemory } from './sample-data'
 import {
   defaultSettings,
@@ -7,6 +8,19 @@ import {
   type ModelOption,
   type UpdateStatus
 } from '@shared/types'
+
+let cloudPreview: CloudStatus = {
+  signedIn: false,
+  email: '',
+  balanceSeconds: 0,
+  recent: [],
+  packs: [
+    { id: 'starter', name: '20 hours', hours: 20, cents: 500 },
+    { id: 'regular', name: '60 hours', hours: 60, cents: 1200 },
+    { id: 'big', name: '150 hours', hours: 150, cents: 2500 }
+  ],
+  maxRequestSeconds: 180
+}
 
 const memory = {
   // A configured, lived-in workspace so every screen can be previewed and screenshotted.
@@ -58,6 +72,21 @@ function mockApi(): Window['s2t'] {
     hudEdit: async () => 'saved',
     hudTidy: async () => 'unchanged',
     hudPause: async () => undefined,
+    // Browser preview: a pretend S2Teasy Cloud account.
+    cloudStatus: async () => cloudPreview,
+    cloudSignIn: async () => {
+      cloudPreview = { ...cloudPreview, signedIn: true, email: 'you@example.com', balanceSeconds: 1800 }
+      return cloudPreview
+    },
+    cloudCancelSignIn: async () => undefined,
+    cloudSignOut: async () => {
+      cloudPreview = { ...cloudPreview, signedIn: false, email: '', balanceSeconds: 0 }
+    },
+    cloudBuy: async () => undefined,
+    cloudRedeem: async () => {
+      cloudPreview = { ...cloudPreview, balanceSeconds: cloudPreview.balanceSeconds + 7200 }
+      return { seconds: 7200, balance: cloudPreview.balanceSeconds }
+    },
     hudFinish: async () => undefined,
     hudHold: () => undefined,
     hudCues: async () => undefined,

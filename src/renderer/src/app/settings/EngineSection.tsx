@@ -4,8 +4,14 @@ import { ROUTER_PROVIDERS, type AppSettings, type ModelOption } from '@shared/ty
 import { errorMessage, useApp } from '../context'
 import { Check, Section, Toggle, useSave } from './controls'
 import { localSteps, openRouterSteps, routerSteps, type TestStep } from './connection-test'
+import { CloudPanel } from './CloudPanel'
 
 const ENGINES: { id: AppSettings['sttEngine']; name: string; desc: string }[] = [
+  {
+    id: 'cloud',
+    name: 'S2Teasy Cloud',
+    desc: 'No keys or setup. Sign in with Google, top up, talk.'
+  },
   {
     id: 'router-audio',
     name: 'Streaming · router.audio',
@@ -58,7 +64,9 @@ export function EngineSection() {
       ? { routerAudioKey: routerKey.trim() }
       : engine === 'openrouter'
         ? { apiKey: apiKey.trim(), model: model.trim() }
-        : { localEndpoint: endpoint.trim(), localModel: localModel.trim() }
+        : engine === 'local'
+          ? { localEndpoint: endpoint.trim(), localModel: localModel.trim() }
+          : {}
   const dirty = (Object.keys(patch) as (keyof AppSettings)[]).some(
     (key) => patch[key] !== settings[key]
   )
@@ -121,6 +129,8 @@ export function EngineSection() {
           </button>
         ))}
       </div>
+
+      {engine === 'cloud' && <CloudPanel />}
 
       <div className="set-fields">
         {engine === 'router-audio' && (
@@ -269,7 +279,7 @@ export function EngineSection() {
         </div>
       </div>
 
-      <div className="set-actions">
+      {engine !== 'cloud' && <div className="set-actions">
         <button
           type="button"
           className="btn primary"
@@ -288,13 +298,13 @@ export function EngineSection() {
             </Check>
           ))}
         </div>
-      </div>
+      </div>}
       {error && (
         <p className="set-error" role="alert">
           {error}
         </p>
       )}
-      <p className="hint">{billing}</p>
+      {engine !== 'cloud' && <p className="hint">{billing}</p>}
 
       <div className="set-lines">
         <Toggle

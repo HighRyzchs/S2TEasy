@@ -19,7 +19,7 @@ export type { OverlayTheme }
 
 export type InsertMode = 'live' | 'final'
 export type HotkeyMode = 'toggle' | 'hold'
-export type SttEngine = 'router-audio' | 'openrouter' | 'local'
+export type SttEngine = 'router-audio' | 'openrouter' | 'local' | 'cloud'
 export type OpenRouterRoute = 'auto' | 'transcription' | 'chat'
 export const OVERLAY_POSITIONS = [
   'bottom',
@@ -91,6 +91,10 @@ export type AppSettings = {
   autoUpdate: boolean
   githubToken: string
   sttEngine: SttEngine
+  /** S2Teasy Cloud's address; empty uses the built-in one. */
+  cloudUrl: string
+  /** Who is signed in to S2Teasy Cloud on this PC (the session itself is kept encrypted, not here). */
+  cloudEmail: string
   routerAudioKey: string
   routerProvider: RouterProvider
   echoCancellation: boolean
@@ -252,6 +256,8 @@ export const defaultSettings = (): AppSettings => ({
   autoUpdate: false,
   githubToken: '',
   sttEngine: 'router-audio',
+  cloudUrl: '',
+  cloudEmail: '',
   routerAudioKey: '',
   routerProvider: 'auto',
   echoCancellation: true,
@@ -315,11 +321,11 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
   merged.welcomeCompleted = raw?.welcomeCompleted === true
   merged.setupChecklistDismissed = raw?.setupChecklistDismissed === true
   merged.sttEngine =
-    raw?.sttEngine === 'local'
-      ? 'local'
-      : raw?.sttEngine === 'openrouter'
-        ? 'openrouter'
-        : 'router-audio'
+    raw?.sttEngine === 'local' || raw?.sttEngine === 'openrouter' || raw?.sttEngine === 'cloud'
+      ? raw.sttEngine
+      : 'router-audio'
+  merged.cloudUrl = typeof raw?.cloudUrl === 'string' ? raw.cloudUrl.trim().slice(0, 200) : ''
+  merged.cloudEmail = typeof raw?.cloudEmail === 'string' ? raw.cloudEmail.slice(0, 200) : ''
   merged.routerProvider = isRouterProvider(raw?.routerProvider) ? raw.routerProvider : 'auto'
   merged.vadSensitivity =
     raw?.vadSensitivity === 'low' ||

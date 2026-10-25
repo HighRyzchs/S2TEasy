@@ -20,7 +20,7 @@ export type TranscribeInput = {
   model: string
   language: string
   wavBase64: string
-  engine?: 'openrouter' | 'local'
+  engine?: 'openrouter' | 'local' | 'cloud'
   localEndpoint?: string
   vocabulary?: string[]
   /** The languages the speaker mixes in, as a written hint (see mixedLanguageHint). */

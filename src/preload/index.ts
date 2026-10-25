@@ -1,5 +1,6 @@
 import type { OutputPreferences } from '../shared/output'
 import type { UsageState } from '../shared/usage'
+import type { CloudStatus } from '../shared/cloud'
 import type { CueRequest, CueFeedback } from '../shared/speech-cues'
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '../shared/ipc'
@@ -33,6 +34,15 @@ export type S2TApi = {
   /** Take the stumbles out of everything said so far (Speech tidy). */
   hudTidy: (sessionId: string) => Promise<'typed' | 'saved' | 'kept-in-history' | 'unchanged'>
   hudPause: () => Promise<void>
+  /** S2Teasy Cloud (hosted credits): account, balance, packs. */
+  cloudStatus: () => Promise<CloudStatus>
+  /** Opens Google sign-in in the browser and resolves once it finished there. */
+  cloudSignIn: () => Promise<CloudStatus>
+  cloudCancelSignIn: () => Promise<void>
+  cloudSignOut: (everywhere: boolean) => Promise<void>
+  /** Opens the payment page for a pack in the browser. */
+  cloudBuy: (pack: string) => Promise<void>
+  cloudRedeem: (code: string) => Promise<{ seconds: number; balance: number }>
   hudFinish: () => Promise<void>
   hudHold: (held: boolean) => void
   hudCues: (on: boolean) => Promise<void>
@@ -118,6 +128,12 @@ const api: S2TApi = {
     ipcRenderer.invoke(IPC.HUD_EDIT, sessionId, start, end, text),
   hudTidy: (sessionId) => ipcRenderer.invoke(IPC.HUD_TIDY, sessionId),
   hudPause: () => ipcRenderer.invoke(IPC.HUD_PAUSE),
+  cloudStatus: () => ipcRenderer.invoke(IPC.CLOUD_STATUS),
+  cloudSignIn: () => ipcRenderer.invoke(IPC.CLOUD_SIGN_IN),
+  cloudCancelSignIn: () => ipcRenderer.invoke(IPC.CLOUD_CANCEL),
+  cloudSignOut: (everywhere) => ipcRenderer.invoke(IPC.CLOUD_SIGN_OUT, everywhere),
+  cloudBuy: (pack) => ipcRenderer.invoke(IPC.CLOUD_BUY, pack),
+  cloudRedeem: (code) => ipcRenderer.invoke(IPC.CLOUD_REDEEM, code),
   hudFinish: () => ipcRenderer.invoke(IPC.HUD_FINISH),
   hudHold: (held) => ipcRenderer.send(IPC.HUD_HOLD, held),
   hudCues: (on) => ipcRenderer.invoke(IPC.HUD_CUES, on),

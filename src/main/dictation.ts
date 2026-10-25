@@ -1032,7 +1032,7 @@ export class DictationController {
       language: settings.language,
       mixedLanguages: mixedLanguageHint(settings.tidy),
       wavBase64,
-      engine: settings.sttEngine === 'local' ? 'local' : 'openrouter',
+      engine: settings.sttEngine === 'local' || settings.sttEngine === 'cloud' ? settings.sttEngine : 'openrouter',
       localEndpoint: settings.localEndpoint,
       route: settings.openrouterRoute,
       signal: this.requestAbort?.signal,

@@ -31,7 +31,10 @@ import {
 import { joinUtterances } from '../shared/transcript'
 import { emptyOverlay, normalizeSettings } from '../shared/types'
 import { extrasPaused, LIMIT_REACHED, usageCsv } from '../shared/usage'
-import { transcribeAudio } from './openrouter'
+import { transcribeAudio, type TranscribeInput } from './openrouter'
+import { CloudClient } from './cloud'
+import { cloudUrlOf } from '../shared/constants'
+import type { CloudStatus } from '../shared/cloud'
 import { IPC } from '../shared/ipc'
 import type {
   AppSettings,
@@ -146,6 +149,10 @@ function shapeHud(rects: Rect[], force = false): void {
 }
 
 let voiceMemory: VoiceMemoryService
+let cloud: CloudClient
+/** OpenRouter, a local server, or S2Teasy Cloud: whichever the input names. */
+const transcribeAny = (input: TranscribeInput) =>
+  input.engine === 'cloud' ? cloud.transcribe(input) : transcribeAudio(input)
 let voiceMemoryEncrypted = false
 const voiceMemoryState = (): VoiceMemoryState => ({ ...voiceMemory.list(), encrypted: voiceMemoryEncrypted })
 let trayUi: ReturnType<typeof createTray> | null = null
@@ -280,6 +287,17 @@ async function setup(): Promise<void> {
     () => sendMain(IPC.VOICE_MEMORY_CHANGED, voiceMemoryState())
   )
 
+  // Test machines (Linux, no keychain) only; Windows always protects the session with DPAPI.
+  if (e2eEnabled && process.platform === 'linux') safeStorage.setUsePlainTextEncryption(true)
+  cloud = new CloudClient(
+    join(app.getPath('userData'), 'cloud-session.bin'),
+    () => cloudUrlOf(store.getSettings().cloudUrl),
+    (email) => {
+      store.saveSettings({ cloudEmail: email })
+      broadcastSettings()
+    }
+  )
+
   dictation = new DictationController({
     overlay: overlayWindow,
     journal,
@@ -378,6 +396,7 @@ async function setup(): Promise<void> {
     }
   }, {
     voiceMemory,
+    transcribe: transcribeAny,
     ...(e2eEnabled
       ? { createStream: () => new FakeStream() as unknown as RouterAudioClient, injector: fakeInjector }
       : {})
@@ -393,6 +412,7 @@ async function setup(): Promise<void> {
         hudLog: () => hudLog.join('\n'),
         typed: () => fakeInjector.typed,
         script: setScript,
+        cloudTranscribe: (input: TranscribeInput) => cloud.transcribe(input),
         history: () => store.getHistory(),
         settings: (patch: Partial<AppSettings>) => {
           store.saveSettings(patch)
@@ -666,6 +686,54 @@ async function setup(): Promise<void> {
       throw new Error('That edit could not be applied.')
     return dictation.editText(sessionId, start, end, text)
   })
+  // S2Teasy Cloud: only the main window manages the account.
+  const fromApp = (event: Electron.IpcMainInvokeEvent) => {
+    if (event.sender !== mainWindow?.webContents) throw new Error('Not allowed here.')
+  }
+  const signedOut = (): CloudStatus => ({ signedIn: false, email: '', balanceSeconds: 0, recent: [], packs: [], maxRequestSeconds: 0 })
+  const forgetCloud = () => {
+    if (!store.getSettings().cloudEmail) return
+    store.saveSettings({ cloudEmail: '' })
+    broadcastSettings()
+  }
+  ipcMain.handle(IPC.CLOUD_STATUS, async (event) => {
+    fromApp(event)
+    if (!cloud.signedIn()) {
+      forgetCloud()
+      return signedOut()
+    }
+    try {
+      return await cloud.status()
+    } catch (error) {
+      if (!cloud.signedIn()) forgetCloud()
+      throw error
+    }
+  })
+  ipcMain.handle(IPC.CLOUD_SIGN_IN, async (event) => {
+    fromApp(event)
+    await cloud.signIn()
+    return cloud.status()
+  })
+  ipcMain.handle(IPC.CLOUD_CANCEL, (event) => {
+    fromApp(event)
+    cloud.cancelSignIn()
+  })
+  ipcMain.handle(IPC.CLOUD_SIGN_OUT, async (event, everywhere: unknown) => {
+    fromApp(event)
+    try {
+      await cloud.signOut(everywhere === true)
+    } finally {
+      forgetCloud()
+    }
+  })
+  ipcMain.handle(IPC.CLOUD_BUY, (event, pack: unknown) => {
+    fromApp(event)
+    return cloud.buy(String(pack))
+  })
+  ipcMain.handle(IPC.CLOUD_REDEEM, (event, code: unknown) => {
+    fromApp(event)
+    return cloud.redeem(String(code).slice(0, 60))
+  })
   ipcMain.handle(IPC.HUD_TIDY, (_event, sessionId: string) => {
     logHud('HUD tidy')
     return dictation.tidyNow(sessionId)
@@ -822,7 +890,7 @@ async function setup(): Promise<void> {
       const chunkBytes = 15 * 16000 * 2
       for (let offset = 0; offset < audio.length; offset += chunkBytes) {
         parts.push(
-          await transcribeAudio({
+          await transcribeAny({
             engine: settings.sttEngine,
             apiKey: settings.apiKey,
             model: settings.sttEngine === 'local' ? settings.localModel : settings.model,

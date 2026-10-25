@@ -28,3 +28,7 @@ export const LANGUAGES: { code: string; label: string }[] = [
   { code: 'ar', label: 'Arabic' },
   { code: 'ru', label: 'Russian' }
 ]
+
+/** S2Teasy Cloud (hosted credits). Empty until the service is live; Settings can point at a test one. */
+export const DEFAULT_CLOUD_URL = ''
+export const cloudUrlOf = (configured: string) => configured.trim() || DEFAULT_CLOUD_URL

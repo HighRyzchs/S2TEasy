@@ -1,7 +1,13 @@
 import type { AppSettings } from './types'
 import { resolveStreamingKey } from './types'
+import { cloudUrlOf } from './constants'
 
 export function startError(settings: AppSettings): string | null {
+  if (settings.sttEngine === 'cloud') {
+    if (!cloudUrlOf(settings.cloudUrl)) return 'S2Teasy Cloud is not available in this version yet. Pick another engine in Settings.'
+    if (!settings.cloudEmail) return 'Sign in to S2Teasy Cloud in Settings → Speech engine.'
+    return null
+  }
   if (settings.sttEngine === 'local') {
     try {
       const url = new URL(settings.localEndpoint)
