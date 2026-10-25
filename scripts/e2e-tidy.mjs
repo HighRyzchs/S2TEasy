@@ -76,6 +76,21 @@ try {
   check('Tidy button: it says what it took out', /Tidied: /.test((await state()).notice ?? ''), (await state()).notice)
   await overlay.locator('[data-a="send"]').first().click({ timeout: 4000 })
   await until(finished, 10000)
+
+  // 3. Voice commands: "new paragraph" and "bullet point" become real line breaks in the app.
+  await until(async () => (await state()).status === 'hidden', 10000)
+  const start = (await typed()).length
+  await main((_, lines) => globalThis.__s2t.script(lines), ['Here is the plan. New paragraph. Bullet point call the venue.'])
+  await main(() => globalThis.__s2t.dictation.toggle())
+  await until(async () => (await state()).partial.includes('venue'))
+  await wait(300)
+  check('commands: the HUD shows them as chips', (await overlay.locator('.hud-mark').count()) === 2, String(await overlay.locator('.hud-mark').count()))
+  await main(() => globalThis.__s2t.dictation.stop?.() ?? globalThis.__s2t.dictation.toggle())
+  await until(finished, 10000)
+  const out = (await typed()).slice(start)
+  check('commands: typed with real line breaks', out.trim() === 'Here is the plan. \n\n- call the venue.', JSON.stringify(out))
+  const kept = await main(() => globalThis.__s2t.history()[0]?.text)
+  check('commands: History keeps the line breaks', kept === 'Here is the plan. \n\n- call the venue.', JSON.stringify(kept))
 } catch (error) {
   check('run', false, error.message.split('\n')[0])
 } finally {

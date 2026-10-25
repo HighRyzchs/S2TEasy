@@ -1,6 +1,7 @@
 import { analyzeAutomaticCues } from './automatic-cues'
 import { normalizeOutputPreferences, renderOutput, type OutputPreferences } from '../shared/output'
 import { bringToFront, copyTranscript, foregroundProgram } from './inject'
+import { renderStructure } from '../shared/structure'
 import { e2eEnabled, fakeInjector, FakeStream, setScript } from './e2e'
 import { UsageStore } from './usage-store'
 import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen, session, protocol } from 'electron'
@@ -727,7 +728,7 @@ async function setup(): Promise<void> {
   ipcMain.handle(IPC.CANCEL_RECORDING, () => dictation.cancel())
   ipcMain.handle(IPC.COPY_HISTORY, (event, text: string) => {
     if (event.sender === overlayWindow?.webContents) logHud(`HUD copy (${String(text).length} chars)`)
-    return copyTranscript(text)
+    return copyTranscript(renderStructure(String(text)))
   })
   ipcMain.handle(IPC.INSERT_HISTORY, (_event, text: string) => dictation.insertNow(text))
   ipcMain.handle(IPC.GET_UPDATE, () => updater.getStatus())

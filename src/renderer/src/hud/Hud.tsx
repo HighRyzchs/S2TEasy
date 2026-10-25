@@ -9,6 +9,7 @@ import {
   type PointerEvent as ReactPointerEvent
 } from 'react'
 import type { HudSettings } from '@shared/hud'
+import { isStructureMarker } from '@shared/structure'
 import type { OverlayState, OverlayStatus } from '@shared/types'
 import { Draft, EditField, WordList } from './Draft'
 import { Countdown, CopyButton, CueSwitch, RememberPill, Wave } from './controls'
@@ -252,7 +253,14 @@ export function Hud({
     const next = normalizeEdit(value)
     const latest = stateRef.current
     const range = relocateSpan(latest.partial, current)
-    if (!next || !range || next === current.text) return
+    // Emptying a structure chip removes the paragraph / line break it stands for.
+    const removeMark = !next && isStructureMarker(current.text.trim())
+    if ((!next && !removeMark) || !range || next === current.text) return
+    if (removeMark) {
+      if (latest.sessionId)
+        void api.hudEdit(latest.sessionId, range.start, range.end, '').catch(() => showToast('Could not remove that'))
+      return
+    }
     if (!latest.sessionId) {
       showToast('Could not save that fix')
       return

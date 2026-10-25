@@ -5,7 +5,6 @@ import { EngineSection } from '../settings/EngineSection'
 import { MicSection } from '../settings/MicSection'
 import { PrivacySection } from '../settings/PrivacySection'
 import { ShortcutSection } from '../settings/ShortcutSection'
-import { TidySection } from '../settings/TidySection'
 import { SECTIONS, activeSection, resolveSection, type SectionId } from '../settings/sections'
 import '../settings/settings.css'
 
@@ -81,7 +80,6 @@ export function Settings() {
           <EngineSection />
           <MicSection />
           <ShortcutSection />
-          <TidySection />
           <PrivacySection />
           <AppSection />
         </div>

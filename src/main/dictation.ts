@@ -38,6 +38,7 @@ import { accentSlots, type AccentSlot } from '../shared/accent-check'
 import { applyThreshold, suggestThreshold, type Detection } from './voice-memory/memory'
 import type { VoiceMemoryService } from './voice-memory/service'
 import type { MemoryHint } from '../shared/voice-memory'
+import { applyCommands, renderNext, renderStructure } from '../shared/structure'
 import { describeTidy, mixedLanguageHint, scriptOnly, tidyAlways, tidyNext, tidySpeech, type TidySettings } from '../shared/tidy'
 
 type Host = {
@@ -880,7 +881,7 @@ export class DictationController {
     this.checkpoint()
     if (!this.practiceText && !this.reviewRequested && this.settings.insertMode === 'final') {
       try {
-        await this.dependencies.injector.paste(this.item.text, this.pasteAbort.signal)
+        await this.dependencies.injector.paste(renderStructure(this.item.text), this.pasteAbort.signal)
       } catch (error) {
         if (!(
           this.reviewRequested &&
@@ -1134,10 +1135,11 @@ export class DictationController {
     if (take <= 0) return ''
     const applied = applyVocabularyDetailed(pending.slice(0, take).join(' '), this.vocabulary())
     const hits = applied.hits
-    // Speech tidy, piece by piece: what is typed can't easily be taken back, the end of the take
-    // tidies the whole text once more.
+    // Voice commands first ("new paragraph" becomes a marker), then speech tidy, piece by piece:
+    // what is typed can't easily be taken back; the end of the take tidies the whole text once more.
+    const said = this.settings ? applyCommands(applied.text, this.settings.structure).text : applied.text
     const tidy = this.autoTidy()
-    const text = tidy ? tidyNext(this.typedText, applied.text, tidy, this.tidyNames()).text : applied.text
+    const text = tidy ? tidyNext(this.typedText, said, tidy, this.tidyNames()).text : said
     this.liveCues?.phrase(this.typedText.split(/\s+/).filter(Boolean).length, this.journalMs())
     this.typedRawWords += take
     this.typedText = joinUtterances([this.typedText, text])
@@ -1170,14 +1172,21 @@ export class DictationController {
     settings: TidySettings | null = this.settings?.tidy ?? null
   ): Promise<'typed' | 'saved' | 'kept-in-history' | 'unchanged'> {
     if (!this.settings || !this.item || !settings) return 'unchanged'
-    const { text, changes } = tidySpeech(this.typedText, settings, this.tidyNames())
-    if (!changes.length || text === this.typedText) {
+    const commanded = applyCommands(this.typedText, this.settings.structure)
+    const tidied = tidySpeech(commanded.text, settings, this.tidyNames())
+    const text = tidied.text
+    if (text === this.typedText) {
       if (asked) this.notice('Nothing to tidy.')
       return 'unchanged'
     }
     this.typedText = text
     this.updateText()
-    const done = `Tidied: ${describeTidy(changes)}.`
+    const done = `Tidied: ${[
+      describeTidy(tidied.changes),
+      commanded.count ? `${commanded.count} structure ${commanded.count === 1 ? 'command' : 'commands'}` : ''
+    ]
+      .filter(Boolean)
+      .join(', ')}.`
     if (!this.liveTyping()) {
       if (asked) this.notice(done)
       return 'saved'
@@ -1203,15 +1212,21 @@ export class DictationController {
 
   private async typeLive(text: string): Promise<void> {
     if (!text || this.reviewRequested || !this.liveTyping()) return
-    await this.dependencies.injector.pasteBlock(text, this.pasteAbort.signal)
-    this.targetText += withTrailingSpace(text)
+    // Structure markers become line breaks only here, on the way into the app.
+    const piece = withTrailingSpace(text)
+    const out = renderNext(this.targetText, piece)
+    // pasteBlock adds the space after the words itself.
+    if (out) await this.dependencies.injector.pasteBlock(out.replace(/ $/, ''), this.pasteAbort.signal)
+    this.targetText += piece
     this.lastTypedAt = Date.now()
   }
 
   /** Bring the target app's typed text in line with the settled text, if that is still safe. */
   private async replaceTyped(): Promise<'typed' | 'kept-in-history'> {
-    const desired = withTrailingSpace(this.typedText)
-    const old = this.targetText
+    const desiredText = withTrailingSpace(this.typedText)
+    // Compared as typed into the app, with structure markers as the line breaks they became.
+    const desired = renderStructure(desiredText)
+    const old = renderStructure(this.targetText)
     let same = 0
     while (same < old.length && same < desired.length && old[same] === desired[same]) same++
     if (same === old.length && same === desired.length) return 'typed'
@@ -1227,7 +1242,7 @@ export class DictationController {
       return 'kept-in-history'
     }
     await replace.call(this.dependencies.injector, erase, desired.slice(same), this.pasteAbort.signal)
-    this.targetText = desired
+    this.targetText = desiredText
     this.lastTypedAt = Date.now()
     return 'typed'
   }
@@ -1279,8 +1294,10 @@ export class DictationController {
     if (this.recording)
       this.item.durationMs = Math.max(this.item.durationMs, Date.now() - this.startedAt)
     this.item.hasAudio = this.host.journal.hasAudio(this.item.id)
-    this.host.journal.save(this.item)
-    this.host.onHistoryItem({ ...this.item })
+    // History keeps the text as it goes into the app: structure markers become line breaks.
+    const saved = { ...this.item, text: renderStructure(this.item.text) }
+    this.host.journal.save(saved)
+    this.host.onHistoryItem(saved)
   }
 
   private command(action: RecordingCommand['action']): void {

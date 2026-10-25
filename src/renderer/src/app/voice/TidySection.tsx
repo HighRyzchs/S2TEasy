@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { describeTidy, MIXED_LANGUAGES, tidySpeech, type LanguageCode, type TidySettings } from '@shared/tidy'
 import { useApp } from '../context'
-import { Section, Toggle, useSave } from './controls'
+import { Section, Toggle, useSave } from '../settings/controls'
+import '../settings/settings.css'
 
 const SAMPLE =
   'Um, I I want to go to the store, I mean the mall. That would, that would be great because I went to the. Screen was frozen.'

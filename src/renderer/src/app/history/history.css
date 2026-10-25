@@ -120,6 +120,7 @@
   font-size: 17px;
   line-height: 1.75;
   overflow-wrap: anywhere;
+  white-space: pre-line;
 }
 .detail-text .fixed-word {
   text-underline-offset: 4px;

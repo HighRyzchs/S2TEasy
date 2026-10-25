@@ -1,3 +1,24 @@
+## Voice memory beta — v1.10.0-beta.9
+
+**New: voice commands for structure** (Your voice → **Structure**). Say a command on its own, between sentences, and it shapes the text instead of being typed:
+- "new paragraph" or "new stanza" starts a new paragraph after a blank line.
+- "new line" moves to the next line, for example the next line of a poem.
+- "bullet point …" starts a "- " line.
+- "next number …" starts the next numbered line: "1. ", "2. "…
+
+The HUD shows each command as a small chip in your text. Click a chip and clear it to take the break back out. You can add your own phrases for each command. A phrase needs two words or more, and a command inside a sentence ("I started a new paragraph today") stays as words. The line breaks go into your app as you talk, and History and Copy keep them.
+
+**Moved:** Speech tidy now sits in Your voice → Structure, next to the voice commands. Settings is for the app itself.
+
+**The app window fits half a laptop screen:**
+- It can shrink to 540 px wide.
+- In narrow windows the sidebar becomes an icon rail, and each icon names itself when you hover over it.
+- The Settings section tabs scroll instead of being cut off.
+- On/off settings are proper switches, and every dropdown and text box has the same look.
+- The HUD page's preview shrinks to fit the window.
+
+---
+
 ## Voice memory beta — v1.10.0-beta.8
 
 **The HUD's clicks, rebuilt from the ground up.** Earlier betas made the HUD's big transparent window let clicks through, then tried to guess when the pointer was over the HUD so it could take them back. That guess depended on hover, display scaling and timing, and kept failing on real machines. Now the window's own shape is the HUD: Windows itself sends a mouse click, a finger tap or a pen press on the HUD to the HUD, and everywhere else to the app underneath. Nothing is guessed anymore.

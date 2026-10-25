@@ -1,5 +1,6 @@
 import { defaultVoiceMemory, normalizeVoiceMemory, type MemoryHint, type VoiceMemorySettings } from './voice-memory'
 import { defaultTidySettings, normalizeTidy, type TidySettings } from './tidy'
+import { defaultStructureSettings, normalizeStructure, type StructureSettings } from './structure'
 import { normalizeOutputPreferences, type OutputPreferences } from './output'
 import type { WordTiming } from './word-timing'
 import type { UsageState } from './usage'
@@ -126,6 +127,8 @@ export type AppSettings = {
   voiceMemory: VoiceMemorySettings
   /** Take stutters, fillers, restarts and pause breaks out of dictated text. */
   tidy: TidySettings
+  /** Voice commands that structure the text: "new paragraph", "new line", "bullet point"… */
+  structure: StructureSettings
   hud: HudSettings
   /** Your voice suggestions the user chose not to see again (heard→meant keys). */
   dismissedSuggestions: string[]
@@ -277,6 +280,7 @@ export const defaultSettings = (): AppSettings => ({
   accentContextCheck: false,
   voiceMemory: defaultVoiceMemory(),
   tidy: defaultTidySettings(),
+  structure: defaultStructureSettings(),
   hud: defaultHudSettings(),
   dismissedSuggestions: []
 })
@@ -381,6 +385,7 @@ export function normalizeSettings(raw?: Partial<AppSettings> | null): AppSetting
   merged.accentContextCheck = raw?.accentContextCheck === true
   merged.voiceMemory = normalizeVoiceMemory(raw?.voiceMemory)
   merged.tidy = normalizeTidy(raw?.tidy)
+  merged.structure = normalizeStructure(raw?.structure)
   merged.hud = normalizeHudSettings(raw?.hud, raw?.overlayTheme)
   merged.dismissedSuggestions = Array.isArray(raw?.dismissedSuggestions)
     ? raw.dismissedSuggestions.filter((key): key is string => typeof key === 'string').slice(-500)

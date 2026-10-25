@@ -292,3 +292,5 @@
 .hud-empty { color: var(--hud-dim); }
 .hud-left { white-space: nowrap; }
 .hud-title small { display: block; margin: 0; font-size: 11.5px; line-height: 1.25; }
+/* Structure commands said aloud ("new paragraph"): a small chip in the text. */
+.hud-w.hud-mark, .hud-wd.hud-mark { display: inline-block; font-size: .78em; padding: 0 7px; border-radius: 999px; background: color-mix(in srgb, var(--mint) 18%, transparent); color: var(--mint); vertical-align: 1px; }

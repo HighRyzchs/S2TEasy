@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react'
 import { useApp } from '../context'
 import { ExpressionTab } from '../voice/ExpressionTab'
 import { PracticeTab } from '../voice/PracticeTab'
+import { StructureTab } from '../voice/StructureTab'
 import { VoiceMemoryTab } from '../voice/VoiceMemoryTab'
 import { WordsTab } from '../voice/WordsTab'
 import '../voice/voice.css'
 
-type Tab = 'words' | 'practice' | 'memory' | 'expression'
+type Tab = 'words' | 'structure' | 'practice' | 'memory' | 'expression'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'words', label: 'Words' },
+  { id: 'structure', label: 'Structure' },
   { id: 'practice', label: 'Practice' },
   { id: 'memory', label: 'Voice memory' },
   { id: 'expression', label: 'Expression' }
@@ -38,7 +40,7 @@ export function Voice() {
       <div className="page-head">
         <div>
           <h1>Your voice</h1>
-          <p>The words it should know, how you say them, and how your voice sounds. All of it stays on this PC.</p>
+          <p>The words it should know, how you say them, how your words come out, and how your voice sounds. All of it stays on this PC.</p>
         </div>
       </div>
       <div className="tabs" role="tablist" aria-label="Your voice">
@@ -58,6 +60,7 @@ export function Voice() {
           }}
         />
       )}
+      {tab === 'structure' && <StructureTab />}
       {tab === 'practice' && <PracticeTab requested={practice} onPick={setPractice} />}
       {tab === 'memory' && <VoiceMemoryTab />}
       {tab === 'expression' && <ExpressionTab />}

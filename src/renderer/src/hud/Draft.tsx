@@ -9,6 +9,7 @@ import {
   type PointerEvent,
   type ReactNode
 } from 'react'
+import { isStructureMarker, markerLabel } from '@shared/structure'
 import { extendSelection, type Span, type Token } from './tokens'
 
 type WordListProps = {
@@ -70,7 +71,17 @@ export function WordList({
       )
       return
     }
+    // A structure command ("new paragraph") is a marker: a chip, clickable like a word to remove it.
+    const mark = isStructureMarker(token.text)
+    const shown = mark ? (
+      <>
+        <span aria-hidden>{token.text}</span> {markerLabel(token.text).toLowerCase()}
+      </>
+    ) : (
+      token.text
+    )
     const classes = [
+      mark ? 'hud-mark' : '',
       dimUntyped && !token.typed ? 'prov' : '',
       inside(marked, token) ? 'edited fresh' : '',
       hints.some((hint) => inside(hint, token)) ? 'hint' : '',
@@ -88,13 +99,13 @@ export function WordList({
             data-i={index}
             data-start={token.start}
             data-end={token.end}
-            title="Click to fix · drag across words for a phrase"
+            title={mark ? 'Click to change or remove' : 'Click to fix · drag across words for a phrase'}
           >
-            {token.text}
+            {shown}
           </button>
         ) : (
           <span className={`hud-wd ${classes}`} data-start={token.start} data-end={token.end}>
-            {token.text}
+            {shown}
           </span>
         )}{' '}
       </Fragment>

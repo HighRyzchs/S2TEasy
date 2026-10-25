@@ -3,7 +3,6 @@ export const SECTIONS = [
   { id: 'engine', label: 'Speech engine' },
   { id: 'mic', label: 'Microphone' },
   { id: 'shortcut', label: 'Shortcut' },
-  { id: 'tidy', label: 'Speech tidy' },
   { id: 'privacy', label: 'Privacy & data' },
   { id: 'app', label: 'App & updates' }
 ] as const
