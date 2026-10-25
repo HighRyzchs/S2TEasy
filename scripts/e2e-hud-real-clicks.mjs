@@ -223,7 +223,7 @@ async function launch(extraArgs = []) {
   return { app, main, overlay, hwnd, close }
 }
 
-async function screenshot(name) {
+async function screenshot(name, crop) {
   if (!isWin) return
   const file = resolve(`release/${name}.png`)
   const script = `Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $b = [Windows.Forms.Screen]::PrimaryScreen.Bounds; $bmp = New-Object Drawing.Bitmap $b.Width, $b.Height; $g = [Drawing.Graphics]::FromImage($bmp); $g.CopyFromScreen($b.Location, [Drawing.Point]::Empty, $b.Size); $bmp.Save('${file}')`
@@ -231,6 +231,17 @@ async function screenshot(name) {
     execFileSync('powershell', ['-NoProfile', '-Command', script])
   } catch {
     note(`no screenshot ${name}`)
+    return
+  }
+  if (!crop) return
+  // A small crop around the HUD straight into the log, to see how its edges look on the desktop.
+  const jpg = resolve(`release/${name}-crop.jpg`)
+  const cut = `Add-Type -AssemblyName System.Drawing; $src = [Drawing.Image]::FromFile('${file}'); $r = New-Object Drawing.Rectangle ${crop.x}, ${crop.y}, ${crop.w}, ${crop.h}; $dst = New-Object Drawing.Bitmap ${crop.w}, ${crop.h}; $g = [Drawing.Graphics]::FromImage($dst); $g.DrawImage($src, 0, 0, $r, [Drawing.GraphicsUnit]::Pixel); $codec = [Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/jpeg' }; $p = New-Object Drawing.Imaging.EncoderParameters 1; $p.Param[0] = New-Object Drawing.Imaging.EncoderParameter ([Drawing.Imaging.Encoder]::Quality), 55L; $dst.Save('${jpg}', $codec, $p)`
+  try {
+    execFileSync('powershell', ['-NoProfile', '-Command', cut])
+    console.log(`SHOT ${name} ${require('node:fs').readFileSync(jpg).toString('base64')}`)
+  } catch {
+    note(`no crop ${name}`)
   }
 }
 
@@ -393,7 +404,19 @@ async function session(ctx, label, hud, how = 'mouse') {
   await press(await point('[data-a="pause"]'))
   check(`${label}: Pause pauses`, !!(await until(() => main(() => globalThis.__s2t.dictation.isPaused()), 8000)))
   await until(async () => (await overlay.locator('[data-a="resume"]').count()) > 0, 4000)
-  await screenshot(`hud-${label.replace(/[^a-z0-9]+/gi, '-')}-paused`)
+  const crop = await main(({ screen }) => {
+    const a = globalThis.__s2t.hudArea()
+    const b = globalThis.__s2t.overlay().getContentBounds()
+    const k = screen.getPrimaryDisplay().scaleFactor
+    const pad = 60
+    return a && {
+      x: Math.max(0, Math.round((b.x + a.x - pad) * k)),
+      y: Math.max(0, Math.round((b.y + a.y - pad) * k)),
+      w: Math.round((a.width + pad * 2) * k),
+      h: Math.round((a.height + pad * 2) * k)
+    }
+  })
+  await screenshot(`hud-${label.replace(/[^a-z0-9]+/gi, '-')}-paused`, /cyber\/compact|caption\/full/.test(label) && how === 'mouse' ? crop : undefined)
   await fixWord('edit while paused', 'Sah')
   await press(await point('[data-a="send"]'))
   check(
