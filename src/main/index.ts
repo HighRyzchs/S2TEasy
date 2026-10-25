@@ -89,8 +89,8 @@ function logHud(line: string): void {
   hudLog.push(`${new Date().toISOString().slice(11, 23)} ${line}`)
   if (hudLog.length > 400) hudLog.splice(0, hudLog.length - 400)
 }
-// Room around each part for glows and shadows; it also takes clicks.
-const HUD_SHAPE_MARGIN = 6
+// Room around each part for glows, shadows and tabs drawn outside it (at HUD scale 1); it also takes clicks.
+const HUD_SHAPE_MARGIN = 16
 
 /**
  * The HUD window covers more of the screen than the HUD draws (the editor grows into it). Its window
@@ -103,15 +103,16 @@ function shapeHud(rects: Rect[], force = false): void {
   hudRaw = rects
   if (!window || window.isDestroyed()) return
   const { width, height } = window.getContentBounds()
+  const margin = Math.round(HUD_SHAPE_MARGIN * Math.max(1, store.getSettings().hud.scale))
   const shape = rects
     .map((r) => {
-      const x = Math.max(0, Math.floor(r.x - HUD_SHAPE_MARGIN))
-      const y = Math.max(0, Math.floor(r.y - HUD_SHAPE_MARGIN))
+      const x = Math.max(0, Math.floor(r.x - margin))
+      const y = Math.max(0, Math.floor(r.y - margin))
       return {
         x,
         y,
-        width: Math.min(width, Math.ceil(r.x + r.width + HUD_SHAPE_MARGIN)) - x,
-        height: Math.min(height, Math.ceil(r.y + r.height + HUD_SHAPE_MARGIN)) - y
+        width: Math.min(width, Math.ceil(r.x + r.width + margin)) - x,
+        height: Math.min(height, Math.ceil(r.y + r.height + margin)) - y
       }
     })
     .filter((r) => r.width > 0 && r.height > 0)
