@@ -87,12 +87,10 @@ describe('OpenRouter audio operations', () => {
       vocabulary: ['Roshan']
     })
     const body = JSON.parse(fetchMock.mock.calls[0][1].body)
-    // Personal words reach Whisper-style providers only as their own prompt option (OpenRouter drops
-    // options for providers that do not serve the request); no top-level fields they could reject.
+    // Dedicated ASR gets no prompt or provider options: Groq's Whisper rejects a long prompt.
     expect(body).toEqual({
       model: 'new/asr',
-      input_audio: { data: 'AAAA', format: 'wav' },
-      provider: { options: { groq: { prompt: 'Roshan' }, openai: { prompt: 'Roshan' } } }
+      input_audio: { data: 'AAAA', format: 'wav' }
     })
     // Unsupported keyterms/temperature options must not break dedicated ASR providers.
     expect(fetchMock).toHaveBeenCalledTimes(1)

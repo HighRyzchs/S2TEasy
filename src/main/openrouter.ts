@@ -155,12 +155,9 @@ export async function transcribeAudio(input: TranscribeInput): Promise<string> {
                 ...(input.requestWordTimings
                   ? { response_format: 'verbose_json', timestamp_granularities: ['word'] }
                   : {}),
-                ...(input.language ? { language: input.language } : {}),
-                // Whisper's prompt reaches it only through the serving provider's own options;
-                // providers that do not serve the request never see theirs.
-                ...(prompt
-                  ? { provider: { options: { groq: { prompt: prompt.slice(0, 800) }, openai: { prompt: prompt.slice(0, 800) } } } }
-                  : {})
+                // No prompt or provider options: Groq's Whisper rejects a prompt over 224 tokens, and
+                // personal words plus a mixed-language hint easily pass that, failing every take.
+                ...(input.language ? { language: input.language } : {})
               })
             : JSON.stringify({
                 model: input.model.trim(),
