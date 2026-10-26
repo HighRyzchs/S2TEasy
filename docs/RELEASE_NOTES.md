@@ -2,7 +2,11 @@
 
 Everything from the 1.10 betas, now as a full release. Installing over v1.9.x or a beta keeps your settings and History.
 
-**Fixed in this release:** OpenRouter Whisper-style models (for example Whisper served by Groq) failed every take since beta 8. S2Teasy sent your personal words and mixed-language note as Whisper's prompt, and Groq rejects a prompt over 224 tokens. Dedicated OpenRouter speech models now get the same request as in v1.9 again. Chat-style audio models still get the written note.
+**Fixed in this release: OpenRouter dictation that came back empty** ("No finalized speech received"):
+- Some speech models (for example `x-ai/grok-stt-1.0`) can answer a request for word timings with the words but an empty text field. S2Teasy now builds the text from those words.
+- If a dedicated speech model still returns nothing while word timings or a language are set, S2Teasy asks once more with only the model and the audio.
+- Whisper-style models are no longer sent your personal words and mixed-language note as a prompt. Groq's Whisper rejects a prompt over 224 tokens. Chat-style audio models still get the written note.
+- When the local speech server can't be reached, the error now names its address instead of saying "fetch failed".
 
 **Voice memory (beta feature, off by default).** Fix a few misheard words on the HUD and S2Teasy keeps the *sound* of what you said with the words you meant, then underlines or fixes them the next time it hears that sound. Everything stays on your PC. Turn it on in Your voice → Voice memory.
 

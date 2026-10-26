@@ -57,7 +57,20 @@ export function parseTranscriptionPayload(payload: unknown): string {
     const message = typeof body.error.message === 'string' ? body.error.message : 'OpenRouter error'
     throw new Error(message)
   }
-  if (typeof body.text === 'string') return normalizeTranscript(body.text)
+  if (typeof body.text === 'string' && body.text.trim()) return normalizeTranscript(body.text)
+  // Some speech models answer a timed (verbose) request with the words and segments but an empty
+  // text field: rebuild the text from them before calling the take empty.
+  const pieces = (rows: unknown, key: 'text' | 'word') =>
+    Array.isArray(rows)
+      ? rows.map((row) => (row && typeof row === 'object' ? (row as Record<string, unknown>)[key] : undefined))
+          .filter((piece): piece is string => typeof piece === 'string')
+      : []
+  const rest = payload as { segments?: unknown; words?: unknown }
+  const fromSegments = joinUtterances(pieces(rest.segments, 'text'))
+  if (fromSegments) return fromSegments
+  const fromWords = joinUtterances(pieces(rest.words, 'word'))
+  if (fromWords) return fromWords
+  if (typeof body.text === 'string') return ''
   const content = body.choices?.[0]?.message?.content
   if (typeof content === 'string') return normalizeTranscript(content)
   if (Array.isArray(content)) {

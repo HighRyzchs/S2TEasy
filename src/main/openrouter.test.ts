@@ -95,6 +95,37 @@ describe('OpenRouter audio operations', () => {
     // Unsupported keyterms/temperature options must not break dedicated ASR providers.
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
+  it('asks once more with model and audio only when timings or a language bring back nothing', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(response({ text: '' }))
+      .mockResolvedValueOnce(response({ text: 'plain words' }))
+    vi.stubGlobal('fetch', fetchMock)
+    const text = await transcribeAudio({
+      ...input,
+      model: 'x-ai/grok-stt-1.0',
+      route: 'transcription',
+      requestWordTimings: true,
+      vocabulary: ['Roshan']
+    })
+    expect(text).toBe('plain words')
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({
+      model: 'x-ai/grok-stt-1.0',
+      input_audio: { data: 'AAAA', format: 'wav' }
+    })
+  })
+  it('names the local server when nothing answers there', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('fetch failed')))
+    await expect(
+      transcribeAudio({ ...input, engine: 'local', localEndpoint: 'http://127.0.0.1:8000/v1/audio/transcriptions' })
+    ).rejects.toThrow(/Could not reach the local speech server at http:\/\/127\.0\.0\.1:8000/)
+  })
+  it('does not ask again when the first request was already plain', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(response({ text: '' }))
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await transcribeAudio({ ...input, route: 'transcription', language: '' })).toBe('')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
   it('explains missing slugs without sending audio to a guessed operation', async () => {
     const fetchMock = vi.fn().mockResolvedValue(response(catalogue))
     vi.stubGlobal('fetch', fetchMock)
