@@ -1,3 +1,9 @@
+## Says when your microphone is silent — v1.10.1
+
+- When nothing your microphone sends reaches speech level, S2Teasy now says so on the HUD after a few seconds, and when the take ends: "Your microphone is silent". Before, it blamed the speech engine ("No finalized speech received"). Plugged-in earphones or a headset can quietly become Windows' input device; check Settings → Microphone and Windows' sound input.
+
+---
+
 ## Voice memory, speech tidy and voice commands — v1.10.0
 
 Everything from the 1.10 betas, now as a full release. Installing over v1.9.x or a beta keeps your settings and History.

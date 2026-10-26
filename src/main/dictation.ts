@@ -1,3 +1,4 @@
+import { vadFromSensitivity } from '../shared/vad'
 import type { CueAnalysis } from '../shared/speech-cues'
 import type { WordTiming } from '../shared/word-timing'
 import type { UsageRecord } from '../shared/usage'
@@ -41,6 +42,9 @@ import type { VoiceMemoryService } from './voice-memory/service'
 import type { MemoryHint } from '../shared/voice-memory'
 import { applyCommands, renderNext, renderStructure } from '../shared/structure'
 import { describeTidy, mixedLanguageHint, scriptOnly, tidyAlways, tidyNext, tidySpeech, type TidySettings } from '../shared/tidy'
+
+const MIC_SILENT =
+  "Your microphone is silent: nothing reached speech level. Check the microphone in Settings → Microphone and Windows' input device (plugged-in earphones or a headset can take over)."
 
 type Host = {
   overlay: { showInactive: () => void; hide: () => void; isDestroyed: () => boolean }
@@ -126,6 +130,9 @@ export class DictationController {
   private lastHeard = ''
   private heardTail = ''
   private lastTypedAt = 0
+  // The loudest microphone level heard this session, to tell a silent microphone from a quiet engine.
+  private peakLevel = 0
+  private silenceWarned = false
   // Pause/resume: a session is one or more recorded segments in the same History item.
   private pausing = false
   private paused = false
@@ -571,6 +578,8 @@ export class DictationController {
     this.lastHeard = ''
     this.heardTail = ''
     this.lastTypedAt = 0
+    this.peakLevel = 0
+    this.silenceWarned = false
     this.pausing = false
     this.paused = false
     this.segmentStartMs = 0
@@ -730,9 +739,15 @@ export class DictationController {
   setLevel(payload: AudioLevelPayload | number, gen = this.generation): void {
     if (gen !== this.generation || !this.recording) return
     this.lastLevelAt = Date.now()
+    const level = typeof payload === 'number' ? payload : payload.rms
+    this.peakLevel = Math.max(this.peakLevel, level)
+    if (!this.silenceWarned && this.micSilent() && Date.now() - this.startedAt > 6000) {
+      this.silenceWarned = true
+      this.notice(MIC_SILENT)
+    }
     this.setState({
       ...this.state,
-      rms: typeof payload === 'number' ? payload : payload.rms,
+      rms: level,
       bars: typeof payload === 'number' ? this.state.bars : payload.bars,
       elapsedMs: Date.now() - this.startedAt
     })
@@ -856,7 +871,10 @@ export class DictationController {
       return
     }
     if (!this.item.text.trim()) {
-      this.fail('No finalized speech received. Recover retained audio from History.', gen)
+      this.fail(
+        this.micSilent() ? MIC_SILENT : 'No finalized speech received. Recover retained audio from History.',
+        gen
+      )
       return
     }
     await this.checkAccentSwaps(gen)
@@ -1272,6 +1290,11 @@ export class DictationController {
     this.targetText = desiredText
     this.lastTypedAt = Date.now()
     return 'typed'
+  }
+
+  /** Nothing this session reached speech level: the microphone in use is silent or turned down. */
+  private micSilent(): boolean {
+    return !!this.settings && this.peakLevel < vadFromSensitivity(this.settings.vadSensitivity).speechThreshold
   }
 
   private notice(message: string): void {
