@@ -24,6 +24,14 @@ describe('transcript', () => {
     expect(parseTranscriptionPayload({ text: '  Hi there  ' })).toBe('Hi there')
   })
 
+  it('rebuilds an empty text field from segments or words', () => {
+    expect(parseTranscriptionPayload({ text: '', segments: [{ text: ' Hello' }, { text: 'there. ' }] })).toBe(
+      'Hello there.'
+    )
+    expect(parseTranscriptionPayload({ text: '', words: [{ word: 'Hi' }, { word: 'you' }] })).toBe('Hi you')
+    expect(parseTranscriptionPayload({ text: '' })).toBe('')
+  })
+
   it('parses chat-style fallback content', () => {
     expect(
       parseTranscriptionPayload({

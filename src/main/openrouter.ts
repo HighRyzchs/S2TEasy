@@ -46,6 +46,15 @@ export function localTranscriptionUrl(value: string): URL {
 }
 
 export async function transcribeAudio(input: TranscribeInput): Promise<string> {
+  const text = await transcribeOnce(input)
+  if (text || input.engine === 'local' || !(input.requestWordTimings || input.language)) return text
+  // A dedicated speech model that hears nothing with word timings or a language set gets one plain
+  // request (model and audio only): some providers answer those options with an empty transcript.
+  input.signal?.throwIfAborted()
+  return transcribeOnce({ ...input, requestWordTimings: false, language: '', vocabulary: [], mixedLanguages: '' })
+}
+
+async function transcribeOnce(input: TranscribeInput): Promise<string> {
   const local = input.engine === 'local'
   input.signal?.throwIfAborted()
   const route = local ? 'transcription' : await resolveRoute(input)
@@ -204,6 +213,13 @@ export async function transcribeAudio(input: TranscribeInput): Promise<string> {
       if (error instanceof Error && error.name === 'AbortError')
         throw new OpenRouterError(
           'Transcription timed out. Retained audio can be recovered from History.'
+        )
+      // Node reports an unreachable server only as "fetch failed".
+      if (error instanceof TypeError && error.message === 'fetch failed')
+        throw new OpenRouterError(
+          local
+            ? `Could not reach the local speech server at ${url}. Check that it is running, then recover the audio from History.`
+            : 'Could not reach OpenRouter. Check your connection, then recover the audio from History.'
         )
       throw error
     } finally {
