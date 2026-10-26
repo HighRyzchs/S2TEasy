@@ -189,6 +189,25 @@ describe('recoverable dictation sessions', () => {
     expect(t.history[0]?.status).toBe('cancelled')
   })
 
+  it('names a silent microphone instead of the engine when nothing reached speech level', async () => {
+    const t = setup()
+    t.transcribe.mockResolvedValue('')
+    await t.controller.start()
+    const gen = t.controller.currentGeneration()
+    t.controller.setLevel(0.001, gen)
+    t.controller.stop()
+    await t.controller.onFinished('', '', 1000, gen)
+    expect(t.history[0]?.error).toMatch(/microphone is silent/)
+
+    const loud = setup()
+    loud.transcribe.mockResolvedValue('')
+    await loud.controller.start()
+    const loudGen = loud.controller.currentGeneration()
+    loud.controller.setLevel(0.2, loudGen)
+    loud.controller.stop()
+    await loud.controller.onFinished('', '', 1000, loudGen)
+    expect(loud.history[0]?.error).toMatch(/No finalized speech/)
+  })
   it('retains successful audio only with training retention enabled', async () => {
     vi.useFakeTimers()
     const t = setup({ keepAudioForTraining: true })
