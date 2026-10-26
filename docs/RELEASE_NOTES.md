@@ -1,3 +1,23 @@
+## Voice memory, speech tidy and voice commands — v1.10.0
+
+Everything from the 1.10 betas, now as a full release. Installing over v1.9.x or a beta keeps your settings and History.
+
+**Fixed in this release:** OpenRouter Whisper-style models (for example Whisper served by Groq) failed every take since beta 8. S2Teasy sent your personal words and mixed-language note as Whisper's prompt, and Groq rejects a prompt over 224 tokens. Dedicated OpenRouter speech models now get the same request as in v1.9 again. Chat-style audio models still get the written note.
+
+**Voice memory (beta feature, off by default).** Fix a few misheard words on the HUD and S2Teasy keeps the *sound* of what you said with the words you meant, then underlines or fixes them the next time it hears that sound. Everything stays on your PC. Turn it on in Your voice → Voice memory.
+
+**Speech tidy** (Your voice → Structure). Takes stutters, fillers (um, uh), corrections ("the store, I mean the mall") and pause breaks out of dictation without rewording you. Your own habit words ("yeah", "like", "you know") go only where they fill a gap. Mixed languages (Tagalog, Arabic, Hindi/Urdu): their doubles are never taken for stutters, and Arabic and Hindi words can be written in English letters or their own script.
+
+**Voice commands for structure.** Say "new paragraph", "new line", "bullet point" or "next number" on its own between sentences and it shapes the text. Add your own phrases in Your voice → Structure.
+
+**Your last word is kept.** A soft last word the engine drops is kept from the live preview, and live engines get half a second of silence before finishing so they commit it.
+
+**The HUD's clicks, rebuilt.** The HUD window's own shape is now the HUD, so Windows sends clicks, taps and pen presses on it to the HUD and everywhere else to the app underneath. Editing words while you talk, dragging across words, Done, Pause and Copy work in every style, and the keyboard goes back to the app you dictate into after an edit.
+
+**The app window fits half a laptop screen,** with an icon rail in narrow windows, proper switches and consistent dropdowns.
+
+---
+
 ## Your words, fixed before they land — v1.9.0
 
 **Recognition**
